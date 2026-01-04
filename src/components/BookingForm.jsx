@@ -5,7 +5,7 @@ const ROOMS = [
     {
         id: 'carmel',
         name: 'Carmel',
-        price: 1241,
+        price: 2500,
         beds: '2 Single Beds & 1 Double Bed',
         extraBed: 'Extra 1 Mattress available',
         view: 'Mountain View',
@@ -15,7 +15,7 @@ const ROOMS = [
     {
         id: 'jordan',
         name: 'Jordan',
-        price: 1241,
+        price: 2500,
         beds: '2 Double Beds',
         extraBed: null,
         view: 'Courtyard View',
@@ -25,7 +25,7 @@ const ROOMS = [
     {
         id: 'sion',
         name: 'Sion Room',
-        price: 1241,
+        price: 2500,
         beds: '2 Double Beds',
         extraBed: 'Extra 1 Cot available',
         view: null,
@@ -35,7 +35,7 @@ const ROOMS = [
     {
         id: 'zion',
         name: 'Zion',
-        price: 1282,
+        price: 2500,
         beds: '2 Single Beds & 1 Queen Bed',
         extraBed: null,
         view: 'City View',
