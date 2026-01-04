@@ -60,6 +60,8 @@ const BookingForm = ({ onToast }) => {
     const [isLoadingBookings, setIsLoadingBookings] = useState(false);
     const [totalPrice, setTotalPrice] = useState(0);
     const [numberOfNights, setNumberOfNights] = useState(0);
+    const [showSuccessModal, setShowSuccessModal] = useState(false);
+    const [bookingDetails, setBookingDetails] = useState(null);
 
     // Google Sheets Web App URL (Apps Script deployment)
     const GOOGLE_SHEETS_URL = 'https://script.google.com/macros/s/AKfycbwK4ImQyrF_W8e2g9ZGjbLypWW9vaNVk4Pwh_t5uyWknnFWpGz2tiKxYJ13Js4srAar/exec';
@@ -221,7 +223,19 @@ const BookingForm = ({ onToast }) => {
                 mode: 'no-cors'
             });
 
-            onToast(`Booking request for ${selectedRoom.name} sent successfully! Total: ₹${totalPrice.toLocaleString('en-IN')} for ${numberOfNights} night(s). We will contact you soon.`, 'success');
+            // Save booking details for modal
+            setBookingDetails({
+                name: formData.name,
+                email: formData.email,
+                roomName: selectedRoom.name,
+                checkIn: formData.checkIn,
+                checkOut: formData.checkOut,
+                nights: numberOfNights,
+                totalPrice: totalPrice
+            });
+
+            // Show success modal
+            setShowSuccessModal(true);
 
             // Reset form
             setFormData({
@@ -498,6 +512,84 @@ const BookingForm = ({ onToast }) => {
                     </form>
                 </div>
             </div>
+
+            {/* Success Modal Popup */}
+            {showSuccessModal && bookingDetails && (
+                <div className="modal-overlay" onClick={() => setShowSuccessModal(false)}>
+                    <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                        <div className="modal-header success">
+                            <span className="modal-icon">✅</span>
+                            <h2>Booking Request Submitted!</h2>
+                        </div>
+
+                        <div className="modal-body">
+                            <div className="modal-greeting">
+                                <p>Dear <strong>{bookingDetails.name}</strong>,</p>
+                                <p>Your booking request has been received successfully!</p>
+                            </div>
+
+                            <div className="modal-booking-summary">
+                                <h4>📋 Booking Summary</h4>
+                                <div className="summary-item">
+                                    <span>Room:</span>
+                                    <span>{bookingDetails.roomName}</span>
+                                </div>
+                                <div className="summary-item">
+                                    <span>Check-in:</span>
+                                    <span>{new Date(bookingDetails.checkIn).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                                </div>
+                                <div className="summary-item">
+                                    <span>Check-out:</span>
+                                    <span>{new Date(bookingDetails.checkOut).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                                </div>
+                                <div className="summary-item">
+                                    <span>Duration:</span>
+                                    <span>{bookingDetails.nights} night(s)</span>
+                                </div>
+                                <div className="summary-item total">
+                                    <span>Total Amount:</span>
+                                    <span>₹{bookingDetails.totalPrice.toLocaleString('en-IN')}</span>
+                                </div>
+                            </div>
+
+                            <div className="modal-instructions">
+                                <div className="instruction-icon">📧</div>
+                                <h4>Check Your Email!</h4>
+                                <p>We have sent a confirmation email to:</p>
+                                <p className="email-highlight">{bookingDetails.email}</p>
+                                <p className="instruction-text">
+                                    Please check your inbox (and spam folder) for detailed instructions
+                                    on how to confirm your booking with advance payment.
+                                </p>
+                            </div>
+
+                            <div className="modal-steps">
+                                <h4>📝 Next Steps:</h4>
+                                <ol>
+                                    <li>Open the confirmation email we sent you</li>
+                                    <li>Contact us via phone/WhatsApp for payment</li>
+                                    <li>Complete the advance payment</li>
+                                    <li>Receive your confirmed booking!</li>
+                                </ol>
+                            </div>
+
+                            <div className="modal-note">
+                                <span className="note-icon">⚠️</span>
+                                <span>Your booking is <strong>pending</strong> until advance payment is received.</span>
+                            </div>
+                        </div>
+
+                        <div className="modal-footer">
+                            <button
+                                className="modal-close-btn"
+                                onClick={() => setShowSuccessModal(false)}
+                            >
+                                Got it, I'll check my email!
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </section>
     );
 };

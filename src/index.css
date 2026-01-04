@@ -1191,3 +1191,262 @@ section {
     font-size: 20px;
   }
 }
+
+/* ===== SUCCESS MODAL ===== */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  padding: 20px;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.modal-content {
+  background: white;
+  border-radius: 20px;
+  max-width: 500px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3);
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(50px);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.modal-header {
+  padding: 30px;
+  text-align: center;
+  border-radius: 20px 20px 0 0;
+}
+
+.modal-header.success {
+  background: linear-gradient(135deg, #00C853, #00E676);
+  color: white;
+}
+
+.modal-icon {
+  font-size: 48px;
+  display: block;
+  margin-bottom: 10px;
+}
+
+.modal-header h2 {
+  font-size: 24px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.modal-body {
+  padding: 30px;
+}
+
+.modal-greeting {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.modal-greeting p {
+  margin: 5px 0;
+  font-size: 16px;
+}
+
+.modal-booking-summary {
+  background: #f8f9fa;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.modal-booking-summary h4 {
+  margin: 0 0 15px;
+  font-size: 16px;
+  color: var(--airbnb-dark);
+}
+
+.summary-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid #eee;
+  font-size: 14px;
+}
+
+.summary-item:last-child {
+  border-bottom: none;
+}
+
+.summary-item span:first-child {
+  color: #666;
+}
+
+.summary-item span:last-child {
+  font-weight: 600;
+}
+
+.summary-item.total {
+  margin-top: 10px;
+  padding-top: 15px;
+  border-top: 2px solid var(--airbnb-primary);
+  border-bottom: none;
+}
+
+.summary-item.total span:last-child {
+  color: var(--airbnb-primary);
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.modal-instructions {
+  background: linear-gradient(135deg, #E3F2FD, #BBDEFB);
+  border-radius: 12px;
+  padding: 20px;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.instruction-icon {
+  font-size: 40px;
+  margin-bottom: 10px;
+}
+
+.modal-instructions h4 {
+  margin: 0 0 10px;
+  color: #1565C0;
+  font-size: 18px;
+}
+
+.modal-instructions p {
+  margin: 5px 0;
+  font-size: 14px;
+  color: #333;
+}
+
+.email-highlight {
+  font-weight: 700;
+  color: #1565C0;
+  font-size: 16px !important;
+  word-break: break-all;
+}
+
+.instruction-text {
+  color: #666 !important;
+  font-size: 13px !important;
+  margin-top: 10px !important;
+}
+
+.modal-steps {
+  background: #FFF8E1;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.modal-steps h4 {
+  margin: 0 0 15px;
+  font-size: 16px;
+  color: #F57C00;
+}
+
+.modal-steps ol {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.modal-steps li {
+  padding: 5px 0;
+  font-size: 14px;
+  color: #333;
+}
+
+.modal-note {
+  background: #FFF3E0;
+  border: 1px solid #FFB74D;
+  border-radius: 8px;
+  padding: 12px 15px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+}
+
+.modal-note .note-icon {
+  font-size: 18px;
+}
+
+.modal-footer {
+  padding: 0 30px 30px;
+}
+
+.modal-close-btn {
+  width: 100%;
+  padding: 16px;
+  background: var(--airbnb-primary);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.modal-close-btn:hover {
+  background: var(--airbnb-primary-dark);
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(255, 90, 95, 0.4);
+}
+
+/* Modal Responsive */
+@media (max-width: 480px) {
+  .modal-content {
+    border-radius: 15px;
+  }
+
+  .modal-header {
+    padding: 20px;
+  }
+
+  .modal-body {
+    padding: 20px;
+  }
+
+  .modal-footer {
+    padding: 0 20px 20px;
+  }
+
+  .modal-icon {
+    font-size: 36px;
+  }
+
+  .modal-header h2 {
+    font-size: 20px;
+  }
+}
