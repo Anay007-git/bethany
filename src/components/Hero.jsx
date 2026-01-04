@@ -25,48 +25,27 @@ const Hero = () => {
                 style={{ backgroundImage: `url(${heroImageUrl})` }}
             />
 
-            {/* Animated Cloud/Mist Effects */}
+            {/* Floating Clouds */}
             <div className="clouds-container">
                 <div className="cloud cloud-1"></div>
                 <div className="cloud cloud-2"></div>
                 <div className="cloud cloud-3"></div>
-                <div className="cloud cloud-4"></div>
-                <div className="cloud cloud-5"></div>
-            </div>
-
-            {/* Fog/Mist Overlay */}
-            <div className="mist-overlay"></div>
-            <div className="mist-overlay mist-2"></div>
-
-            {/* Floating Particles (Fireflies/Dust) */}
-            <div className="particles-container">
-                {[...Array(20)].map((_, i) => (
-                    <div
-                        key={i}
-                        className="particle"
-                        style={{
-                            left: `${Math.random() * 100}%`,
-                            animationDelay: `${Math.random() * 5}s`,
-                            animationDuration: `${3 + Math.random() * 4}s`
-                        }}
-                    />
-                ))}
             </div>
 
             <div className="hero-content">
                 <span className="hero-badge animate-fade-in">✨ Authentic Himalayan Experience</span>
-                <h1 className="animate-slide-up">BETHANY HOMESTAY</h1>
-                <p className="hero-subtitle animate-slide-up delay-1">
+                <h1 className="animate-text">BETHANY HOMESTAY</h1>
+                <p className="hero-subtitle animate-text delay-1">
                     Experience the warmth of traditional hospitality in the heart of Kalimpong,
                     surrounded by breathtaking mountain views.
                 </p>
-                <div className="hero-location animate-slide-up delay-2">
+                <div className="hero-location animate-text delay-2">
                     <svg viewBox="0 0 24 24" fill="currentColor">
                         <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
                     </svg>
                     <span>Kalimpong, West Bengal, India</span>
                 </div>
-                <div className="hero-buttons animate-slide-up delay-3">
+                <div className="hero-buttons animate-text delay-3">
                     <a href="#booking" className="btn-primary" onClick={scrollToBooking}>
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
                             <path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11z" />
@@ -78,9 +57,6 @@ const Hero = () => {
                     </a>
                 </div>
             </div>
-
-            {/* Bottom Mist Gradient */}
-            <div className="hero-bottom-mist"></div>
         </section>
     );
 };
