@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import Calendar from 'react-calendar'; // Import Calendar
+import './Calendar.css'; // Import Custom Styles
 
 // Room data based on MakeMyTrip listing
 const ROOMS = [
@@ -211,6 +213,16 @@ const BookingForm = ({ onToast }) => {
         index: 0
     });
 
+    // Calendar Reset Key (for uncontrolled component usage)
+    const [calendarKey, setCalendarKey] = useState(0);
+
+    // Reset calendar when form clears
+    useEffect(() => {
+        if (!formData.checkIn && !formData.checkOut) {
+            setCalendarKey(prev => prev + 1);
+        }
+    }, [formData.checkIn, formData.checkOut]);
+
     const openLightbox = (images, index = 0) => {
         setLightboxState({ isOpen: true, images, index });
     };
@@ -263,12 +275,42 @@ const BookingForm = ({ onToast }) => {
         }
     };
 
-    // Helper to check if a date is in Peak Season
-    const isPeakSeason = (date) => {
-        const month = date.getMonth();
-        const seasonMonths = [11, 0, 1, 2, 3, 8, 9];
-        return seasonMonths.includes(month);
+    // --- PRICING LOGIC HELPERS ---
+
+    // Check if a date is in High Season
+    // High Season: Dec-Jan, Mar-Apr 15, Oct-Nov 7
+    const isHighSeason = (date) => {
+        const month = date.getMonth(); // 0-indexed (0=Jan, 11=Dec)
+        const day = date.getDate();
+
+        // December (11) & January (0)
+        if (month === 11 || month === 0) return true;
+
+        // March (2) & April (3) up to 15th
+        if (month === 2) return true;
+        if (month === 3 && day <= 15) return true;
+
+        // October (9) & November (10) up to 7th
+        if (month === 9) return true;
+        if (month === 10 && day <= 7) return true;
+
+        return false;
     };
+
+    // Get Room Price for a specific date
+    const getSeasonalRoomPrice = (date, roomId) => {
+        const highSeason = isHighSeason(date);
+
+        // Carmel: High=3600, Low=3000
+        if (roomId === 'carmel') {
+            return highSeason ? 3600 : 3000;
+        }
+
+        // Others (Jordan, Sion, Zion): High=3000, Low=2500
+        return highSeason ? 3000 : 2500;
+    };
+
+    const MEAL_PRICE = 520; // Fixed meal price for all seasons
 
     // Helper to get numeric capacity from string (e.g., "4 Adults" -> 4)
     const getRoomCapacity = (room) => {
@@ -277,47 +319,47 @@ const BookingForm = ({ onToast }) => {
         return match ? parseInt(match[0]) : 2;
     };
 
-    // Calculate number of nights and total price
+    // Calculate number of nights and total price (Iterating through dates)
     useEffect(() => {
         if (formData.checkIn && formData.checkOut && formData.selectedRooms.length > 0) {
             const checkIn = new Date(formData.checkIn);
             const checkOut = new Date(formData.checkOut);
-            const diffTime = checkOut - checkIn;
-            const nights = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-            if (nights > 0) {
-                setNumberOfNights(nights);
-
-                // 1. Calculate Room Price (Sum of all selected rooms)
-                let roomTotal = 0;
-                formData.selectedRooms.forEach(room => {
-                    roomTotal += (room.price * nights);
-                });
-                setRoomPriceTotal(roomTotal);
-
-                // 2. Calculate Meal Price
-                let mealTotal = 0;
-                if (formData.addMeals) {
-                    const guests = parseInt(formData.guests) || 1;
-                    let currentDate = new Date(checkIn);
-
-                    for (let i = 0; i < nights; i++) {
-                        const isSeason = isPeakSeason(currentDate);
-                        const dailyMealRate = isSeason ? 1500 : 1200;
-                        mealTotal += (dailyMealRate * guests);
-                        currentDate.setDate(currentDate.getDate() + 1);
-                    }
-                }
-                setMealPriceTotal(mealTotal);
-
-                // 3. Grand Total
-                setTotalPrice(roomTotal + mealTotal);
-            } else {
+            // Validate: CheckOut must be after CheckIn
+            if (checkOut <= checkIn) {
                 setNumberOfNights(0);
                 setTotalPrice(0);
-                setRoomPriceTotal(0);
-                setMealPriceTotal(0);
+                return;
             }
+
+            const diffTime = checkOut - checkIn;
+            const nights = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            setNumberOfNights(nights);
+
+            let totalRoomCost = 0;
+            let totalMealCost = 0;
+            const currentGuests = parseInt(formData.guests) || 1;
+
+            // Loop through each night to get precise daily rates
+            for (let i = 0; i < nights; i++) {
+                let currentDate = new Date(checkIn);
+                currentDate.setDate(checkIn.getDate() + i);
+
+                // Room Cost
+                formData.selectedRooms.forEach(room => {
+                    totalRoomCost += getSeasonalRoomPrice(currentDate, room.id);
+                });
+
+                // Meal Cost
+                if (formData.addMeals) {
+                    totalMealCost += (MEAL_PRICE * currentGuests);
+                }
+            }
+
+            setRoomPriceTotal(totalRoomCost);
+            setMealPriceTotal(totalMealCost);
+            setTotalPrice(totalRoomCost + totalMealCost);
+
         } else {
             setNumberOfNights(0);
             setTotalPrice(0);
@@ -325,6 +367,57 @@ const BookingForm = ({ onToast }) => {
             setMealPriceTotal(0);
         }
     }, [formData.checkIn, formData.checkOut, formData.selectedRooms, formData.guests, formData.addMeals]);
+
+    // Calendar Tile Content (Price Display)
+    const getTileContent = ({ date, view }) => {
+        if (view === 'month') {
+            const isHigh = isHighSeason(date);
+            // Show price for currently selected primary room or generic "Start" price if none selected
+            // Use 'carmel' logic for high price visualization, or generic
+            // Prompt asks to "add this rate to calendar". 
+            // We'll show the rate for "Carmel" (High Tier) and "Standard" (Low Tier) in a small tooltip or just one reference price?
+            // User said: "highlight the rate high and low".
+            // Let's show the Carmel rate as reference since it varies most distinctively (3600 vs 3000)
+            const price = isHigh ? 'High' : 'Low';
+            return (
+                <div className="price-tag">
+                    {isHigh ? 'High' : 'Low'}
+                </div>
+            );
+        }
+    };
+
+    const getTileClassName = ({ date, view }) => {
+        if (view === 'month') {
+            return isHighSeason(date) ? 'season-high' : 'season-low';
+        }
+    };
+
+    // Handle Calendar Range Select
+    // Handle Calendar Range Select
+    const handleDateChange = (dates) => {
+        // React-Calendar returns [start, end]
+        if (!dates || !Array.isArray(dates) || dates.length < 2) {
+            // Partial or empty
+            return;
+        }
+
+        const start = dates[0];
+        const end = dates[1];
+
+        const toLocalISO = (d) => {
+            const offset = d.getTimezoneOffset() * 60000;
+            return new Date(d.getTime() - offset).toISOString().split('T')[0];
+        };
+
+        if (start && end) {
+            setFormData(prev => ({
+                ...prev,
+                checkIn: toLocalISO(start),
+                checkOut: toLocalISO(end)
+            }));
+        }
+    };
 
     // Check room availability
     const getRoomStatus = (roomId) => {
@@ -483,186 +576,189 @@ const BookingForm = ({ onToast }) => {
 
     return (
         <section id="booking" className="booking">
-            <div className="container">
-                <div className="section-header">
+            <div className="container" style={{ maxWidth: '1280px', margin: '0 auto', padding: '20px' }}>
+                <div className="section-header" style={{ textAlign: 'center', marginBottom: '30px' }}>
                     <h2>Book Your Stay</h2>
                     <p>Select multiple rooms for your perfect family getaway</p>
                 </div>
 
-                <div className="booking-layout" style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap' }}>
-                    {/* LEFT COLUMN: Rooms & Filters */}
-                    <div className="booking-main" style={{ flex: '2', minWidth: '300px' }}>
+                {/* Single Row Layout: Calendar | Rooms | Cart */}
+                <div className="booking-single-row" style={{ display: 'flex', gap: '25px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
 
-                        {/* Global Filters */}
-                        <div className="filters-card" style={{ background: 'white', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 15px rgba(0,0,0,0.05)', marginBottom: '20px' }}>
-                            <div className="form-row">
-                                <div className="form-group">
-                                    <label>Check-in</label>
-                                    <input type="date" name="checkIn" value={formData.checkIn} onChange={handleChange} min={today} required />
-                                </div>
-                                <div className="form-group">
-                                    <label>Check-out</label>
-                                    <input type="date" name="checkOut" value={formData.checkOut} onChange={handleChange} min={formData.checkIn || today} required />
-                                </div>
-                                <div className="form-group">
-                                    <label>Guests</label>
-                                    <select name="guests" value={formData.guests} onChange={handleChange} required>
-                                        {[...Array(15)].map((_, i) => (
-                                            <option key={i} value={i + 1}>{i + 1} Guest{i > 0 ? 's' : ''}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                            </div>
-
-                            {/* Capacity Suggestion */}
-                            {showCapacityWarning && (
-                                <div style={{ background: '#fff3cd', color: '#856404', padding: '10px', borderRadius: '6px', fontSize: '0.9rem', marginTop: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <span>⚠️</span>
-                                    <span>You have {currentGuests} guests but selected rooms only fit {currentCapacity}. Please add another room!</span>
-                                </div>
-                            )}
-
-                            {!formData.checkIn && <p style={{ color: '#666', fontSize: '0.9rem', marginTop: '10px' }}>Select dates to check availability.</p>}
+                    {/* COL 1: Calendar */}
+                    <div className="col-calendar" style={{ flex: '1 1 300px', maxWidth: '380px' }}>
+                        <h3 style={{ fontSize: '1.2rem', marginBottom: '15px', paddingBottom: '10px', borderBottom: '1px solid #eee' }}>1. Select Dates</h3>
+                        <div className="calendar-container-styled" style={{ background: 'white', padding: '10px', borderRadius: '12px', boxShadow: '0 4px 15px rgba(0,0,0,0.05)' }}>
+                            <Calendar
+                                key={calendarKey}
+                                selectRange={true}
+                                onChange={handleDateChange}
+                                defaultValue={formData.checkIn && formData.checkOut ? [new Date(formData.checkIn), new Date(formData.checkOut)] : undefined}
+                                minDate={new Date()}
+                                tileContent={getTileContent}
+                                tileClassName={getTileClassName}
+                            />
                         </div>
+                        {/* Hidden Inputs */}
+                        <input type="hidden" name="checkIn" value={formData.checkIn} required />
+                        <input type="hidden" name="checkOut" value={formData.checkOut} required />
 
-                        {/* Room Cards List */}
-                        <div className="room-cards">
-                            {ROOMS.map((room) => {
-                                const status = getRoomStatus(room.id);
-                                const statusInfo = getStatusLabel(status);
-                                const isSelected = formData.selectedRooms.some(r => r.id === room.id);
-                                const isDisabled = status === 'booked';
+                        {!formData.checkIn && <p style={{ color: '#7f8c8d', marginTop: '10px', fontStyle: 'italic', fontSize: '0.9rem' }}>Please select check-in and check-out dates.</p>}
+                    </div>
 
-                                return (
-                                    <div key={room.id} className={`room-card ${isSelected ? 'selected' : ''} ${isDisabled ? 'disabled' : ''}`} style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                    {/* COL 2: Room Selection (Scrollable) */}
+                    <div className="col-rooms" style={{ flex: '2 1 400px', minWidth: '320px' }}>
+                        <h3 style={{ fontSize: '1.2rem', marginBottom: '15px', paddingBottom: '10px', borderBottom: '1px solid #eee' }}>2. Select Rooms</h3>
+                        <div className="rooms-scroll-container" style={{ maxHeight: '800px', overflowY: 'auto', paddingRight: '10px' }}>
+                            <div className="rooms-list-vertical" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                                {ROOMS.map((room) => {
+                                    const status = getRoomStatus(room.id);
+                                    const statusInfo = getStatusLabel(status);
+                                    const isSelected = formData.selectedRooms.some(r => r.id === room.id);
+                                    const isDisabled = status === 'booked';
 
-                                        {/* Carousel Component */}
-                                        <ImageCarousel
-                                            images={room.images}
-                                            height="180px"
-                                            onImageClick={(idx) => openLightbox(room.images, idx)}
-                                        />
-
-                                        <div className="room-card-content" style={{ padding: '15px', flex: '1', display: 'flex', flexDirection: 'column' }}>
-                                            <div className="room-card-header">
-                                                <h4>{room.name}</h4>
-                                                <span className={`room-status ${statusInfo.className}`}>{statusInfo.text}</span>
-                                            </div>
-                                            <div className="room-card-price">
-                                                <span className="price">₹{room.price.toLocaleString('en-IN')}</span>
-                                                <span className="per-night">/night</span>
-                                            </div>
-                                            <div className="room-card-details">
-                                                <p>🛏️ {room.beds}</p>
-                                                {room.extraBed && <p className="extra-bed">➕ {room.extraBed}</p>}
-                                                {room.view && <p className="view">🏔️ {room.view}</p>}
-                                                {room.size && <p className="size">📐 {room.size}</p>}
-                                            </div>
-                                            <div className="room-card-features">
-                                                {room.features.map((feature, idx) => (
-                                                    <span key={idx} className="feature-tag">✓ {feature}</span>
-                                                ))}
+                                    return (
+                                        <div key={room.id} className={`room-card ${isSelected ? 'selected' : ''} ${isDisabled ? 'disabled' : ''}`} style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', background: 'white', borderRadius: '12px', boxShadow: '0 4px 15px rgba(0,0,0,0.05)', transition: 'transform 0.2s', border: isSelected ? '2px solid #2ecc71' : '1px solid transparent' }}>
+                                            {/* Horizontal Card Layout for compactness in middle col? Or standard vertical? Let's keep vertical but compact images */}
+                                            <div style={{ position: 'relative' }}>
+                                                <ImageCarousel
+                                                    images={room.images}
+                                                    height="180px"
+                                                    onImageClick={(idx) => openLightbox(room.images, idx)}
+                                                />
+                                                <span className={`room-status ${statusInfo.className}`} style={{ position: 'absolute', top: '10px', right: '10px', fontSize: '0.75rem', padding: '4px 10px', borderRadius: '20px', zIndex: 10 }}>{statusInfo.text}</span>
                                             </div>
 
-                                            <div style={{ marginTop: 'auto', paddingTop: '15px' }}>
-                                                {isDisabled ? (
-                                                    <button className="add-room-btn" disabled style={{ width: '100%', padding: '10px', background: '#ddd', border: 'none', borderRadius: '6px', cursor: 'not-allowed' }}>Unavailable</button>
-                                                ) : isSelected ? (
-                                                    <button
-                                                        type="button"
-                                                        onClick={(e) => { e.stopPropagation(); toggleRoom(room); }}
-                                                        style={{ width: '100%', padding: '10px', background: '#e74c3c', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}
-                                                    >
-                                                        Remove Room
-                                                    </button>
-                                                ) : (
-                                                    <button
-                                                        type="button"
-                                                        onClick={(e) => { e.stopPropagation(); toggleRoom(room); }}
-                                                        style={{ width: '100%', padding: '10px', background: '#2ecc71', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}
-                                                    >
-                                                        Add to Stay
-                                                    </button>
-                                                )}
+                                            <div className="room-card-content" style={{ padding: '15px', flex: '1', display: 'flex', flexDirection: 'column' }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px' }}>
+                                                    <h4 style={{ fontSize: '1.1rem', margin: 0 }}>{room.name}</h4>
+                                                    <div style={{ textAlign: 'right' }}>
+                                                        <span className="price" style={{ fontSize: '1.1rem', fontWeight: '800', color: '#2c3e50' }}>₹{room.price.toLocaleString('en-IN')}</span>
+                                                        <span className="per-night" style={{ fontSize: '0.8rem', color: '#7f8c8d' }}>/night</span>
+                                                    </div>
+                                                </div>
+
+                                                <div className="room-card-details" style={{ display: 'flex', gap: '10px', marginBottom: '10px', fontSize: '0.85rem', color: '#555', flexWrap: 'wrap' }}>
+                                                    <span>🛏️ {room.beds}</span>
+                                                    {room.extraBed && <span>➕ {room.extraBed}</span>}
+                                                    {room.view && <span>🏔️ {room.view}</span>}
+                                                </div>
+
+                                                <div style={{ marginTop: 'auto' }}>
+                                                    {isDisabled ? (
+                                                        <button className="add-room-btn" disabled style={{ width: '100%', padding: '8px', background: '#ecf0f1', color: '#95a5a6', border: 'none', borderRadius: '6px', cursor: 'not-allowed', fontWeight: 'bold' }}>Unavailable</button>
+                                                    ) : isSelected ? (
+                                                        <button
+                                                            type="button"
+                                                            onClick={(e) => { e.stopPropagation(); toggleRoom(room); }}
+                                                            style={{ width: '100%', padding: '8px', background: '#e74c3c', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.9rem' }}
+                                                        >
+                                                            Remove
+                                                        </button>
+                                                    ) : (
+                                                        <button
+                                                            type="button"
+                                                            onClick={(e) => { e.stopPropagation(); toggleRoom(room); }}
+                                                            style={{ width: '100%', padding: '8px', background: '#3498db', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.9rem', transition: 'background 0.2s' }}
+                                                        >
+                                                            Add
+                                                        </button>
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
-                                );
-                            })}
+                                    );
+                                })}
+                            </div>
                         </div>
                     </div>
 
-                    {/* RIGHT COLUMN: Cart & Checkout Form */}
-                    <div className="booking-sidebar" style={{ flex: '1', minWidth: '300px' }}>
-                        <div className="sidebar-cart" style={{ position: 'sticky', top: '20px' }}>
-                            <h3 style={{ fontSize: '1.2rem', marginBottom: '15px', borderBottom: '2px solid #eee', paddingBottom: '10px' }}>Your Selection</h3>
+                    {/* COL 3: Cart & Checkout */}
+                    <div className="col-cart" style={{ flex: '1 1 300px', maxWidth: '350px' }}>
+                        <h3 style={{ fontSize: '1.2rem', marginBottom: '15px', paddingBottom: '10px', borderBottom: '1px solid #eee' }}>3. Booking Details</h3>
 
-                            {formData.selectedRooms.length === 0 ? (
-                                <div className="empty-cart-placeholder">
-                                    <div style={{ fontSize: '2rem', marginBottom: '10px' }}>🛒</div>
-                                    <p>Your cart is empty</p>
-                                    <p style={{ fontSize: '0.8rem', marginTop: '5px' }}>Select rooms to start your booking</p>
-                                </div>
-                            ) : (
-                                <div className="selected-rooms-list" style={{ marginBottom: '20px' }}>
-                                    {formData.selectedRooms.map(room => (
-                                        <div key={room.id} className="cart-item">
-                                            <span>🏠 {room.name}</span>
-                                            <span>₹{room.price.toLocaleString('en-IN')}</span>
-                                        </div>
+                        <div className="cart-card" style={{ background: 'white', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 20px rgba(0,0,0,0.08)', position: 'sticky', top: '20px' }}>
+                            {/* Guests Selector */}
+                            <div className="form-group" style={{ marginBottom: '15px' }}>
+                                <label style={{ fontWeight: '600', marginBottom: '5px', display: 'block', fontSize: '0.9rem' }}>Number of Guests</label>
+                                <select name="guests" value={formData.guests} onChange={handleChange} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ddd', fontSize: '0.95rem' }}>
+                                    {[...Array(15)].map((_, i) => (
+                                        <option key={i} value={i + 1}>{i + 1} Guest{i > 0 ? 's' : ''}</option>
                                     ))}
-                                    <div style={{ borderTop: '1px dashed #ccc', marginTop: '10px', paddingTop: '10px', display: 'flex', justifyContent: 'space-between', fontWeight: 'bold' }}>
-                                        <span>Room Subtotal:</span>
-                                        <span>₹{formData.selectedRooms.reduce((sum, r) => sum + r.price, 0).toLocaleString('en-IN')}/night</span>
+                                </select>
+                            </div>
+
+                            {/* Cart Items */}
+                            <div className="selected-rooms-summary" style={{ marginBottom: '15px' }}>
+                                <h4 style={{ fontSize: '0.95rem', color: '#34495e', marginBottom: '8px' }}>Selected Rooms:</h4>
+                                {formData.selectedRooms.length === 0 ? (
+                                    <p style={{ color: '#95a5a6', fontStyle: 'italic', background: '#f8f9fa', padding: '8px', borderRadius: '4px', fontSize: '0.9rem' }}>No rooms selected.</p>
+                                ) : (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                                        {formData.selectedRooms.map(room => (
+                                            <div key={room.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', padding: '6px', background: '#f8f9fa', borderRadius: '4px' }}>
+                                                <span>{room.name}</span>
+                                                <span style={{ fontWeight: '600' }}>₹{room.price.toLocaleString('en-IN')}</span>
+                                            </div>
+                                        ))}
                                     </div>
+                                )}
+                            </div>
+
+                            {/* Capacity Warning */}
+                            {showCapacityWarning && (
+                                <div style={{ background: '#fff3cd', color: '#856404', padding: '10px', borderRadius: '6px', fontSize: '0.85rem', marginBottom: '15px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <span>⚠️</span>
+                                    <span>Guests ({currentGuests}) &gt; Beds ({currentCapacity}). Add rooms!</span>
                                 </div>
                             )}
 
-                            {/* Add Meals Option */}
-                            <div className="form-group" style={{ background: '#f8f9fa', padding: '15px', borderRadius: '8px', marginBottom: '20px' }}>
-                                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                            {/* Meals Option */}
+                            <div className="meals-option" style={{ marginBottom: '15px', padding: '10px', background: '#fff9e6', borderRadius: '6px', border: '1px solid #ffeeba' }}>
+                                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
                                     <input type="checkbox" id="addMeals" name="addMeals" checked={formData.addMeals} onChange={handleChange} style={{ marginTop: '4px' }} />
                                     <div>
-                                        <label htmlFor="addMeals" style={{ fontWeight: '600', cursor: 'pointer' }}>Add All Meals</label>
-                                        <div style={{ fontSize: '0.85rem', color: '#e67e22', fontWeight: 'bold', marginTop: '5px' }}>
-                                            Rate: ₹{isPeakSeason(formData.checkIn ? new Date(formData.checkIn) : new Date()) ? '1500' : '1200'} per person/day
+                                        <label htmlFor="addMeals" style={{ fontWeight: '700', cursor: 'pointer', color: '#d35400', fontSize: '0.95rem' }}>Add All Meals</label>
+                                        <div style={{ fontSize: '0.8rem', color: '#e67e22' }}>
+                                            ₹{MEAL_PRICE} /person/day
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Final Total */}
+                            {/* Totals */}
                             {totalPrice > 0 && (
-                                <div className="cart-total" style={{ padding: '20px', borderRadius: '12px', marginBottom: '25px', marginTop: '10px' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px', fontSize: '0.95rem', opacity: 0.9 }}>
-                                        <span>Nights:</span>
-                                        <span>{numberOfNights}</span>
+                                <div className="totals-display" style={{ paddingTop: '15px', borderTop: '2px solid #eee', marginBottom: '20px' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px', color: '#7f8c8d', fontSize: '0.9rem' }}>
+                                        <span>Duration:</span>
+                                        <span>{numberOfNights} Nights</span>
                                     </div>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px', fontSize: '0.95rem', opacity: 0.9 }}>
-                                        <span>Guests:</span>
-                                        <span>{formData.guests}</span>
-                                    </div>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.4rem', fontWeight: '800', borderTop: '1px solid rgba(255,255,255,0.3)', paddingTop: '12px', marginTop: '10px' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.3rem', fontWeight: '800', color: '#2c3e50', marginTop: '5px' }}>
                                         <span>Total:</span>
                                         <span>₹{totalPrice.toLocaleString('en-IN')}</span>
                                     </div>
                                 </div>
                             )}
 
-                            <form onSubmit={handleSubmit}>
-                                <div className="form-group"><input type="text" name="name" value={formData.name} onChange={handleChange} placeholder="Full Name" required style={{ width: '100%', padding: '10px', marginBottom: '10px', borderRadius: '6px', border: '1px solid #ddd' }} /></div>
-                                <div className="form-group"><input type="email" name="email" value={formData.email} onChange={handleChange} placeholder="Email" required style={{ width: '100%', padding: '10px', marginBottom: '10px', borderRadius: '6px', border: '1px solid #ddd' }} /></div>
-                                <div className="form-group"><input type="tel" name="phone" value={formData.phone} onChange={handleChange} placeholder="Phone" required style={{ width: '100%', padding: '10px', marginBottom: '10px', borderRadius: '6px', border: '1px solid #ddd' }} /></div>
-                                <div className="form-group"><textarea name="message" value={formData.message} onChange={handleChange} placeholder="Special Requests..." rows="3" style={{ width: '100%', padding: '10px', marginBottom: '15px', borderRadius: '6px', border: '1px solid #ddd' }} /></div>
+                            {/* Checkout Form */}
+                            <form onSubmit={handleSubmit} className="checkout-form">
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
+                                    <input type="text" name="name" value={formData.name} onChange={handleChange} placeholder="Name" required style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ddd', fontSize: '0.9rem' }} />
+                                    <input type="tel" name="phone" value={formData.phone} onChange={handleChange} placeholder="Phone" required style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ddd', fontSize: '0.9rem' }} />
+                                </div>
+                                <input type="email" name="email" value={formData.email} onChange={handleChange} placeholder="Email" required style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ddd', marginBottom: '10px', fontSize: '0.9rem' }} />
+                                <textarea name="message" value={formData.message} onChange={handleChange} placeholder="Message" rows="2" style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ddd', marginBottom: '15px', fontSize: '0.9rem' }} />
 
-                                <button type="submit" className="submit-btn" disabled={isSubmitting || formData.selectedRooms.length === 0} style={{ width: '100%', padding: '15px', background: '#3498db', color: 'white', border: 'none', borderRadius: '8px', fontSize: '1.1rem', fontWeight: 'bold', cursor: isSubmitting || formData.selectedRooms.length === 0 ? 'not-allowed' : 'pointer', opacity: isSubmitting || formData.selectedRooms.length === 0 ? 0.7 : 1 }}>
-                                    {isSubmitting ? 'Booking...' : 'Confirm Booking'}
+                                <button type="submit" disabled={isSubmitting || formData.selectedRooms.length === 0} style={{ width: '100%', padding: '12px', background: isSubmitting || formData.selectedRooms.length === 0 ? '#bdc3c7' : '#2ecc71', color: 'white', border: 'none', borderRadius: '8px', fontSize: '1.1rem', fontWeight: 'bold', cursor: isSubmitting || formData.selectedRooms.length === 0 ? 'not-allowed' : 'pointer', transition: 'background 0.3s' }}>
+                                    {isSubmitting ? '...' : 'Confirm'}
                                 </button>
                             </form>
+
                         </div>
                     </div>
                 </div>
             </div>
+
 
 
             {/* Success Modal Popup */}

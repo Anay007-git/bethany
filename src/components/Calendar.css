@@ -1,0 +1,258 @@
+/* Custom Calendar Styles */
+.react-calendar {
+    width: 100%;
+    max-width: 100%;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 12px;
+    font-family: 'Inter', sans-serif;
+    /* Match your app font */
+    line-height: 1.125em;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+    margin-bottom: 20px;
+}
+
+.react-calendar--doubleView {
+    width: 700px;
+}
+
+.react-calendar--doubleView .react-calendar__viewContainer {
+    display: flex;
+    margin: -0.5em;
+}
+
+.react-calendar--doubleView .react-calendar__viewContainer>* {
+    width: 50%;
+    margin: 0.5em;
+}
+
+.react-calendar,
+.react-calendar *,
+.react-calendar *:before,
+.react-calendar *:after {
+    -moz-box-sizing: border-box;
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+}
+
+.react-calendar button {
+    margin: 0;
+    border: 0;
+    outline: none;
+}
+
+.react-calendar button:enabled:hover {
+    cursor: pointer;
+}
+
+.react-calendar__navigation {
+    display: flex;
+    height: 44px;
+    margin-bottom: 1em;
+    padding: 10px 10px 0 10px;
+}
+
+.react-calendar__navigation button {
+    min-width: 44px;
+    background: none;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.react-calendar__navigation button:disabled {
+    background-color: #f0f0f0;
+}
+
+.react-calendar__navigation button:enabled:hover,
+.react-calendar__navigation button:enabled:focus {
+    background-color: #f8f9fa;
+    border-radius: 6px;
+}
+
+.react-calendar__month-view__weekdays {
+    text-align: center;
+    text-transform: uppercase;
+    font-weight: bold;
+    font-size: 0.75em;
+    color: #7f8c8d;
+}
+
+.react-calendar__month-view__weekdays__weekday {
+    padding: 0.5em;
+}
+
+.react-calendar__month-view__weekNumbers .react-calendar__tile {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75em;
+    font-weight: bold;
+}
+
+.react-calendar__month-view__days__day--weekend {
+    color: #e74c3c;
+}
+
+/* Base Tile Style */
+.react-calendar__tile {
+    max-width: 100%;
+    padding: 10px 6.6667px;
+    background: none;
+    text-align: center;
+    line-height: 16px;
+    min-height: 80px;
+    /* Taller tiles to fit price */
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: center;
+    position: relative;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+.react-calendar__tile>abbr {
+    font-weight: bold;
+    margin-bottom: 4px;
+}
+
+/* Hover effects */
+.react-calendar__tile:enabled:hover,
+.react-calendar__tile:enabled:focus {
+    background-color: #ecf0f1;
+}
+
+/* Today */
+.react-calendar__tile--now {
+    background: #f1c40f33;
+    border: 1px solid #f1c40f;
+}
+
+.react-calendar__tile--now:enabled:hover,
+.react-calendar__tile--now:enabled:focus {
+    background: #f1c40f55;
+}
+
+/* Selected Range */
+.react-calendar__tile--active {
+    background: #3498db !important;
+    color: white !important;
+}
+
+.react-calendar__tile--active:enabled:hover,
+.react-calendar__tile--active:enabled:focus {
+    background: #2980b9 !important;
+}
+
+/* High Season Styling */
+.season-high {
+    background-color: rgba(231, 76, 60, 0.05);
+    border-bottom: 2px solid rgba(231, 76, 60, 0.3);
+}
+
+.season-high .price-tag {
+    color: #c0392b;
+    font-weight: 700;
+}
+
+/* Low/Normal Season Styling */
+.season-low {
+    background-color: rgba(46, 204, 113, 0.05);
+    border-bottom: 2px solid rgba(46, 204, 113, 0.3);
+}
+
+.season-low .price-tag {
+    color: #27ae60;
+    font-weight: 600;
+}
+
+/* Price Tag in Calendar */
+.price-tag {
+    font-size: 0.7rem;
+    margin-top: auto;
+}
+
+/* Legend Styles */
+.calendar-legend {
+    display: flex;
+    gap: 15px;
+    margin-top: 10px;
+    font-size: 0.85rem;
+    justify-content: center;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+
+.legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+}
+
+/* --- Mobile Responsiveness --- */
+@media screen and (max-width: 1024px) {
+    .booking-single-row {
+        gap: 20px !important;
+    }
+
+    .col-calendar,
+    .col-rooms,
+    .col-cart {
+        flex: 1 1 45% !important;
+        /* Two Columns on Tablet */
+        max-width: none !important;
+    }
+}
+
+@media screen and (max-width: 768px) {
+    .booking-single-row {
+        flex-direction: column !important;
+        gap: 25px !important;
+    }
+
+    .col-calendar,
+    .col-rooms,
+    .col-cart {
+        flex: 1 1 100% !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+    }
+
+    /* Adjust Room List Scroll for Mobile */
+    .rooms-scroll-container {
+        /* Remove fixed height on mobile to allow natural page scroll */
+        max-height: none !important;
+        overflow-y: visible !important;
+        padding-right: 0 !important;
+    }
+
+    .rooms-list-vertical {
+        gap: 25px !important;
+    }
+
+    .react-calendar__tile {
+        min-height: 60px;
+        /* Slightly shorter tiles on mobile */
+        padding: 5px;
+    }
+
+    .react-calendar__navigation button {
+        min-width: 30px;
+        font-size: 1rem;
+    }
+
+    .section-header h2 {
+        font-size: 1.8rem;
+    }
+
+    .section-header p {
+        font-size: 0.95rem;
+    }
+}
