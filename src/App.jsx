@@ -23,9 +23,9 @@ function App() {
       <main>
         <Hero />
         <About />
-        <Amenities />
         <Gallery />
         <BookingForm onToast={showToast} />
+        <Amenities />
         <Contact />
       </main>
       <Footer />

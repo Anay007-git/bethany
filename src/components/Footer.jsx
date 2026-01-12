@@ -22,7 +22,7 @@ const Footer = () => {
 
                     <ul className="footer-links">
                         <li><a href="#about" onClick={(e) => scrollToSection(e, 'about')}>About</a></li>
-                        <li><a href="#amenities" onClick={(e) => scrollToSection(e, 'amenities')}>Amenities</a></li>
+                        <li><a href="#amenities" onClick={(e) => scrollToSection(e, 'amenities')}>Feature</a></li>
                         <li><a href="#gallery" onClick={(e) => scrollToSection(e, 'gallery')}>Gallery</a></li>
                         <li><a href="#booking" onClick={(e) => scrollToSection(e, 'booking')}>Book Now</a></li>
                         <li><a href="#contact" onClick={(e) => scrollToSection(e, 'contact')}>Contact</a></li>
@@ -30,7 +30,7 @@ const Footer = () => {
                 </div>
 
                 <div className="footer-bottom">
-                    <p>© {currentYear} Bethany Homestay. All rights reserved. | Hosted by Anupama Tamang</p>
+                    <p>© {currentYear} Bethany Homestay. All rights reserved. | Namaste Hills</p>
                 </div>
             </div>
         </footer>

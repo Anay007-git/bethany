@@ -34,7 +34,12 @@ const Hero = () => {
 
             <div className="hero-content">
                 <span className="hero-badge animate-fade-in">✨ Authentic Himalayan Experience</span>
-                <h1 className="animate-text">BETHANY HOMESTAY</h1>
+                <h1 className="animate-text">
+                    BETHANY HOMESTAY
+                    <span style={{ display: 'block', fontSize: '1.2rem', fontWeight: '700', marginTop: '10px', textTransform: 'uppercase', letterSpacing: '1px', opacity: '0.9' }}>
+                        🤝 Official Hospitality Partner: Namaste Hills
+                    </span>
+                </h1>
                 <p className="hero-subtitle animate-text delay-1">
                     Experience the warmth of traditional hospitality in the heart of Kalimpong,
                     surrounded by breathtaking mountain views.

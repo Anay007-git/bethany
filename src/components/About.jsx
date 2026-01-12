@@ -12,7 +12,7 @@ const About = () => {
                             alt="Bethany Homestay - Beautiful mountain view property"
                         />
                         <div className="about-image-badge">
-                            🏆 Superhost
+                            🏔️ Experience Himalayan Bliss
                         </div>
                     </div>
                     <div className="about-content">
@@ -33,9 +33,9 @@ const About = () => {
                         </p>
 
                         <div className="host-info">
-                            <div className="host-avatar">AT</div>
+                            <div className="host-avatar">NH</div>
                             <div className="host-details">
-                                <h4>Hosted by Anupama Tamang</h4>
+                                <h4>Namaste Hills</h4>
                                 <p>Your local host since 2020 • Quick responder</p>
                             </div>
                         </div>

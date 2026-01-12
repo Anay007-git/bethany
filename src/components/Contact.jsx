@@ -18,7 +18,7 @@ const Contact = () => {
                             </div>
                             <div className="contact-item-content">
                                 <h4>Phone</h4>
-                                <p><a href="tel:+918348993048">+91 83489 93048</a></p>
+                                <p><a href="tel:+918348993048">+91 83489 93048</a>/<a href="tel:+918910911758">+91 89109 11758</a></p>
                             </div>
                         </div>
 
@@ -30,7 +30,7 @@ const Contact = () => {
                             </div>
                             <div className="contact-item-content">
                                 <h4>Email</h4>
-                                <p><a href="mailto:wangchuck20199@gmail.com">wangchuck20199@gmail.com</a></p>
+                                <p><a href="mailto:namastehills.kol@gmail.com">namastehills.kol@gmail.com</a></p>
                             </div>
                         </div>
 
