@@ -348,19 +348,27 @@ const BookingForm = ({ onToast }) => {
         }
     }, [formData.checkIn, formData.checkOut, formData.selectedRooms, formData.guests, formData.addMeals]);
 
+    // Helper for Local YYYY-MM-DD
+    const getLocalYMD = (date) => {
+        const offset = date.getTimezoneOffset() * 60000;
+        return new Date(date.getTime() - offset).toISOString().split('T')[0];
+    };
+
     // Calendar Tile Content (Price & Holidays)
     const getTileContent = ({ date, view }) => {
         if (view === 'month') {
             const isHigh = isHighSeason(date);
-            const dateStr = date.toISOString().split('T')[0];
+            const dateStr = getLocalYMD(date);
             const holiday = HOLIDAYS[dateStr];
+
+            // Show Base Price (Standard Room)
+            // Low: 2500, High: 3000
+            const price = isHigh ? 3000 : 2500;
 
             return (
                 <div className="tile-content">
-                    {holiday && <div className="holiday-dot" title={holiday}>•</div>}
-                    <div className={`price-tag ${isHigh ? 'high-rate' : 'low-rate'}`}>
-                        {isHigh ? 'High Season' : 'Off Season'}
-                    </div>
+                    <div className="price-tag">₹{price}</div>
+                    {holiday && <div className="holiday-name">{holiday}</div>}
                 </div>
             );
         }
@@ -368,7 +376,7 @@ const BookingForm = ({ onToast }) => {
 
     const getTileClassName = ({ date, view }) => {
         if (view === 'month') {
-            const dateStr = date.toISOString().split('T')[0];
+            const dateStr = getLocalYMD(date);
             const isHoliday = HOLIDAYS[dateStr];
             let classes = isHighSeason(date) ? 'season-high' : 'season-low';
             if (isHoliday) classes += ' holiday-date';
