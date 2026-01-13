@@ -1,24 +1,3 @@
-# Robots.txt for Bethany Homestay
-# https://bethanyhomestay.com
-
 User-agent: *
 Allow: /
-
-# Sitemap location
 Sitemap: https://bethanyhomestay.com/sitemap.xml
-
-# Crawl-delay for respectful crawling
-Crawl-delay: 1
-
-# Allow all major search engines
-User-agent: Googlebot
-Allow: /
-
-User-agent: Bingbot
-Allow: /
-
-User-agent: Yahoo
-Allow: /
-
-User-agent: DuckDuckBot
-Allow: /
