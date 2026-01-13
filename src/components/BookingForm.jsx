@@ -292,11 +292,14 @@ const BookingForm = ({ onToast }) => {
 
     const MEAL_PRICE = 520; // Fixed meal price for all seasons
 
-    // Helper to get numeric capacity from string (e.g., "4 Adults" -> 4)
+    // Helper to get numeric capacity from string (e.g., "4 Adults + 1 Kid" -> 5)
     const getRoomCapacity = (room) => {
-        // Simple heuristic: extract first digit
-        const match = room.beds.match(/(\d+)/);
-        return match ? parseInt(match[0]) : 2;
+        // match all numbers and sum them up
+        const matches = room.beds.match(/(\d+)/g);
+        if (matches) {
+            return matches.reduce((acc, val) => acc + parseInt(val, 10), 0);
+        }
+        return 2;
     };
 
     // Calculate number of nights and total price (Iterating through dates)
