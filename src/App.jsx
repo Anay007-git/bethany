@@ -7,6 +7,8 @@ import Amenities from './components/Amenities';
 import Gallery from './components/Gallery';
 import Reviews from './components/Reviews';
 import BookingForm from './components/BookingForm';
+import Contact from './components/Contact';
+import Footer from './components/Footer';
 
 function App() {
   const [toast, setToast] = useState(null);
