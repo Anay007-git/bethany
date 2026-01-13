@@ -244,6 +244,18 @@ const BookingForm = ({ onToast }) => {
 
     // --- PRICING LOGIC HELPERS ---
 
+    // Indian Holidays 2026
+    const HOLIDAYS = {
+        '2026-01-26': 'Republic Day',
+        '2026-03-08': 'Holi',
+        '2026-04-14': 'Ambedkar Jayanti',
+        '2026-08-15': 'Independence Day',
+        '2026-10-02': 'Gandhi Jayanti',
+        '2026-10-20': 'Dussehra',
+        '2026-11-08': 'Diwali',
+        '2026-12-25': 'Christmas'
+    };
+
     // Check if a date is in High Season
     // High Season: Dec-Jan, Mar-Apr 15, Oct-Nov 7
     const isHighSeason = (date) => {
@@ -257,7 +269,7 @@ const BookingForm = ({ onToast }) => {
         if (month === 2) return true;
         if (month === 3 && day <= 15) return true;
 
-        // October (9) & November (10) up to 7th
+        // Oct (9) & Nov (10) up to 7th
         if (month === 9) return true;
         if (month === 10 && day <= 7) return true;
 
@@ -274,6 +286,7 @@ const BookingForm = ({ onToast }) => {
         }
 
         // Others (Jordan, Sion, Zion): High=3000, Low=2500
+        // User requested "Rest are 3000" during high season, and "Off season rate is fixed to existing" (which is 2500)
         return highSeason ? 3000 : 2500;
     };
 
@@ -335,20 +348,19 @@ const BookingForm = ({ onToast }) => {
         }
     }, [formData.checkIn, formData.checkOut, formData.selectedRooms, formData.guests, formData.addMeals]);
 
-    // Calendar Tile Content (Price Display)
+    // Calendar Tile Content (Price & Holidays)
     const getTileContent = ({ date, view }) => {
         if (view === 'month') {
             const isHigh = isHighSeason(date);
-            // Show price for currently selected primary room or generic "Start" price if none selected
-            // Use 'carmel' logic for high price visualization, or generic
-            // Prompt asks to "add this rate to calendar". 
-            // We'll show the rate for "Carmel" (High Tier) and "Standard" (Low Tier) in a small tooltip or just one reference price?
-            // User said: "highlight the rate high and low".
-            // Let's show the Carmel rate as reference since it varies most distinctively (3600 vs 3000)
-            const price = isHigh ? 'High' : 'Low';
+            const dateStr = date.toISOString().split('T')[0];
+            const holiday = HOLIDAYS[dateStr];
+
             return (
-                <div className="price-tag">
-                    {isHigh ? 'High' : 'Low'}
+                <div className="tile-content">
+                    {holiday && <div className="holiday-dot" title={holiday}>•</div>}
+                    <div className={`price-tag ${isHigh ? 'high-rate' : 'low-rate'}`}>
+                        {isHigh ? 'High Season' : 'Off Season'}
+                    </div>
                 </div>
             );
         }
@@ -356,7 +368,11 @@ const BookingForm = ({ onToast }) => {
 
     const getTileClassName = ({ date, view }) => {
         if (view === 'month') {
-            return isHighSeason(date) ? 'season-high' : 'season-low';
+            const dateStr = date.toISOString().split('T')[0];
+            const isHoliday = HOLIDAYS[dateStr];
+            let classes = isHighSeason(date) ? 'season-high' : 'season-low';
+            if (isHoliday) classes += ' holiday-date';
+            return classes;
         }
     };
 
