@@ -195,18 +195,19 @@
 }
 
 .holiday-name {
-    font-size: 0.6rem;
-    color: #d35400;
+    font-size: 0.55rem;
+    color: #e67e22;
     font-weight: 700;
     background: rgba(255, 255, 255, 0.9);
-    padding: 1px 4px;
+    padding: 1px 2px;
     border-radius: 4px;
-    max-width: 100%;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    margin-top: 2px;
+    width: 100%;
+    white-space: normal;
+    /* Allow wrapping */
+    word-wrap: break-word;
     line-height: 1;
+    margin-top: 2px;
+    text-align: center;
 }
 
 .holiday-date {

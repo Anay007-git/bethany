@@ -704,7 +704,7 @@ const BookingForm = ({ onToast }) => {
                                         {formData.selectedRooms.map(room => (
                                             <div key={room.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', padding: '6px', background: '#f8f9fa', borderRadius: '4px' }}>
                                                 <span>{room.name}</span>
-                                                <span style={{ fontWeight: '600' }}>₹{room.price.toLocaleString('en-IN')}</span>
+                                                <span style={{ fontWeight: '600' }}>₹{getSeasonalRoomPrice(formData.checkIn ? new Date(formData.checkIn) : new Date(), room.id).toLocaleString('en-IN')}</span>
                                             </div>
                                         ))}
                                     </div>
@@ -940,7 +940,9 @@ const BookingForm = ({ onToast }) => {
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '10px' }}>
                                                 <h3 style={{ margin: 0, fontSize: '1.25rem', color: '#2c3e50', fontWeight: '700' }}>{room.name}</h3>
                                                 <div style={{ textAlign: 'right' }}>
-                                                    <div style={{ fontSize: '1.2rem', fontWeight: '800', color: '#e67e22' }}>₹{room.price.toLocaleString('en-IN')}</div>
+                                                    <div style={{ fontSize: '1.2rem', fontWeight: '800', color: '#e67e22' }}>
+                                                        ₹{getSeasonalRoomPrice(formData.checkIn ? new Date(formData.checkIn) : new Date(), room.id).toLocaleString('en-IN')}
+                                                    </div>
                                                     <div style={{ fontSize: '0.8rem', color: '#95a5a6' }}>/ night</div>
                                                 </div>
                                             </div>
