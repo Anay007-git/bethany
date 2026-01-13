@@ -36,8 +36,8 @@ const Hero = () => {
                 <span className="hero-badge animate-fade-in">✨ Authentic Himalayan Experience</span>
                 <h1 className="animate-text">
                     BETHANY HOMESTAY
-                    <span style={{ display: 'block', fontSize: '1.2rem', fontWeight: '700', marginTop: '10px', textTransform: 'uppercase', letterSpacing: '1px', opacity: '0.9' }}>
-                        🤝 Official Hospitality Partner: Namaste Hills
+                    <span style={{ display: 'block', fontSize: '1rem', fontWeight: '500', marginTop: '12px', letterSpacing: '2px', opacity: '0.9', fontFamily: 'Inter, sans-serif' }}>
+                        <span style={{ opacity: 0.8 }}>🤝 Official Hospitality Partner:</span> <span style={{ fontWeight: '600', color: '#ffdde1' }}>Namaste Hills</span>
                     </span>
                 </h1>
                 <p className="hero-subtitle animate-text delay-1">
