@@ -43,10 +43,17 @@ const Gallery = () => {
                                 <div className="media-wrapper">
                                     <video
                                         src={item.src}
-                                        preload="metadata"
                                         className="gallery-media"
+                                        muted
+                                        loop
+                                        playsInline
+                                        autoPlay
                                     />
-                                    <div className="video-icon">▶</div>
+                                    <div className="video-icon">
+                                        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                                            <path d="M8 5v14l11-7z" />
+                                        </svg>
+                                    </div>
                                 </div>
                             ) : (
                                 <div className="media-wrapper">
