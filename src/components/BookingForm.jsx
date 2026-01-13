@@ -910,28 +910,69 @@ const BookingForm = ({ onToast }) => {
                                 return (
                                     <div
                                         key={room.id}
-                                        className={`room-card-compact ${isSelected ? 'selected' : ''}`}
+                                        className={`room-card-detailed ${isSelected ? 'selected' : ''}`}
                                         onClick={() => toggleRoom(room)}
                                         style={{
-                                            display: 'flex',
-                                            gap: '15px',
-                                            padding: '15px',
-                                            borderRadius: '12px',
-                                            border: isSelected ? '2px solid #3498db' : '1px solid #eee',
-                                            background: isSelected ? '#ebf5fb' : 'white',
+                                            border: isSelected ? '2px solid #3498db' : '1px solid #e0e0e0',
+                                            background: isSelected ? '#fbfdff' : 'white',
+                                            borderRadius: '16px',
+                                            overflow: 'hidden',
                                             cursor: 'pointer',
-                                            transition: 'all 0.2s',
-                                            alignItems: 'center'
+                                            transition: 'all 0.3s ease',
+                                            boxShadow: isSelected ? '0 8px 16px rgba(52,152,219,0.15)' : '0 4px 12px rgba(0,0,0,0.05)',
+                                            position: 'relative'
                                         }}
                                     >
-                                        <img src={room.images[0]} alt={room.name} style={{ width: '80px', height: '80px', borderRadius: '8px', objectFit: 'cover' }} />
-                                        <div style={{ flex: 1 }}>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
-                                                <span style={{ fontWeight: '700', fontSize: '1.1rem', color: '#2c3e50' }}>{room.name}</span>
-                                                {isSelected && <span style={{ fontSize: '0.85rem', color: '#3498db', fontWeight: 'bold', background: 'rgba(52,152,219,0.1)', padding: '2px 8px', borderRadius: '4px' }}>SELECTED</span>}
+                                        {/* Selection Badge */}
+                                        {isSelected && (
+                                            <div style={{
+                                                position: 'absolute',
+                                                top: '15px',
+                                                right: '15px',
+                                                background: '#3498db',
+                                                color: 'white',
+                                                padding: '6px 14px',
+                                                borderRadius: '20px',
+                                                fontWeight: 'bold',
+                                                fontSize: '0.85rem',
+                                                zIndex: 10,
+                                                boxShadow: '0 2px 8px rgba(52,152,219,0.4)'
+                                            }}>
+                                                ✓ Selected
                                             </div>
-                                            <div style={{ fontSize: '0.9rem', color: '#7f8c8d' }}>{room.type} • {room.capacity} Guests</div>
-                                            <div style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#e67e22', marginTop: '5px' }}>₹{room.price.toLocaleString('en-IN')}</div>
+                                        )}
+
+                                        {/* Image Carousel */}
+                                        <div style={{ pointerEvents: 'auto' }} onClick={(e) => e.stopPropagation()}>
+                                            <ImageCarousel images={room.images} height="220px" onImageClick={() => toggleRoom(room)} />
+                                        </div>
+
+                                        {/* Content */}
+                                        <div style={{ padding: '20px' }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '10px' }}>
+                                                <h3 style={{ margin: 0, fontSize: '1.25rem', color: '#2c3e50', fontWeight: '700' }}>{room.name}</h3>
+                                                <div style={{ textAlign: 'right' }}>
+                                                    <div style={{ fontSize: '1.2rem', fontWeight: '800', color: '#e67e22' }}>₹{room.price.toLocaleString('en-IN')}</div>
+                                                    <div style={{ fontSize: '0.8rem', color: '#95a5a6' }}>/ night</div>
+                                                </div>
+                                            </div>
+
+                                            {/* Specs Grid */}
+                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '15px', fontSize: '0.9rem', color: '#546e7a' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>🛏️ {room.beds}</div>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>📏 {room.size}</div>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>🏞️ {room.view}</div>
+                                                {room.extraBed && <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#27ae60' }}>➕ {room.extraBed}</div>}
+                                            </div>
+
+                                            {/* Features */}
+                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                                                {room.features.slice(0, 4).map((feature, idx) => (
+                                                    <span key={idx} style={{ background: '#f8f9fa', padding: '4px 10px', borderRadius: '4px', fontSize: '0.8rem', color: '#636e72', border: '1px solid #eee' }}>
+                                                        {feature}
+                                                    </span>
+                                                ))}
+                                            </div>
                                         </div>
                                     </div>
                                 );
