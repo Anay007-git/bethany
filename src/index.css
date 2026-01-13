@@ -694,8 +694,21 @@ section {
 }
 
 @media (max-width: 480px) {
+  section {
+    padding: 60px 0;
+    /* Reduced from 100px */
+  }
+
+  .section-header {
+    margin-bottom: 40px;
+    /* Reduced from 60px */
+  }
+
   .gallery-masonry {
-    column-count: 1;
+    column-count: 2;
+    /* Force 2 columns for Instagram feel */
+    column-gap: 10px;
+    /* Tighter gap */
   }
 }
 
