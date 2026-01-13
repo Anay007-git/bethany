@@ -601,7 +601,7 @@ const BookingForm = ({ onToast }) => {
                                 <label style={{ fontWeight: '700', marginBottom: '8px', display: 'block', color: '#2c3e50', fontSize: '0.9rem', letterSpacing: '0.5px' }}>DATES</label>
                                 <div
                                     className="date-trigger"
-                                    onClick={() => setShowCalendar(!showCalendar)}
+                                    onClick={() => { setShowCalendar(!showCalendar); setShowRoomPicker(false); }}
                                     style={{
                                         padding: '12px 15px',
                                         borderRadius: '10px',
@@ -666,7 +666,7 @@ const BookingForm = ({ onToast }) => {
                                 <label style={{ fontWeight: '700', marginBottom: '8px', display: 'block', color: '#2c3e50', fontSize: '0.9rem', letterSpacing: '0.5px' }}>ROOMS</label>
                                 <div
                                     className="room-trigger"
-                                    onClick={() => setShowRoomPicker(!showRoomPicker)}
+                                    onClick={() => { setShowRoomPicker(!showRoomPicker); setShowCalendar(false); }}
                                     style={{
                                         padding: '12px 15px',
                                         borderRadius: '10px',
@@ -809,16 +809,6 @@ const BookingForm = ({ onToast }) => {
                         <h3 style={{ fontSize: '1.2rem', marginBottom: '15px', paddingBottom: '10px', borderBottom: '1px solid #eee' }}>3. Booking Details</h3>
 
                         <div className="cart-card" style={{ background: 'white', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 20px rgba(0,0,0,0.08)', position: 'sticky', top: '20px' }}>
-                            {/* Guests Selector */}
-                            <div className="form-group" style={{ marginBottom: '15px' }}>
-                                <label style={{ fontWeight: '600', marginBottom: '5px', display: 'block', fontSize: '0.9rem' }}>Number of Guests</label>
-                                <select name="guests" value={formData.guests} onChange={handleChange} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ddd', fontSize: '0.95rem' }}>
-                                    {[...Array(15)].map((_, i) => (
-                                        <option key={i} value={i + 1}>{i + 1} Guest{i > 0 ? 's' : ''}</option>
-                                    ))}
-                                </select>
-                            </div>
-
                             {/* Cart Items */}
                             <div className="selected-rooms-summary" style={{ marginBottom: '15px' }}>
                                 <h4 style={{ fontSize: '0.95rem', color: '#34495e', marginBottom: '8px' }}>Selected Rooms:</h4>
