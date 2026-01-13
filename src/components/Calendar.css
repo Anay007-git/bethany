@@ -291,10 +291,77 @@
 @media screen and (max-width: 480px) {
     .room-popup {
         width: 300px !important;
-        /* Fit within screen */
     }
 
     .room-container-styled {
         max-height: 70vh !important;
+    }
+}
+
+/* --- Generic Centered Modal --- */
+.picker-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.3s ease-out;
+}
+
+.picker-modal-content {
+    background: white;
+    padding: 20px;
+    border-radius: 16px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    max-width: 90vw;
+    max-height: 90vh;
+    overflow-y: auto;
+    animation: scaleUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    position: relative;
+}
+
+/* Specific Widths */
+.calendar-modal {
+    width: 400px;
+}
+
+.room-modal {
+    width: 500px;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes scaleUp {
+    from {
+        transform: scale(0.95);
+        opacity: 0;
+    }
+
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+@media screen and (max-width: 768px) {
+
+    .calendar-modal,
+    .room-modal {
+        width: 95vw;
+        padding: 15px;
     }
 }
