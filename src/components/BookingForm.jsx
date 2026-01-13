@@ -214,6 +214,7 @@ const BookingForm = ({ onToast }) => {
     });
 
     const [showCalendar, setShowCalendar] = useState(false);
+    const [showRoomPicker, setShowRoomPicker] = useState(false);
 
     // Calendar Reset Key (for uncontrolled component usage)
     const [calendarKey, setCalendarKey] = useState(0);
@@ -660,6 +661,109 @@ const BookingForm = ({ onToast }) => {
                                 )}
                             </div>
 
+                            {/* Room Picker Trigger */}
+                            <div className="form-group" style={{ marginBottom: '20px', position: 'relative' }}>
+                                <label style={{ fontWeight: '700', marginBottom: '8px', display: 'block', color: '#2c3e50', fontSize: '0.9rem', letterSpacing: '0.5px' }}>ROOMS</label>
+                                <div
+                                    className="room-trigger"
+                                    onClick={() => setShowRoomPicker(!showRoomPicker)}
+                                    style={{
+                                        padding: '12px 15px',
+                                        borderRadius: '10px',
+                                        background: '#f8f9fa',
+                                        border: '2px solid transparent',
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        alignItems: 'center',
+                                        transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                                        boxShadow: showRoomPicker ? '0 0 0 3px rgba(52, 152, 219, 0.2)' : 'none',
+                                        borderColor: showRoomPicker ? '#3498db' : '#e9ecef'
+                                    }}
+                                >
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                        <span style={{ fontSize: '1.2rem' }}>🛏️</span>
+                                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                            <span style={{ fontSize: '0.95rem', fontWeight: '600', color: '#2c3e50' }}>{formData.selectedRooms.length > 0 ? `${formData.selectedRooms.length} Room${formData.selectedRooms.length > 1 ? 's' : ''} Selected` : 'Select Rooms'}</span>
+                                            <span style={{ fontSize: '0.75rem', color: '#7f8c8d' }}>{formData.selectedRooms.length > 0 ? 'Tap to edit' : 'Tap to choose'}</span>
+                                        </div>
+                                    </div>
+                                    <span style={{ fontSize: '0.8rem', color: '#95a5a6' }}>{showRoomPicker ? '▲' : '▼'}</span>
+                                </div>
+                                {/* Collapsible Room Picker Popup */}
+                                {showRoomPicker && (
+                                    <>
+                                        <div
+                                            className="room-backdrop"
+                                            onClick={(e) => { e.stopPropagation(); setShowRoomPicker(false); }}
+                                            style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 999, cursor: 'default' }}
+                                        />
+                                        <div className="room-popup" style={{ position: 'absolute', top: '100%', left: '0', width: '400px', zIndex: 1000, marginTop: '10px', animation: 'fadeInDown 0.3s ease-out' }}>
+                                            <div className="room-container-styled" style={{ background: 'white', padding: '15px', borderRadius: '16px', boxShadow: '0 20px 60px rgba(0,0,0,0.15)', border: '1px solid rgba(0,0,0,0.05)', maxHeight: '600px', overflowY: 'auto' }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px', borderBottom: '1px solid #eee', paddingBottom: '10px' }}>
+                                                    <h4 style={{ margin: 0, fontSize: '1.1rem' }}>Select Rooms</h4>
+                                                    <button onClick={(e) => { e.stopPropagation(); setShowRoomPicker(false); }} style={{ background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
+                                                </div>
+
+                                                <div className="rooms-list-vertical" style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                                                    {ROOMS.map((room) => {
+                                                        const status = getRoomStatus(room.id);
+                                                        const statusInfo = getStatusLabel(status);
+                                                        const isSelected = formData.selectedRooms.some(r => r.id === room.id);
+                                                        const isDisabled = status === 'booked';
+
+                                                        return (
+                                                            <div key={room.id} className={`room-card ${isSelected ? 'selected' : ''} ${isDisabled ? 'disabled' : ''}`} style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', background: '#f8f9fa', borderRadius: '12px', transition: 'transform 0.2s', border: isSelected ? '2px solid #2ecc71' : '1px solid #eee' }}>
+                                                                <div style={{ position: 'relative' }}>
+                                                                    <ImageCarousel
+                                                                        images={room.images}
+                                                                        height="140px"
+                                                                        onImageClick={(idx) => openLightbox(room.images, idx)}
+                                                                    />
+                                                                    <span className={`room-status ${statusInfo.className}`} style={{ position: 'absolute', top: '10px', right: '10px', fontSize: '0.65rem', padding: '3px 8px', borderRadius: '20px', zIndex: 10 }}>{statusInfo.text}</span>
+                                                                </div>
+
+                                                                <div className="room-card-content" style={{ padding: '12px' }}>
+                                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px' }}>
+                                                                        <h4 style={{ fontSize: '1rem', margin: 0 }}>{room.name}</h4>
+                                                                        <span className="price" style={{ fontSize: '0.95rem', fontWeight: '800', color: '#2c3e50' }}>₹{room.price.toLocaleString('en-IN')}</span>
+                                                                    </div>
+
+                                                                    <div className="room-card-details" style={{ display: 'flex', gap: '8px', marginBottom: '10px', fontSize: '0.75rem', color: '#666' }}>
+                                                                        <span>🛏️ {room.beds}</span>
+                                                                        {room.extraBed && <span>➕ {room.extraBed}</span>}
+                                                                    </div>
+
+                                                                    {isDisabled ? (
+                                                                        <button className="add-room-btn" disabled style={{ width: '100%', padding: '8px', background: '#ddd', border: 'none', borderRadius: '6px', cursor: 'not-allowed', fontSize: '0.85rem' }}>Unavailable</button>
+                                                                    ) : isSelected ? (
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={(e) => { e.stopPropagation(); toggleRoom(room); }}
+                                                                            style={{ width: '100%', padding: '8px', background: '#e74c3c', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.85rem' }}
+                                                                        >
+                                                                            Remove
+                                                                        </button>
+                                                                    ) : (
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={(e) => { e.stopPropagation(); toggleRoom(room); }}
+                                                                            style={{ width: '100%', padding: '8px', background: '#2ecc71', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.85rem' }}
+                                                                        >
+                                                                            Add Room
+                                                                        </button>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </>
+                                )}
+                            </div>
+
                             {/* Guest Selector (Moved here for cohesion) */}
                             <div className="form-group" style={{ marginBottom: '10px' }}>
                                 <label style={{ fontWeight: '700', marginBottom: '8px', display: 'block', color: '#2c3e50', fontSize: '0.9rem', letterSpacing: '0.5px' }}>GUESTS</label>
@@ -698,72 +802,7 @@ const BookingForm = ({ onToast }) => {
                         <input type="hidden" name="checkOut" value={formData.checkOut} required />
                     </div>
 
-                    {/* COL 2: Room Selection (Scrollable) */}
-                    <div className="col-rooms" style={{ flex: '2 1 400px', minWidth: '320px' }}>
-                        <h3 style={{ fontSize: '1.2rem', marginBottom: '15px', paddingBottom: '10px', borderBottom: '1px solid #eee' }}>2. Select Rooms</h3>
-                        <div className="rooms-scroll-container" style={{ maxHeight: '800px', overflowY: 'auto', paddingRight: '10px' }}>
-                            <div className="rooms-list-vertical" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                                {ROOMS.map((room) => {
-                                    const status = getRoomStatus(room.id);
-                                    const statusInfo = getStatusLabel(status);
-                                    const isSelected = formData.selectedRooms.some(r => r.id === room.id);
-                                    const isDisabled = status === 'booked';
 
-                                    return (
-                                        <div key={room.id} className={`room-card ${isSelected ? 'selected' : ''} ${isDisabled ? 'disabled' : ''}`} style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', background: 'white', borderRadius: '12px', boxShadow: '0 4px 15px rgba(0,0,0,0.05)', transition: 'transform 0.2s', border: isSelected ? '2px solid #2ecc71' : '1px solid transparent' }}>
-                                            {/* Horizontal Card Layout for compactness in middle col? Or standard vertical? Let's keep vertical but compact images */}
-                                            <div style={{ position: 'relative' }}>
-                                                <ImageCarousel
-                                                    images={room.images}
-                                                    height="180px"
-                                                    onImageClick={(idx) => openLightbox(room.images, idx)}
-                                                />
-                                                <span className={`room-status ${statusInfo.className}`} style={{ position: 'absolute', top: '10px', right: '10px', fontSize: '0.75rem', padding: '4px 10px', borderRadius: '20px', zIndex: 10 }}>{statusInfo.text}</span>
-                                            </div>
-
-                                            <div className="room-card-content" style={{ padding: '15px', flex: '1', display: 'flex', flexDirection: 'column' }}>
-                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px' }}>
-                                                    <h4 style={{ fontSize: '1.1rem', margin: 0 }}>{room.name}</h4>
-                                                    <div style={{ textAlign: 'right' }}>
-                                                        <span className="price" style={{ fontSize: '1.1rem', fontWeight: '800', color: '#2c3e50' }}>₹{room.price.toLocaleString('en-IN')}</span>
-                                                        <span className="per-night" style={{ fontSize: '0.8rem', color: '#7f8c8d' }}>/night</span>
-                                                    </div>
-                                                </div>
-
-                                                <div className="room-card-details" style={{ display: 'flex', gap: '10px', marginBottom: '10px', fontSize: '0.85rem', color: '#555', flexWrap: 'wrap' }}>
-                                                    <span>🛏️ {room.beds}</span>
-                                                    {room.extraBed && <span>➕ {room.extraBed}</span>}
-                                                    {room.view && <span>🏔️ {room.view}</span>}
-                                                </div>
-
-                                                <div style={{ marginTop: 'auto' }}>
-                                                    {isDisabled ? (
-                                                        <button className="add-room-btn" disabled style={{ width: '100%', padding: '8px', background: '#ecf0f1', color: '#95a5a6', border: 'none', borderRadius: '6px', cursor: 'not-allowed', fontWeight: 'bold' }}>Unavailable</button>
-                                                    ) : isSelected ? (
-                                                        <button
-                                                            type="button"
-                                                            onClick={(e) => { e.stopPropagation(); toggleRoom(room); }}
-                                                            style={{ width: '100%', padding: '8px', background: '#e74c3c', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.9rem' }}
-                                                        >
-                                                            Remove
-                                                        </button>
-                                                    ) : (
-                                                        <button
-                                                            type="button"
-                                                            onClick={(e) => { e.stopPropagation(); toggleRoom(room); }}
-                                                            style={{ width: '100%', padding: '8px', background: '#3498db', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.9rem', transition: 'background 0.2s' }}
-                                                        >
-                                                            Add
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </div>
-                    </div>
 
                     {/* COL 3: Cart & Checkout */}
                     <div className="col-cart" style={{ flex: '1 1 300px', maxWidth: '350px' }}>

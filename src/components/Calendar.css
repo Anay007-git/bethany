@@ -278,6 +278,23 @@
     box-shadow: none;
 }
 
+
 .calendar-popup .react-calendar__navigation {
     margin-bottom: 0.5em;
+}
+
+/* Room Popup Overrides */
+.room-popup {
+    width: 400px;
+}
+
+@media screen and (max-width: 480px) {
+    .room-popup {
+        width: 300px !important;
+        /* Fit within screen */
+    }
+
+    .room-container-styled {
+        max-height: 70vh !important;
+    }
 }
