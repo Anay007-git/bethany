@@ -256,3 +256,28 @@
         font-size: 0.95rem;
     }
 }
+
+/* Animations */
+@keyframes fadeInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Popover Specific Overrides */
+.calendar-popup .react-calendar {
+    width: 300px;
+    margin-bottom: 0;
+    border: none;
+    box-shadow: none;
+}
+
+.calendar-popup .react-calendar__navigation {
+    margin-bottom: 0.5em;
+}

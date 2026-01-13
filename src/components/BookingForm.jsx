@@ -213,6 +213,8 @@ const BookingForm = ({ onToast }) => {
         index: 0
     });
 
+    const [showCalendar, setShowCalendar] = useState(false);
+
     // Calendar Reset Key (for uncontrolled component usage)
     const [calendarKey, setCalendarKey] = useState(0);
 
@@ -586,24 +588,114 @@ const BookingForm = ({ onToast }) => {
                 <div className="booking-single-row" style={{ display: 'flex', gap: '25px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
 
                     {/* COL 1: Calendar */}
-                    <div className="col-calendar" style={{ flex: '1 1 300px', maxWidth: '380px' }}>
-                        <h3 style={{ fontSize: '1.2rem', marginBottom: '15px', paddingBottom: '10px', borderBottom: '1px solid #eee' }}>1. Select Dates</h3>
-                        <div className="calendar-container-styled" style={{ background: 'white', padding: '10px', borderRadius: '12px', boxShadow: '0 4px 15px rgba(0,0,0,0.05)' }}>
-                            <Calendar
-                                key={calendarKey}
-                                selectRange={true}
-                                onChange={handleDateChange}
-                                defaultValue={formData.checkIn && formData.checkOut ? [new Date(formData.checkIn), new Date(formData.checkOut)] : undefined}
-                                minDate={new Date()}
-                                tileContent={getTileContent}
-                                tileClassName={getTileClassName}
-                            />
+                    {/* COL 1: Date & Search Panel */}
+                    <div className="col-search" style={{ flex: '0 0 300px', maxWidth: '320px', position: 'relative', zIndex: 100 }}>
+                        <h3 style={{ fontSize: '1.2rem', marginBottom: '15px', paddingBottom: '10px', borderBottom: '1px solid #eee' }}>1. Plan Your Stay</h3>
+
+                        {/* Search Card */}
+                        <div className="search-card" style={{ background: 'white', padding: '20px', borderRadius: '16px', boxShadow: '0 10px 30px rgba(0,0,0,0.08)', border: '1px solid rgba(0,0,0,0.02)' }}>
+
+                            {/* Date Picker Trigger */}
+                            <div className="form-group" style={{ marginBottom: '20px', position: 'relative' }}>
+                                <label style={{ fontWeight: '700', marginBottom: '8px', display: 'block', color: '#2c3e50', fontSize: '0.9rem', letterSpacing: '0.5px' }}>DATES</label>
+                                <div
+                                    className="date-trigger"
+                                    onClick={() => setShowCalendar(!showCalendar)}
+                                    style={{
+                                        padding: '12px 15px',
+                                        borderRadius: '10px',
+                                        background: '#f8f9fa',
+                                        border: '2px solid transparent',
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        alignItems: 'center',
+                                        transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                                        boxShadow: showCalendar ? '0 0 0 3px rgba(52, 152, 219, 0.2)' : 'none',
+                                        borderColor: showCalendar ? '#3498db' : '#e9ecef'
+                                    }}
+                                >
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                        <span style={{ fontSize: '1.2rem' }}>📅</span>
+                                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                            <span style={{ fontSize: '0.95rem', fontWeight: '600', color: '#2c3e50' }}>{formData.checkIn ? new Date(formData.checkIn).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : 'Check-in'}</span>
+                                            <span style={{ fontSize: '0.75rem', color: '#7f8c8d' }}>to</span>
+                                            <span style={{ fontSize: '0.95rem', fontWeight: '600', color: '#2c3e50' }}>{formData.checkOut ? new Date(formData.checkOut).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : 'Check-out'}</span>
+                                        </div>
+                                    </div>
+                                    <span style={{ fontSize: '0.8rem', color: '#95a5a6' }}>{showCalendar ? '▲' : '▼'}</span>
+                                </div>
+
+                                {/* Collapsible Calendar Popup */}
+                                {showCalendar && (
+                                    <>
+                                        <div
+                                            className="calendar-backdrop"
+                                            onClick={(e) => { e.stopPropagation(); setShowCalendar(false); }}
+                                            style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 999, cursor: 'default' }}
+                                        />
+                                        <div className="calendar-popup" style={{ position: 'absolute', top: '100%', left: '0', width: '300px', zIndex: 1000, marginTop: '10px', animation: 'fadeInDown 0.3s ease-out' }}>
+                                            <div className="calendar-container-styled" style={{ background: 'white', padding: '10px', borderRadius: '16px', boxShadow: '0 20px 60px rgba(0,0,0,0.15)', border: '1px solid rgba(0,0,0,0.05)' }}>
+                                                <Calendar
+                                                    key={calendarKey}
+                                                    selectRange={true}
+                                                    onChange={handleDateChange}
+                                                    defaultValue={formData.checkIn && formData.checkOut ? [new Date(formData.checkIn), new Date(formData.checkOut)] : undefined}
+                                                    minDate={new Date()}
+                                                    tileContent={getTileContent}
+                                                    tileClassName={getTileClassName}
+                                                />
+                                                <div style={{ textAlign: 'center', marginTop: '10px', borderTop: '1px solid #eee', paddingTop: '10px' }}>
+                                                    <button
+                                                        type="button"
+                                                        onClick={(e) => { e.stopPropagation(); setShowCalendar(false); }}
+                                                        style={{ background: '#2ecc71', color: 'white', border: 'none', padding: '8px 20px', borderRadius: '20px', fontWeight: 'bold', cursor: 'pointer', fontSize: '0.85rem', boxShadow: '0 4px 6px rgba(46, 204, 113, 0.2)' }}
+                                                    >
+                                                        Done
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </>
+                                )}
+                            </div>
+
+                            {/* Guest Selector (Moved here for cohesion) */}
+                            <div className="form-group" style={{ marginBottom: '10px' }}>
+                                <label style={{ fontWeight: '700', marginBottom: '8px', display: 'block', color: '#2c3e50', fontSize: '0.9rem', letterSpacing: '0.5px' }}>GUESTS</label>
+                                <select
+                                    name="guests"
+                                    value={formData.guests}
+                                    onChange={handleChange}
+                                    style={{
+                                        width: '100%',
+                                        padding: '12px 15px',
+                                        borderRadius: '10px',
+                                        border: '2px solid #e9ecef',
+                                        fontSize: '0.95rem',
+                                        backgroundColor: '#f8f9fa',
+                                        cursor: 'pointer',
+                                        outline: 'none',
+                                        transition: 'border-color 0.2s',
+                                        appearance: 'none',
+                                        backgroundImage: `url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%232c3e50%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E")`,
+                                        backgroundRepeat: 'no-repeat',
+                                        backgroundPosition: 'right 15px top 50%',
+                                        backgroundSize: '12px auto'
+                                    }}
+                                >
+                                    {[...Array(15)].map((_, i) => (
+                                        <option key={i} value={i + 1}>{i + 1} Guest{i > 0 ? 's' : ''}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {!formData.checkIn && <p style={{ color: '#e74c3c', marginTop: '15px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '5px' }}><span>ℹ️</span> Select dates to see prices.</p>}
                         </div>
+
                         {/* Hidden Inputs */}
                         <input type="hidden" name="checkIn" value={formData.checkIn} required />
                         <input type="hidden" name="checkOut" value={formData.checkOut} required />
-
-                        {!formData.checkIn && <p style={{ color: '#7f8c8d', marginTop: '10px', fontStyle: 'italic', fontSize: '0.9rem' }}>Please select check-in and check-out dates.</p>}
                     </div>
 
                     {/* COL 2: Room Selection (Scrollable) */}
