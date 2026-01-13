@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import Calendar from 'react-calendar'; // Import Calendar
+import ImageLightbox from './ImageLightbox'; // Import Shared Lightbox
 import './Calendar.css'; // Import Custom Styles
 
 // Room data based on MakeMyTrip listing
@@ -154,44 +155,7 @@ const ImageCarousel = ({ images, height = '200px', onImageClick }) => {
     );
 };
 
-const ImageLightbox = ({ isOpen, images, initialIndex, onClose }) => {
-    const [index, setIndex] = useState(initialIndex);
 
-    useEffect(() => {
-        setIndex(initialIndex);
-    }, [initialIndex]);
-
-    if (!isOpen) return null;
-
-    const next = (e) => { e.stopPropagation(); setIndex((prev) => (prev + 1) % images.length); };
-    const prev = (e) => { e.stopPropagation(); setIndex((prev) => (prev - 1 + images.length) % images.length); };
-
-    return (
-        <div
-            style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.9)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-            onClick={onClose}
-        >
-            <button onClick={onClose} style={{ position: 'absolute', top: '20px', right: '30px', background: 'transparent', border: 'none', color: 'white', fontSize: '30px', cursor: 'pointer', zIndex: 10001 }}>×</button>
-
-            <img
-                src={images[index]}
-                alt="Fullscreen view"
-                style={{ maxHeight: '90vh', maxWidth: '90vw', objectFit: 'contain', borderRadius: '4px', boxShadow: '0 0 20px rgba(0,0,0,0.5)' }}
-                onClick={(e) => e.stopPropagation()} // Prevent close on image click
-            />
-
-            {images.length > 1 && (
-                <>
-                    <button onClick={prev} style={{ position: 'absolute', left: '20px', background: 'rgba(255,255,255,0.1)', color: 'white', border: 'none', padding: '15px', fontSize: '24px', cursor: 'pointer', borderRadius: '50%' }}>❮</button>
-                    <button onClick={next} style={{ position: 'absolute', right: '20px', background: 'rgba(255,255,255,0.1)', color: 'white', border: 'none', padding: '15px', fontSize: '24px', cursor: 'pointer', borderRadius: '50%' }}>❯</button>
-                    <div style={{ position: 'absolute', bottom: '20px', color: 'rgba(255,255,255,0.7)' }}>
-                        {index + 1} / {images.length}
-                    </div>
-                </>
-            )}
-        </div>
-    );
-};
 
 const BookingForm = ({ onToast }) => {
     const [formData, setFormData] = useState({
