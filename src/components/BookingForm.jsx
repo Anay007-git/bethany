@@ -586,7 +586,7 @@ const BookingForm = ({ onToast }) => {
                 </div>
 
                 {/* Single Row Layout: Calendar | Rooms | Cart */}
-                <div className="booking-single-row" style={{ display: 'flex', gap: '25px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                <div className="booking-single-row" style={{ display: 'flex', gap: '25px', alignItems: 'flex-start', flexWrap: 'wrap', justifyContent: 'center' }}>
 
                     {/* COL 1: Calendar */}
                     {/* COL 1: Date & Search Panel */}
@@ -703,7 +703,7 @@ const BookingForm = ({ onToast }) => {
 
                     {/* COL 3: Cart & Checkout */}
                     <div className="col-cart" style={{ flex: '1 1 300px', maxWidth: '350px' }}>
-                        <h3 style={{ fontSize: '1.2rem', marginBottom: '15px', paddingBottom: '10px', borderBottom: '1px solid #eee' }}>3. Booking Details</h3>
+                        <h3 style={{ fontSize: '1.2rem', marginBottom: '15px', paddingBottom: '10px', borderBottom: '1px solid #eee' }}>2. Booking Details</h3>
 
                         <div className="cart-card" style={{ background: 'white', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 20px rgba(0,0,0,0.08)', position: 'sticky', top: '20px' }}>
                             {/* Cart Items */}
