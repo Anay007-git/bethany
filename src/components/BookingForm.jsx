@@ -911,7 +911,7 @@ const BookingForm = ({ onToast }) => {
                                     <div
                                         key={room.id}
                                         className={`room-card-compact ${isSelected ? 'selected' : ''}`}
-                                        onClick={() => handleRoomSelect(room)}
+                                        onClick={() => toggleRoom(room)}
                                         style={{
                                             display: 'flex',
                                             gap: '15px',
@@ -924,7 +924,7 @@ const BookingForm = ({ onToast }) => {
                                             alignItems: 'center'
                                         }}
                                     >
-                                        <img src={room.image} alt={room.name} style={{ width: '80px', height: '80px', borderRadius: '8px', objectFit: 'cover' }} />
+                                        <img src={room.images[0]} alt={room.name} style={{ width: '80px', height: '80px', borderRadius: '8px', objectFit: 'cover' }} />
                                         <div style={{ flex: 1 }}>
                                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
                                                 <span style={{ fontWeight: '700', fontSize: '1.1rem', color: '#2c3e50' }}>{room.name}</span>
