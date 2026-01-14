@@ -9,6 +9,7 @@ import Reviews from './components/Reviews';
 import BookingForm from './components/BookingForm';
 import Contact from './components/Contact';
 import Footer from './components/Footer';
+import CookieConsent from './components/CookieConsent';
 
 function App() {
   const [toast, setToast] = useState(null);
@@ -38,6 +39,8 @@ function App() {
           {toast.message}
         </div>
       )}
+
+      <CookieConsent />
     </>
   );
 }

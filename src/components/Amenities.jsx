@@ -8,7 +8,6 @@ const amenities = [
         title: 'Mountain Views',
         description: 'Wake up to breathtaking panoramic views of the Himalayan mountains every morning.'
     },
-
     {
         icon: (
             <svg viewBox="0 0 24 24">
