@@ -1894,3 +1894,130 @@ section {
   vertical-align: middle;
   margin-left: 5px;
 }
+
+/* ===== POLICY MODAL ===== */
+.policy-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  z-index: 3000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.policy-modal-content {
+  background: white;
+  width: 90%;
+  max-width: 800px;
+  max-height: 85vh;
+  border-radius: 12px;
+  position: relative;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  display: flex;
+  flex-direction: column;
+  animation: scaleUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.policy-close-btn {
+  position: absolute;
+  top: 15px;
+  right: 20px;
+  background: none;
+  border: none;
+  font-size: 2rem;
+  cursor: pointer;
+  color: #7f8c8d;
+  transition: color 0.2s;
+  z-index: 10;
+}
+
+.policy-close-btn:hover {
+  color: #2c3e50;
+}
+
+.policy-body {
+  padding: 40px;
+  overflow-y: auto;
+  line-height: 1.6;
+  color: #2c3e50;
+}
+
+.policy-body h3 {
+  font-size: 1.8rem;
+  margin-bottom: 20px;
+  color: #e67e22;
+  /* Using your accent color */
+  text-align: center;
+  border-bottom: 2px solid #eee;
+  padding-bottom: 10px;
+}
+
+.policy-body h4 {
+  font-size: 1.2rem;
+  margin-top: 25px;
+  margin-bottom: 10px;
+  color: #34495e;
+}
+
+.policy-body p {
+  margin-bottom: 15px;
+}
+
+.policy-body ul {
+  padding-left: 20px;
+  margin-bottom: 15px;
+}
+
+.policy-body li {
+  margin-bottom: 8px;
+  list-style-type: disc;
+}
+
+/* Footer Legal Links */
+.footer-legal {
+  margin-top: 15px;
+  display: flex;
+  gap: 15px;
+  justify-content: center;
+  align-items: center;
+  font-size: 0.85rem;
+  opacity: 0.8;
+}
+
+.footer-legal button {
+  background: none;
+  border: none;
+  color: white;
+  cursor: pointer;
+  padding: 0;
+  font-size: inherit;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  transition: opacity 0.2s;
+}
+
+.footer-legal button:hover {
+  opacity: 1;
+  text-decoration: none;
+}
+
+.footer-legal span {
+  color: white;
+  opacity: 0.5;
+}
+
+@media (max-width: 768px) {
+  .policy-body {
+    padding: 25px;
+  }
+
+  .policy-body h3 {
+    font-size: 1.5rem;
+  }
+}
