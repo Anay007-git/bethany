@@ -17,6 +17,11 @@ const CookieConsent = () => {
         localStorage.setItem('cookieConsent', 'accepted');
     };
 
+    const handleDecline = () => {
+        setIsVisible(false);
+        localStorage.setItem('cookieConsent', 'declined');
+    };
+
     if (!isVisible) return null;
 
     return (
@@ -25,9 +30,14 @@ const CookieConsent = () => {
                 <p>
                     We use cookies to enhance your experience. By continuing to visit this site you agree to our use of cookies.
                 </p>
-                <button onClick={handleAccept} className="cookie-btn">
-                    Got it
-                </button>
+                <div className="cookie-actions">
+                    <button onClick={handleDecline} className="cookie-btn cookie-decline">
+                        Decline
+                    </button>
+                    <button onClick={handleAccept} className="cookie-btn cookie-accept">
+                        Accept
+                    </button>
+                </div>
             </div>
         </div>
     );

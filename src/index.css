@@ -2057,20 +2057,41 @@ section {
   line-height: 1.4;
 }
 
+.cookie-actions {
+  display: flex;
+  gap: 10px;
+}
+
 .cookie-btn {
-  background: #2c3e50;
-  color: white;
-  border: none;
   padding: 10px 20px;
   border-radius: 8px;
   cursor: pointer;
   font-weight: 600;
   white-space: nowrap;
-  transition: background 0.2s;
+  transition: all 0.2s;
+  font-size: 0.9rem;
 }
 
-.cookie-btn:hover {
+.cookie-accept {
+  background: #2c3e50;
+  color: white;
+  border: none;
+}
+
+.cookie-accept:hover {
   background: #34495e;
+}
+
+.cookie-decline {
+  background: transparent;
+  color: #7f8c8d;
+  border: 1px solid #bdc3c7;
+}
+
+.cookie-decline:hover {
+  border-color: #7f8c8d;
+  color: #2c3e50;
+  background: #f8f9fa;
 }
 
 @keyframes slideUp {
