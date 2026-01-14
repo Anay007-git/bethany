@@ -598,6 +598,7 @@ const BookingForm = ({ onToast }) => {
                 checkOut: formData.checkOut,
                 guests: formData.guests,
                 roomType: roomNames,
+                meals: selectedMeals.length > 0 ? selectedMeals.join(' | ') : 'None',
                 pricePerNight: Math.round(roomPriceTotal / numberOfNights), // Avg Room price
                 numberOfNights: numberOfNights,
                 totalPrice: totalPrice,
