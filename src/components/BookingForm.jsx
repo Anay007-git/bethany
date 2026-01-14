@@ -183,6 +183,7 @@ const BookingForm = ({ onToast }) => {
 
     const [showCalendar, setShowCalendar] = useState(false);
     const [showRoomPicker, setShowRoomPicker] = useState(false);
+    const [showMealPicker, setShowMealPicker] = useState(false);
 
     // Calendar Reset Key (for uncontrolled component usage)
     const [calendarKey, setCalendarKey] = useState(0);
@@ -804,113 +805,22 @@ const BookingForm = ({ onToast }) => {
                                 </div>
                             )}
 
-                            {/* Meals Option */}
-                            <div className="meals-option" style={{ marginBottom: '15px', padding: '15px', background: '#fff9e6', borderRadius: '12px', border: '1px solid #ffeeba' }}>
-                                <h4 style={{ fontSize: '1rem', color: '#d35400', marginBottom: '15px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <span>🍽️</span> Add Meals <span style={{ fontSize: '0.8rem', fontWeight: 'normal', color: '#e67e22' }}>(Per Person/Day)</span>
-                                </h4>
-
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                                    {/* Breakfast */}
-                                    <div style={{ background: '#fff', padding: '10px', borderRadius: '8px', border: '1px solid #eee' }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                                            <span style={{ fontWeight: '600', color: '#2c3e50' }}>Breakfast</span>
-                                            <span style={{ fontSize: '0.85rem', color: '#7f8c8d' }}>7:30 - 9:30 AM</span>
-                                        </div>
-                                        <div style={{ display: 'flex', gap: '10px' }}>
-                                            <div style={{ flex: 1 }}>
-                                                <label style={{ fontSize: '0.8rem', color: '#27ae60', fontWeight: 'bold' }}>Veg</label>
-                                                <input
-                                                    type="number"
-                                                    min="0"
-                                                    name="meal_breakfast_veg"
-                                                    value={formData.mealSelection.breakfast.veg}
-                                                    onChange={handleChange}
-                                                    style={{ width: '100%', padding: '5px', borderRadius: '4px', border: '1px solid #ddd' }}
-                                                />
-                                            </div>
-                                            <div style={{ flex: 1 }}>
-                                                <label style={{ fontSize: '0.8rem', color: '#c0392b', fontWeight: 'bold' }}>Non-Veg</label>
-                                                <input
-                                                    type="number"
-                                                    min="0"
-                                                    name="meal_breakfast_nonVeg"
-                                                    value={formData.mealSelection.breakfast.nonVeg}
-                                                    onChange={handleChange}
-                                                    style={{ width: '100%', padding: '5px', borderRadius: '4px', border: '1px solid #ddd' }}
-                                                />
-                                            </div>
-                                        </div>
-                                        <div style={{ textAlign: 'right', marginTop: '5px', fontSize: '0.9rem', color: '#e67e22', fontWeight: 'bold' }}>₹{MEAL_PRICES.breakfast} / plate</div>
+                            {/* Meals Option Trigger */}
+                            <div className="meals-trigger" onClick={() => setShowMealPicker(true)} style={{ marginBottom: '15px', padding: '15px', background: '#fff9e6', borderRadius: '12px', border: '1px solid #ffeeba', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                    <span style={{ fontSize: '1.2rem' }}>🍽️</span>
+                                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                        <span style={{ fontWeight: '700', color: '#d35400', fontSize: '0.95rem' }}>Meal Plan</span>
+                                        <span style={{ fontSize: '0.8rem', color: '#e67e22' }}>
+                                            {(formData.mealSelection.breakfast.veg + formData.mealSelection.breakfast.nonVeg +
+                                                formData.mealSelection.lunch.veg + formData.mealSelection.lunch.nonVeg +
+                                                formData.mealSelection.dinner.veg + formData.mealSelection.dinner.nonVeg) > 0
+                                                ? 'Tap to edit selection'
+                                                : 'Tap to add meals'}
+                                        </span>
                                     </div>
-
-                                    {/* Lunch */}
-                                    <div style={{ background: '#fff', padding: '10px', borderRadius: '8px', border: '1px solid #eee' }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                                            <span style={{ fontWeight: '600', color: '#2c3e50' }}>Lunch</span>
-                                            <span style={{ fontSize: '0.85rem', color: '#7f8c8d' }}>12:00 - 2:00 PM</span>
-                                        </div>
-                                        <div style={{ display: 'flex', gap: '10px' }}>
-                                            <div style={{ flex: 1 }}>
-                                                <label style={{ fontSize: '0.8rem', color: '#27ae60', fontWeight: 'bold' }}>Veg</label>
-                                                <input
-                                                    type="number"
-                                                    min="0"
-                                                    name="meal_lunch_veg"
-                                                    value={formData.mealSelection.lunch.veg}
-                                                    onChange={handleChange}
-                                                    style={{ width: '100%', padding: '5px', borderRadius: '4px', border: '1px solid #ddd' }}
-                                                />
-                                            </div>
-                                            <div style={{ flex: 1 }}>
-                                                <label style={{ fontSize: '0.8rem', color: '#c0392b', fontWeight: 'bold' }}>Non-Veg</label>
-                                                <input
-                                                    type="number"
-                                                    min="0"
-                                                    name="meal_lunch_nonVeg"
-                                                    value={formData.mealSelection.lunch.nonVeg}
-                                                    onChange={handleChange}
-                                                    style={{ width: '100%', padding: '5px', borderRadius: '4px', border: '1px solid #ddd' }}
-                                                />
-                                            </div>
-                                        </div>
-                                        <div style={{ textAlign: 'right', marginTop: '5px', fontSize: '0.9rem', color: '#e67e22', fontWeight: 'bold' }}>₹{MEAL_PRICES.lunch} / plate</div>
-                                    </div>
-
-                                    {/* Dinner */}
-                                    <div style={{ background: '#fff', padding: '10px', borderRadius: '8px', border: '1px solid #eee' }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                                            <span style={{ fontWeight: '600', color: '#2c3e50' }}>Dinner</span>
-                                            <span style={{ fontSize: '0.85rem', color: '#7f8c8d' }}>8:00 - 10:00 PM</span>
-                                        </div>
-                                        <div style={{ display: 'flex', gap: '10px' }}>
-                                            <div style={{ flex: 1 }}>
-                                                <label style={{ fontSize: '0.8rem', color: '#27ae60', fontWeight: 'bold' }}>Veg</label>
-                                                <input
-                                                    type="number"
-                                                    min="0"
-                                                    name="meal_dinner_veg"
-                                                    value={formData.mealSelection.dinner.veg}
-                                                    onChange={handleChange}
-                                                    style={{ width: '100%', padding: '5px', borderRadius: '4px', border: '1px solid #ddd' }}
-                                                />
-                                            </div>
-                                            <div style={{ flex: 1 }}>
-                                                <label style={{ fontSize: '0.8rem', color: '#c0392b', fontWeight: 'bold' }}>Non-Veg</label>
-                                                <input
-                                                    type="number"
-                                                    min="0"
-                                                    name="meal_dinner_nonVeg"
-                                                    value={formData.mealSelection.dinner.nonVeg}
-                                                    onChange={handleChange}
-                                                    style={{ width: '100%', padding: '5px', borderRadius: '4px', border: '1px solid #ddd' }}
-                                                />
-                                            </div>
-                                        </div>
-                                        <div style={{ textAlign: 'right', marginTop: '5px', fontSize: '0.9rem', color: '#e67e22', fontWeight: 'bold' }}>₹{MEAL_PRICES.dinner} / plate</div>
-                                    </div>
-
                                 </div>
+                                <span style={{ fontSize: '0.9rem', color: '#d35400' }}>{showMealPicker ? '▲' : '▶'}</span>
                             </div>
 
                             {/* Totals */}
@@ -1157,6 +1067,141 @@ const BookingForm = ({ onToast }) => {
                                 style={{ background: '#3498db', color: 'white', border: 'none', padding: '12px 40px', borderRadius: '30px', fontWeight: 'bold', cursor: 'pointer', fontSize: '1rem', boxShadow: '0 4px 15px rgba(52, 152, 219, 0.3)' }}
                             >
                                 Done
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* 3. Meal Picker Modal */}
+            {showMealPicker && (
+                <div className="picker-modal-overlay" onClick={() => setShowMealPicker(false)}>
+                    <div className="picker-modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '500px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', paddingBottom: '10px', borderBottom: '1px solid #eee' }}>
+                            <h3 style={{ margin: 0, color: '#e67e22', display: 'flex', alignItems: 'center', gap: '10px' }}>🍽️ Meal Selection</h3>
+                            <button onClick={() => setShowMealPicker(false)} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#95a5a6' }}>&times;</button>
+                        </div>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+
+                            <div style={{ background: '#fff9e6', padding: '15px', borderRadius: '8px', fontSize: '0.9rem', color: '#d35400' }}>
+                                ℹ️ Please specify the number of Veg and Non-Veg plates for each meal.
+                            </div>
+
+                            {/* Breakfast */}
+                            <div style={{ background: '#fff', padding: '15px', borderRadius: '12px', border: '1px solid #eee', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px', alignItems: 'center' }}>
+                                    <div>
+                                        <div style={{ fontWeight: '700', color: '#2c3e50', fontSize: '1.1rem' }}>Breakfast</div>
+                                        <div style={{ fontSize: '0.85rem', color: '#7f8c8d' }}>7:30 - 9:30 AM</div>
+                                    </div>
+                                    <div style={{ fontWeight: 'bold', color: '#e67e22', fontSize: '1.1rem' }}>₹{MEAL_PRICES.breakfast}</div>
+                                </div>
+                                <div style={{ display: 'flex', gap: '15px' }}>
+                                    <div style={{ flex: 1 }}>
+                                        <label style={{ fontSize: '0.9rem', color: '#27ae60', fontWeight: 'bold', marginBottom: '5px', display: 'block' }}>Veg</label>
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            name="meal_breakfast_veg"
+                                            value={formData.mealSelection.breakfast.veg}
+                                            onChange={handleChange}
+                                            style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd', fontSize: '1rem', textAlign: 'center' }}
+                                        />
+                                    </div>
+                                    <div style={{ flex: 1 }}>
+                                        <label style={{ fontSize: '0.9rem', color: '#c0392b', fontWeight: 'bold', marginBottom: '5px', display: 'block' }}>Non-Veg</label>
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            name="meal_breakfast_nonVeg"
+                                            value={formData.mealSelection.breakfast.nonVeg}
+                                            onChange={handleChange}
+                                            style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd', fontSize: '1rem', textAlign: 'center' }}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Lunch */}
+                            <div style={{ background: '#fff', padding: '15px', borderRadius: '12px', border: '1px solid #eee', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px', alignItems: 'center' }}>
+                                    <div>
+                                        <div style={{ fontWeight: '700', color: '#2c3e50', fontSize: '1.1rem' }}>Lunch</div>
+                                        <div style={{ fontSize: '0.85rem', color: '#7f8c8d' }}>12:00 - 2:00 PM</div>
+                                    </div>
+                                    <div style={{ fontWeight: 'bold', color: '#e67e22', fontSize: '1.1rem' }}>₹{MEAL_PRICES.lunch}</div>
+                                </div>
+                                <div style={{ display: 'flex', gap: '15px' }}>
+                                    <div style={{ flex: 1 }}>
+                                        <label style={{ fontSize: '0.9rem', color: '#27ae60', fontWeight: 'bold', marginBottom: '5px', display: 'block' }}>Veg</label>
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            name="meal_lunch_veg"
+                                            value={formData.mealSelection.lunch.veg}
+                                            onChange={handleChange}
+                                            style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd', fontSize: '1rem', textAlign: 'center' }}
+                                        />
+                                    </div>
+                                    <div style={{ flex: 1 }}>
+                                        <label style={{ fontSize: '0.9rem', color: '#c0392b', fontWeight: 'bold', marginBottom: '5px', display: 'block' }}>Non-Veg</label>
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            name="meal_lunch_nonVeg"
+                                            value={formData.mealSelection.lunch.nonVeg}
+                                            onChange={handleChange}
+                                            style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd', fontSize: '1rem', textAlign: 'center' }}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Dinner */}
+                            <div style={{ background: '#fff', padding: '15px', borderRadius: '12px', border: '1px solid #eee', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px', alignItems: 'center' }}>
+                                    <div>
+                                        <div style={{ fontWeight: '700', color: '#2c3e50', fontSize: '1.1rem' }}>Dinner</div>
+                                        <div style={{ fontSize: '0.85rem', color: '#7f8c8d' }}>8:00 - 10:00 PM</div>
+                                    </div>
+                                    <div style={{ fontWeight: 'bold', color: '#e67e22', fontSize: '1.1rem' }}>₹{MEAL_PRICES.dinner}</div>
+                                </div>
+                                <div style={{ display: 'flex', gap: '15px' }}>
+                                    <div style={{ flex: 1 }}>
+                                        <label style={{ fontSize: '0.9rem', color: '#27ae60', fontWeight: 'bold', marginBottom: '5px', display: 'block' }}>Veg</label>
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            name="meal_dinner_veg"
+                                            value={formData.mealSelection.dinner.veg}
+                                            onChange={handleChange}
+                                            style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd', fontSize: '1rem', textAlign: 'center' }}
+                                        />
+                                    </div>
+                                    <div style={{ flex: 1 }}>
+                                        <label style={{ fontSize: '0.9rem', color: '#c0392b', fontWeight: 'bold', marginBottom: '5px', display: 'block' }}>Non-Veg</label>
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            name="meal_dinner_nonVeg"
+                                            value={formData.mealSelection.dinner.nonVeg}
+                                            onChange={handleChange}
+                                            style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd', fontSize: '1rem', textAlign: 'center' }}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <div style={{ textAlign: 'center', marginTop: '25px', borderTop: '1px solid #eee', paddingTop: '20px' }}>
+                            <button
+                                type="button"
+                                onClick={() => setShowMealPicker(false)}
+                                style={{ background: '#e67e22', color: 'white', border: 'none', padding: '12px 40px', borderRadius: '30px', fontWeight: 'bold', cursor: 'pointer', fontSize: '1rem', boxShadow: '0 4px 15px rgba(230, 126, 34, 0.3)' }}
+                            >
+                                Confirm Meals
                             </button>
                         </div>
                     </div>
