@@ -295,798 +295,797 @@ const BookingForm = ({ onToast }) => {
         return highSeason ? 3000 : 2500;
     };
 
-    return highSeason ? 3000 : 2500;
-};
 
-const MEAL_PRICES = {
-    breakfast: 120,
-    lunch: 200,
-    dinner: 200
-};
 
-// Helper to get numeric capacity from string (e.g., "4 Adults + 1 Kid" -> 5)
-const getRoomCapacity = (room) => {
-    // match all numbers and sum them up
-    const matches = room.beds.match(/(\d+)/g);
-    if (matches) {
-        return matches.reduce((acc, val) => acc + parseInt(val, 10), 0);
-    }
-    return 2;
-};
-
-// Calculate number of nights and total price (Iterating through dates)
-useEffect(() => {
-    if (formData.checkIn && formData.checkOut && formData.selectedRooms.length > 0) {
-        const checkIn = new Date(formData.checkIn);
-        const checkOut = new Date(formData.checkOut);
-
-        // Validate: CheckOut must be after CheckIn
-        if (checkOut <= checkIn) {
-            setNumberOfNights(0);
-            setTotalPrice(0);
-            return;
-        }
-
-        const diffTime = checkOut - checkIn;
-        const nights = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        setNumberOfNights(nights);
-
-        let totalRoomCost = 0;
-        let totalMealCost = 0;
-        const currentGuests = parseInt(formData.guests) || 1;
-
-        // Loop through each night to get precise daily rates
-        for (let i = 0; i < nights; i++) {
-            let currentDate = new Date(checkIn);
-            currentDate.setDate(checkIn.getDate() + i);
-
-            // Room Cost
-            formData.selectedRooms.forEach(room => {
-                totalRoomCost += getSeasonalRoomPrice(currentDate, room.id);
-            });
-
-            // Meal Cost
-            let dailyMealCost = 0;
-            if (formData.mealSelection.breakfast) dailyMealCost += MEAL_PRICES.breakfast;
-            if (formData.mealSelection.lunch) dailyMealCost += MEAL_PRICES.lunch;
-            if (formData.mealSelection.dinner) dailyMealCost += MEAL_PRICES.dinner;
-
-            totalMealCost += (dailyMealCost * currentGuests);
-        }
-
-        setRoomPriceTotal(totalRoomCost);
-        setMealPriceTotal(totalMealCost);
-        setTotalPrice(totalRoomCost + totalMealCost);
-
-    } else {
-        setNumberOfNights(0);
-        setTotalPrice(0);
-        setRoomPriceTotal(0);
-        setMealPriceTotal(0);
-    }
-}, [formData.checkIn, formData.checkOut, formData.selectedRooms, formData.guests, formData.addMeals]);
-
-// Helper for Local YYYY-MM-DD
-const getLocalYMD = (date) => {
-    const offset = date.getTimezoneOffset() * 60000;
-    return new Date(date.getTime() - offset).toISOString().split('T')[0];
-};
-
-// Calendar Tile Content (Price & Holidays)
-const getTileContent = ({ date, view }) => {
-    if (view === 'month') {
-        const isHigh = isHighSeason(date);
-        const dateStr = getLocalYMD(date);
-        const holiday = HOLIDAYS[dateStr];
-
-        // Show Base Price (Standard Room)
-        // Low: 2500, High: 3000
-        const price = isHigh ? 3000 : 2500;
-
-        return (
-            <div className="tile-content">
-                <div className="price-tag">₹{price}</div>
-                {holiday && <div className="holiday-name">{holiday}</div>}
-            </div>
-        );
-    }
-};
-
-const getTileClassName = ({ date, view }) => {
-    if (view === 'month') {
-        const dateStr = getLocalYMD(date);
-        const isHoliday = HOLIDAYS[dateStr];
-        let classes = isHighSeason(date) ? 'season-high' : 'season-low';
-        if (isHoliday) classes += ' holiday-date';
-        return classes;
-    }
-};
-
-// Handle Calendar Range Select
-// Handle Calendar Range Select
-const handleDateChange = (dates) => {
-    // React-Calendar returns [start, end]
-    if (!dates || !Array.isArray(dates) || dates.length < 2) {
-        // Partial or empty
-        return;
-    }
-
-    const start = dates[0];
-    const end = dates[1];
-
-    const toLocalISO = (d) => {
-        const offset = d.getTimezoneOffset() * 60000;
-        return new Date(d.getTime() - offset).toISOString().split('T')[0];
+    const MEAL_PRICES = {
+        breakfast: 120,
+        lunch: 200,
+        dinner: 200
     };
 
-    if (start && end) {
-        setFormData(prev => ({
-            ...prev,
-            checkIn: toLocalISO(start),
-            checkOut: toLocalISO(end)
-        }));
-    }
-};
-
-// Check room availability
-const getRoomStatus = (roomId) => {
-    if (!formData.checkIn || !formData.checkOut) return 'available';
-    if (existingBookings.length === 0) return 'available';
-
-    const checkIn = new Date(formData.checkIn);
-    const checkOut = new Date(formData.checkOut);
-    const room = ROOMS.find(r => r.id === roomId);
-    if (!room) return 'available';
-
-    for (const booking of existingBookings) {
-        // Handle multi-room bookings from sheet (e.g. "Jordan, Sion")
-        const bookingRooms = (booking.roomType || '').split(',').map(s => s.trim().toLowerCase());
-        const currentRoomName = room.name.trim().toLowerCase();
-
-        // Check if THIS room is in the booked list
-        const isRoomBooked = bookingRooms.some(bookedRoom =>
-            bookedRoom === currentRoomName || bookedRoom.includes(currentRoomName) || currentRoomName.includes(bookedRoom)
-        );
-
-        if (isRoomBooked) {
-            const bookingCheckIn = new Date(booking.checkIn);
-            const bookingCheckOut = new Date(booking.checkOut);
-            const hasOverlap = checkIn < bookingCheckOut && checkOut > bookingCheckIn;
-
-            if (hasOverlap) {
-                if (booking.status === 'Booked') return 'booked';
-                else if (booking.status === 'Pending') return 'partial';
-            }
+    // Helper to get numeric capacity from string (e.g., "4 Adults + 1 Kid" -> 5)
+    const getRoomCapacity = (room) => {
+        // match all numbers and sum them up
+        const matches = room.beds.match(/(\d+)/g);
+        if (matches) {
+            return matches.reduce((acc, val) => acc + parseInt(val, 10), 0);
         }
-    }
-    return 'available';
-};
+        return 2;
+    };
 
-const getStatusLabel = (status) => {
-    switch (status) {
-        case 'booked': return { text: 'Booked', className: 'status-booked' };
-        case 'partial': return { text: 'Partially Booked', className: 'status-partial' };
-        default: return { text: 'Available', className: 'status-available' };
-    }
-};
+    // Calculate number of nights and total price (Iterating through dates)
+    useEffect(() => {
+        if (formData.checkIn && formData.checkOut && formData.selectedRooms.length > 0) {
+            const checkIn = new Date(formData.checkIn);
+            const checkOut = new Date(formData.checkOut);
 
-// Toggle Room Selection (Add/Remove)
-const toggleRoom = (room) => {
-    if (getRoomStatus(room.id) === 'booked') return;
+            // Validate: CheckOut must be after CheckIn
+            if (checkOut <= checkIn) {
+                setNumberOfNights(0);
+                setTotalPrice(0);
+                return;
+            }
 
-    setFormData(prev => {
-        const isSelected = prev.selectedRooms.some(r => r.id === room.id);
-        if (isSelected) {
-            return { ...prev, selectedRooms: prev.selectedRooms.filter(r => r.id !== room.id) };
+            const diffTime = checkOut - checkIn;
+            const nights = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            setNumberOfNights(nights);
+
+            let totalRoomCost = 0;
+            let totalMealCost = 0;
+            const currentGuests = parseInt(formData.guests) || 1;
+
+            // Loop through each night to get precise daily rates
+            for (let i = 0; i < nights; i++) {
+                let currentDate = new Date(checkIn);
+                currentDate.setDate(checkIn.getDate() + i);
+
+                // Room Cost
+                formData.selectedRooms.forEach(room => {
+                    totalRoomCost += getSeasonalRoomPrice(currentDate, room.id);
+                });
+
+                // Meal Cost
+                let dailyMealCost = 0;
+                if (formData.mealSelection.breakfast) dailyMealCost += MEAL_PRICES.breakfast;
+                if (formData.mealSelection.lunch) dailyMealCost += MEAL_PRICES.lunch;
+                if (formData.mealSelection.dinner) dailyMealCost += MEAL_PRICES.dinner;
+
+                totalMealCost += (dailyMealCost * currentGuests);
+            }
+
+            setRoomPriceTotal(totalRoomCost);
+            setMealPriceTotal(totalMealCost);
+            setTotalPrice(totalRoomCost + totalMealCost);
+
         } else {
-            return { ...prev, selectedRooms: [...prev.selectedRooms, room] };
+            setNumberOfNights(0);
+            setTotalPrice(0);
+            setRoomPriceTotal(0);
+            setMealPriceTotal(0);
         }
-    });
-};
+    }, [formData.checkIn, formData.checkOut, formData.selectedRooms, formData.guests, formData.addMeals]);
 
-const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
+    // Helper for Local YYYY-MM-DD
+    const getLocalYMD = (date) => {
+        const offset = date.getTimezoneOffset() * 60000;
+        return new Date(date.getTime() - offset).toISOString().split('T')[0];
+    };
 
-    if (name.startsWith('meal_')) {
-        const mealName = name.replace('meal_', '');
-        setFormData(prev => ({
-            ...prev,
-            mealSelection: {
-                ...prev.mealSelection,
-                [mealName]: checked
-            }
-        }));
-    } else {
-        setFormData(prev => ({
-            ...prev,
-            [name]: type === 'checkbox' ? checked : value
-        }));
-    }
-};
+    // Calendar Tile Content (Price & Holidays)
+    const getTileContent = ({ date, view }) => {
+        if (view === 'month') {
+            const isHigh = isHighSeason(date);
+            const dateStr = getLocalYMD(date);
+            const holiday = HOLIDAYS[dateStr];
 
-const handleSubmit = async (e) => {
-    e.preventDefault();
+            // Show Base Price (Standard Room)
+            // Low: 2500, High: 3000
+            const price = isHigh ? 3000 : 2500;
 
-    // VALIDATION: Check for dates
-    if (!formData.checkIn || !formData.checkOut) {
-        onToast("Please select Check-in and Check-out dates to proceed.", 'error');
-        return;
-    }
+            return (
+                <div className="tile-content">
+                    <div className="price-tag">₹{price}</div>
+                    {holiday && <div className="holiday-name">{holiday}</div>}
+                </div>
+            );
+        }
+    };
 
-    if (formData.selectedRooms.length === 0) {
-        onToast("Please select at least one room.", 'error');
-        return;
-    }
+    const getTileClassName = ({ date, view }) => {
+        if (view === 'month') {
+            const dateStr = getLocalYMD(date);
+            const isHoliday = HOLIDAYS[dateStr];
+            let classes = isHighSeason(date) ? 'season-high' : 'season-low';
+            if (isHoliday) classes += ' holiday-date';
+            return classes;
+        }
+    };
 
-    setIsSubmitting(true);
-
-    // Re-check availability before submitting
-    for (const room of formData.selectedRooms) {
-        if (getRoomStatus(room.id) === 'booked') {
-            onToast(`Sorry, ${room.name} is no longer available. Please remove it to proceed.`, 'error');
+    // Handle Calendar Range Select
+    // Handle Calendar Range Select
+    const handleDateChange = (dates) => {
+        // React-Calendar returns [start, end]
+        if (!dates || !Array.isArray(dates) || dates.length < 2) {
+            // Partial or empty
             return;
         }
-    }
 
-    setIsSubmitting(true);
+        const start = dates[0];
+        const end = dates[1];
 
-    try {
-        // Combine room names for the sheet
-        const roomNames = formData.selectedRooms.map(r => r.name).join(', ');
+        const toLocalISO = (d) => {
+            const offset = d.getTimezoneOffset() * 60000;
+            return new Date(d.getTime() - offset).toISOString().split('T')[0];
+        };
 
-        let finalMessage = formData.message;
+        if (start && end) {
+            setFormData(prev => ({
+                ...prev,
+                checkIn: toLocalISO(start),
+                checkOut: toLocalISO(end)
+            }));
+        }
+    };
 
-        const selectedMeals = [];
-        if (formData.mealSelection.breakfast) selectedMeals.push('Breakfast');
-        if (formData.mealSelection.lunch) selectedMeals.push('Lunch');
-        if (formData.mealSelection.dinner) selectedMeals.push('Dinner');
+    // Check room availability
+    const getRoomStatus = (roomId) => {
+        if (!formData.checkIn || !formData.checkOut) return 'available';
+        if (existingBookings.length === 0) return 'available';
 
-        if (selectedMeals.length > 0) {
-            finalMessage = `[MEALS: ${formData.mealType.toUpperCase()} - ${selectedMeals.join(', ')}] ${finalMessage}`;
+        const checkIn = new Date(formData.checkIn);
+        const checkOut = new Date(formData.checkOut);
+        const room = ROOMS.find(r => r.id === roomId);
+        if (!room) return 'available';
+
+        for (const booking of existingBookings) {
+            // Handle multi-room bookings from sheet (e.g. "Jordan, Sion")
+            const bookingRooms = (booking.roomType || '').split(',').map(s => s.trim().toLowerCase());
+            const currentRoomName = room.name.trim().toLowerCase();
+
+            // Check if THIS room is in the booked list
+            const isRoomBooked = bookingRooms.some(bookedRoom =>
+                bookedRoom === currentRoomName || bookedRoom.includes(currentRoomName) || currentRoomName.includes(bookedRoom)
+            );
+
+            if (isRoomBooked) {
+                const bookingCheckIn = new Date(booking.checkIn);
+                const bookingCheckOut = new Date(booking.checkOut);
+                const hasOverlap = checkIn < bookingCheckOut && checkOut > bookingCheckIn;
+
+                if (hasOverlap) {
+                    if (booking.status === 'Booked') return 'booked';
+                    else if (booking.status === 'Pending') return 'partial';
+                }
+            }
+        }
+        return 'available';
+    };
+
+    const getStatusLabel = (status) => {
+        switch (status) {
+            case 'booked': return { text: 'Booked', className: 'status-booked' };
+            case 'partial': return { text: 'Partially Booked', className: 'status-partial' };
+            default: return { text: 'Available', className: 'status-available' };
+        }
+    };
+
+    // Toggle Room Selection (Add/Remove)
+    const toggleRoom = (room) => {
+        if (getRoomStatus(room.id) === 'booked') return;
+
+        setFormData(prev => {
+            const isSelected = prev.selectedRooms.some(r => r.id === room.id);
+            if (isSelected) {
+                return { ...prev, selectedRooms: prev.selectedRooms.filter(r => r.id !== room.id) };
+            } else {
+                return { ...prev, selectedRooms: [...prev.selectedRooms, room] };
+            }
+        });
+    };
+
+    const handleChange = (e) => {
+        const { name, value, type, checked } = e.target;
+
+        if (name.startsWith('meal_')) {
+            const mealName = name.replace('meal_', '');
+            setFormData(prev => ({
+                ...prev,
+                mealSelection: {
+                    ...prev.mealSelection,
+                    [mealName]: checked
+                }
+            }));
+        } else {
+            setFormData(prev => ({
+                ...prev,
+                [name]: type === 'checkbox' ? checked : value
+            }));
+        }
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+
+        // VALIDATION: Check for dates
+        if (!formData.checkIn || !formData.checkOut) {
+            onToast("Please select Check-in and Check-out dates to proceed.", 'error');
+            return;
         }
 
-        const params = new URLSearchParams({
-            name: formData.name,
-            email: formData.email,
-            phone: formData.phone,
-            checkIn: formData.checkIn,
-            checkOut: formData.checkOut,
-            guests: formData.guests,
-            roomType: roomNames,
-            pricePerNight: Math.round(roomPriceTotal / numberOfNights), // Avg Room price
-            numberOfNights: numberOfNights,
-            totalPrice: totalPrice,
-            status: 'Pending',
-            message: finalMessage
-        });
+        if (formData.selectedRooms.length === 0) {
+            onToast("Please select at least one room.", 'error');
+            return;
+        }
 
-        await fetch(`${GOOGLE_SHEETS_URL}?${params.toString()}`, {
-            method: 'GET',
-            mode: 'no-cors'
-        });
+        setIsSubmitting(true);
 
-        setBookingDetails({
-            name: formData.name,
-            email: formData.email,
-            roomName: roomNames,
-            checkIn: formData.checkIn,
-            checkOut: formData.checkOut,
-            nights: numberOfNights,
-            totalPrice: totalPrice,
-            guests: formData.guests,
-            mealsIncluded: formData.addMeals
-        });
+        // Re-check availability before submitting
+        for (const room of formData.selectedRooms) {
+            if (getRoomStatus(room.id) === 'booked') {
+                onToast(`Sorry, ${room.name} is no longer available. Please remove it to proceed.`, 'error');
+                return;
+            }
+        }
 
-        setShowSuccessModal(true);
-        setFormData({
-            name: '', email: '', phone: '', checkIn: '', checkOut: '',
-            guests: '1', selectedRooms: [], message: '',
-            mealSelection: { breakfast: false, lunch: false, dinner: false },
-            mealType: 'veg'
-        });
-        setTotalPrice(0); setRoomPriceTotal(0); setMealPriceTotal(0); setNumberOfNights(0);
-        fetchExistingBookings();
+        setIsSubmitting(true);
 
-    } catch (error) {
-        console.error('Booking error:', error);
-        onToast('Failed to send booking request. Please try again.', 'error');
-    } finally {
-        setIsSubmitting(false);
-    }
-};
+        try {
+            // Combine room names for the sheet
+            const roomNames = formData.selectedRooms.map(r => r.name).join(', ');
 
-const today = new Date().toISOString().split('T')[0];
+            let finalMessage = formData.message;
 
-// Calculate Capacity Logic
-const currentGuests = parseInt(formData.guests) || 1;
-const currentCapacity = formData.selectedRooms.reduce((acc, room) => acc + getRoomCapacity(room), 0);
-const capacityDifference = currentGuests - currentCapacity;
-const showCapacityWarning = formData.selectedRooms.length > 0 && capacityDifference > 0;
+            const selectedMeals = [];
+            if (formData.mealSelection.breakfast) selectedMeals.push('Breakfast');
+            if (formData.mealSelection.lunch) selectedMeals.push('Lunch');
+            if (formData.mealSelection.dinner) selectedMeals.push('Dinner');
 
-return (
-    <section id="booking" className="booking">
-        <div className="container" style={{ maxWidth: '1280px', margin: '0 auto', padding: '20px' }}>
-            <div className="section-header" style={{ textAlign: 'center', marginBottom: '30px' }}>
-                <h2>Book Your Stay</h2>
-                <p>Select multiple rooms for your perfect family getaway</p>
-            </div>
+            if (selectedMeals.length > 0) {
+                finalMessage = `[MEALS: ${formData.mealType.toUpperCase()} - ${selectedMeals.join(', ')}] ${finalMessage}`;
+            }
 
-            {/* Single Row Layout: Calendar | Rooms | Cart */}
-            <div className="booking-single-row" style={{ display: 'flex', gap: '25px', alignItems: 'flex-start', flexWrap: 'wrap', justifyContent: 'center' }}>
+            const params = new URLSearchParams({
+                name: formData.name,
+                email: formData.email,
+                phone: formData.phone,
+                checkIn: formData.checkIn,
+                checkOut: formData.checkOut,
+                guests: formData.guests,
+                roomType: roomNames,
+                pricePerNight: Math.round(roomPriceTotal / numberOfNights), // Avg Room price
+                numberOfNights: numberOfNights,
+                totalPrice: totalPrice,
+                status: 'Pending',
+                message: finalMessage
+            });
 
-                {/* COL 1: Calendar */}
-                {/* COL 1: Date & Search Panel */}
-                <div className="col-search" style={{ flex: '0 0 300px', maxWidth: '320px', position: 'relative', zIndex: 100 }}>
-                    <h3 style={{ fontSize: '1.2rem', marginBottom: '15px', paddingBottom: '10px', borderBottom: '1px solid #eee' }}>1. Plan Your Stay</h3>
+            await fetch(`${GOOGLE_SHEETS_URL}?${params.toString()}`, {
+                method: 'GET',
+                mode: 'no-cors'
+            });
 
-                    {/* Search Card */}
-                    <div className="search-card" style={{ background: 'white', padding: '20px', borderRadius: '16px', boxShadow: '0 10px 30px rgba(0,0,0,0.08)', border: '1px solid rgba(0,0,0,0.02)' }}>
+            setBookingDetails({
+                name: formData.name,
+                email: formData.email,
+                roomName: roomNames,
+                checkIn: formData.checkIn,
+                checkOut: formData.checkOut,
+                nights: numberOfNights,
+                totalPrice: totalPrice,
+                guests: formData.guests,
+                mealsIncluded: formData.addMeals
+            });
 
-                        {/* Date Picker Trigger */}
-                        <div className="form-group" style={{ marginBottom: '20px', position: 'relative' }}>
-                            <label style={{ fontWeight: '700', marginBottom: '8px', display: 'block', color: '#2c3e50', fontSize: '0.9rem', letterSpacing: '0.5px' }}>DATES</label>
-                            <div
-                                className="date-trigger"
-                                onClick={() => { setShowCalendar(!showCalendar); setShowRoomPicker(false); }}
-                                style={{
-                                    padding: '12px 15px',
-                                    borderRadius: '10px',
-                                    background: '#f8f9fa',
-                                    border: '2px solid transparent',
-                                    cursor: 'pointer',
-                                    display: 'flex',
-                                    justifyContent: 'space-between',
-                                    alignItems: 'center',
-                                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                                    boxShadow: showCalendar ? '0 0 0 3px rgba(52, 152, 219, 0.2)' : 'none',
-                                    borderColor: showCalendar ? '#3498db' : '#e9ecef'
-                                }}
-                            >
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                    <span style={{ fontSize: '1.2rem' }}>📅</span>
-                                    <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                        <span style={{ fontSize: '0.95rem', fontWeight: '600', color: '#2c3e50' }}>{formData.checkIn ? new Date(formData.checkIn).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : 'Check-in'}</span>
-                                        <span style={{ fontSize: '0.75rem', color: '#7f8c8d' }}>to</span>
-                                        <span style={{ fontSize: '0.95rem', fontWeight: '600', color: '#2c3e50' }}>{formData.checkOut ? new Date(formData.checkOut).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : 'Check-out'}</span>
-                                    </div>
-                                </div>
-                                <span style={{ fontSize: '0.8rem', color: '#95a5a6' }}>{showCalendar ? '▲' : '▼'}</span>
-                            </div>
+            setShowSuccessModal(true);
+            setFormData({
+                name: '', email: '', phone: '', checkIn: '', checkOut: '',
+                guests: '1', selectedRooms: [], message: '',
+                mealSelection: { breakfast: false, lunch: false, dinner: false },
+                mealType: 'veg'
+            });
+            setTotalPrice(0); setRoomPriceTotal(0); setMealPriceTotal(0); setNumberOfNights(0);
+            fetchExistingBookings();
 
+        } catch (error) {
+            console.error('Booking error:', error);
+            onToast('Failed to send booking request. Please try again.', 'error');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
 
-                        </div>
+    const today = new Date().toISOString().split('T')[0];
 
-                        {/* Room Picker Trigger */}
-                        <div className="form-group" style={{ marginBottom: '20px', position: 'relative' }}>
-                            <label style={{ fontWeight: '700', marginBottom: '8px', display: 'block', color: '#2c3e50', fontSize: '0.9rem', letterSpacing: '0.5px' }}>ROOMS</label>
-                            <div
-                                className="room-trigger"
-                                onClick={() => { setShowRoomPicker(!showRoomPicker); setShowCalendar(false); }}
-                                style={{
-                                    padding: '12px 15px',
-                                    borderRadius: '10px',
-                                    background: '#f8f9fa',
-                                    border: '2px solid transparent',
-                                    cursor: 'pointer',
-                                    display: 'flex',
-                                    justifyContent: 'space-between',
-                                    alignItems: 'center',
-                                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                                    boxShadow: showRoomPicker ? '0 0 0 3px rgba(52, 152, 219, 0.2)' : 'none',
-                                    borderColor: showRoomPicker ? '#3498db' : '#e9ecef'
-                                }}
-                            >
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                    <span style={{ fontSize: '1.2rem' }}>🛏️</span>
-                                    <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                        <span style={{ fontSize: '0.95rem', fontWeight: '600', color: '#2c3e50' }}>{formData.selectedRooms.length > 0 ? `${formData.selectedRooms.length} Room${formData.selectedRooms.length > 1 ? 's' : ''} Selected` : 'Select Rooms'}</span>
-                                        <span style={{ fontSize: '0.75rem', color: '#7f8c8d' }}>{formData.selectedRooms.length > 0 ? 'Tap to edit' : 'Tap to choose'}</span>
-                                    </div>
-                                </div>
-                                <span style={{ fontSize: '0.8rem', color: '#95a5a6' }}>{showRoomPicker ? '▲' : '▼'}</span>
-                            </div>
-                        </div>
+    // Calculate Capacity Logic
+    const currentGuests = parseInt(formData.guests) || 1;
+    const currentCapacity = formData.selectedRooms.reduce((acc, room) => acc + getRoomCapacity(room), 0);
+    const capacityDifference = currentGuests - currentCapacity;
+    const showCapacityWarning = formData.selectedRooms.length > 0 && capacityDifference > 0;
 
-                        {/* Guest Selector (Moved here for cohesion) */}
-                        <div className="form-group" style={{ marginBottom: '10px' }}>
-                            <label style={{ fontWeight: '700', marginBottom: '8px', display: 'block', color: '#2c3e50', fontSize: '0.9rem', letterSpacing: '0.5px' }}>GUESTS</label>
-                            <select
-                                name="guests"
-                                value={formData.guests}
-                                onChange={handleChange}
-                                style={{
-                                    width: '100%',
-                                    padding: '12px 15px',
-                                    borderRadius: '10px',
-                                    border: '2px solid #e9ecef',
-                                    fontSize: '0.95rem',
-                                    backgroundColor: '#f8f9fa',
-                                    cursor: 'pointer',
-                                    outline: 'none',
-                                    transition: 'border-color 0.2s',
-                                    appearance: 'none',
-                                    backgroundImage: `url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%232c3e50%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E")`,
-                                    backgroundRepeat: 'no-repeat',
-                                    backgroundPosition: 'right 15px top 50%',
-                                    backgroundSize: '12px auto'
-                                }}
-                            >
-                                {[...Array(15)].map((_, i) => (
-                                    <option key={i} value={i + 1}>{i + 1} Guest{i > 0 ? 's' : ''}</option>
-                                ))}
-                            </select>
-                        </div>
-
-                        {!formData.checkIn && <p style={{ color: '#e74c3c', marginTop: '15px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '5px' }}><span>ℹ️</span> Select dates to see prices.</p>}
-                    </div>
-
-                    {/* Hidden Inputs */}
-                    <input type="hidden" name="checkIn" value={formData.checkIn} required />
-                    <input type="hidden" name="checkOut" value={formData.checkOut} required />
+    return (
+        <section id="booking" className="booking">
+            <div className="container" style={{ maxWidth: '1280px', margin: '0 auto', padding: '20px' }}>
+                <div className="section-header" style={{ textAlign: 'center', marginBottom: '30px' }}>
+                    <h2>Book Your Stay</h2>
+                    <p>Select multiple rooms for your perfect family getaway</p>
                 </div>
 
+                {/* Single Row Layout: Calendar | Rooms | Cart */}
+                <div className="booking-single-row" style={{ display: 'flex', gap: '25px', alignItems: 'flex-start', flexWrap: 'wrap', justifyContent: 'center' }}>
 
+                    {/* COL 1: Calendar */}
+                    {/* COL 1: Date & Search Panel */}
+                    <div className="col-search" style={{ flex: '0 0 300px', maxWidth: '320px', position: 'relative', zIndex: 100 }}>
+                        <h3 style={{ fontSize: '1.2rem', marginBottom: '15px', paddingBottom: '10px', borderBottom: '1px solid #eee' }}>1. Plan Your Stay</h3>
 
-                {/* COL 3: Cart & Checkout */}
-                <div className="col-cart" style={{ flex: '1 1 300px', maxWidth: '350px' }}>
-                    <h3 style={{ fontSize: '1.2rem', marginBottom: '15px', paddingBottom: '10px', borderBottom: '1px solid #eee' }}>2. Booking Details</h3>
+                        {/* Search Card */}
+                        <div className="search-card" style={{ background: 'white', padding: '20px', borderRadius: '16px', boxShadow: '0 10px 30px rgba(0,0,0,0.08)', border: '1px solid rgba(0,0,0,0.02)' }}>
 
-                    <div className="cart-card" style={{ background: 'white', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 20px rgba(0,0,0,0.08)', position: 'sticky', top: '20px' }}>
-                        {/* Cart Items */}
-                        <div className="selected-rooms-summary" style={{ marginBottom: '15px' }}>
-                            <h4 style={{ fontSize: '0.95rem', color: '#34495e', marginBottom: '8px' }}>Selected Rooms:</h4>
-                            {formData.selectedRooms.length === 0 ? (
-                                <p style={{ color: '#95a5a6', fontStyle: 'italic', background: '#f8f9fa', padding: '8px', borderRadius: '4px', fontSize: '0.9rem' }}>No rooms selected.</p>
-                            ) : (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                                    {formData.selectedRooms.map(room => (
-                                        <div key={room.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', padding: '6px', background: '#f8f9fa', borderRadius: '4px' }}>
-                                            <span>{room.name}</span>
-                                            <span style={{ fontWeight: '600' }}>₹{getSeasonalRoomPrice(formData.checkIn ? new Date(formData.checkIn) : new Date(), room.id).toLocaleString('en-IN')}</span>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Capacity Warning */}
-                        {showCapacityWarning && (
-                            <div style={{ background: '#fff3cd', color: '#856404', padding: '10px', borderRadius: '6px', fontSize: '0.85rem', marginBottom: '15px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <span>⚠️</span>
-                                <span>Guests ({currentGuests}) &gt; Beds ({currentCapacity}). Add rooms!</span>
-                            </div>
-                        )}
-
-                        {/* Meals Option */}
-                        <div className="meals-option" style={{ marginBottom: '15px', padding: '15px', background: '#fff9e6', borderRadius: '12px', border: '1px solid #ffeeba' }}>
-                            <h4 style={{ fontSize: '1rem', color: '#d35400', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <span>🍽️</span> Add Meals <span style={{ fontSize: '0.8rem', fontWeight: 'normal', color: '#e67e22' }}>(Per Person/Day)</span>
-                            </h4>
-
-                            {/* Meal Type Selection */}
-                            <div style={{ display: 'flex', gap: '15px', marginBottom: '15px' }}>
-                                <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', fontSize: '0.9rem' }}>
-                                    <input
-                                        type="radio"
-                                        name="mealType"
-                                        value="veg"
-                                        checked={formData.mealType === 'veg'}
-                                        onChange={handleChange}
-                                        style={{ accentColor: '#27ae60' }}
-                                    />
-                                    <span style={{ color: '#27ae60', fontWeight: 'bold' }}>Veg</span>
-                                </label>
-                                <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', fontSize: '0.9rem' }}>
-                                    <input
-                                        type="radio"
-                                        name="mealType"
-                                        value="non-veg"
-                                        checked={formData.mealType === 'non-veg'}
-                                        onChange={handleChange}
-                                        style={{ accentColor: '#c0392b' }}
-                                    />
-                                    <span style={{ color: '#c0392b', fontWeight: 'bold' }}>Non-Veg</span>
-                                </label>
-                            </div>
-
-                            {/* Meal Checkboxes */}
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', fontSize: '0.9rem' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        <input
-                                            type="checkbox"
-                                            name="meal_breakfast"
-                                            checked={formData.mealSelection.breakfast}
-                                            onChange={handleChange}
-                                            style={{ width: '16px', height: '16px' }}
-                                        />
-                                        <span>Breakfast</span>
-                                    </div>
-                                    <span style={{ fontWeight: '600', color: '#e67e22' }}>₹{MEAL_PRICES.breakfast}</span>
-                                </label>
-
-                                <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', fontSize: '0.9rem' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        <input
-                                            type="checkbox"
-                                            name="meal_lunch"
-                                            checked={formData.mealSelection.lunch}
-                                            onChange={handleChange}
-                                            style={{ width: '16px', height: '16px' }}
-                                        />
-                                        <span>Lunch</span>
-                                    </div>
-                                    <span style={{ fontWeight: '600', color: '#e67e22' }}>₹{MEAL_PRICES.lunch}</span>
-                                </label>
-
-                                <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', fontSize: '0.9rem' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        <input
-                                            type="checkbox"
-                                            name="meal_dinner"
-                                            checked={formData.mealSelection.dinner}
-                                            onChange={handleChange}
-                                            style={{ width: '16px', height: '16px' }}
-                                        />
-                                        <span>Dinner</span>
-                                    </div>
-                                    <span style={{ fontWeight: '600', color: '#e67e22' }}>₹{MEAL_PRICES.dinner}</span>
-                                </label>
-                            </div>
-                        </div>
-
-                        {/* Totals */}
-                        {totalPrice > 0 && (
-                            <div className="totals-display" style={{ paddingTop: '15px', borderTop: '2px solid #eee', marginBottom: '20px' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px', color: '#7f8c8d', fontSize: '0.9rem' }}>
-                                    <span>Duration:</span>
-                                    <span>{numberOfNights} Nights</span>
-                                </div>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.3rem', fontWeight: '800', color: '#2c3e50', marginTop: '5px' }}>
-                                    <span>Total:</span>
-                                    <span>₹{totalPrice.toLocaleString('en-IN')}</span>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Checkout Form */}
-                        <form onSubmit={handleSubmit} className="checkout-form">
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
-                                <input type="text" name="name" value={formData.name} onChange={handleChange} placeholder="Name" required style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ddd', fontSize: '0.9rem' }} />
-                                <input type="tel" name="phone" value={formData.phone} onChange={handleChange} placeholder="Phone" required style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ddd', fontSize: '0.9rem' }} />
-                            </div>
-                            <input type="email" name="email" value={formData.email} onChange={handleChange} placeholder="Email" required style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ddd', marginBottom: '10px', fontSize: '0.9rem' }} />
-                            <textarea name="message" value={formData.message} onChange={handleChange} placeholder="Message" rows="2" style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ddd', marginBottom: '15px', fontSize: '0.9rem' }} />
-
-                            <button type="submit" disabled={isSubmitting || formData.selectedRooms.length === 0} style={{ width: '100%', padding: '12px', background: isSubmitting || formData.selectedRooms.length === 0 ? '#bdc3c7' : '#2ecc71', color: 'white', border: 'none', borderRadius: '8px', fontSize: '1.1rem', fontWeight: 'bold', cursor: isSubmitting || formData.selectedRooms.length === 0 ? 'not-allowed' : 'pointer', transition: 'background 0.3s' }}>
-                                {isSubmitting ? '...' : 'Confirm'}
-                            </button>
-                        </form>
-
-                    </div>
-                </div>
-            </div>
-        </div>
-
-
-
-        {/* Success Modal Popup */}
-        {showSuccessModal && bookingDetails && (
-            <div className="modal-overlay" onClick={() => setShowSuccessModal(false)}>
-                <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-                    <div className="modal-header success">
-                        <span className="modal-icon">✅</span>
-                        <h2>Booking Request Submitted!</h2>
-                    </div>
-
-                    <div className="modal-body">
-                        <div className="modal-greeting">
-                            <p>Dear <strong>{bookingDetails.name}</strong>,</p>
-                            <p>Your booking request has been received successfully!</p>
-                        </div>
-
-                        <div className="modal-booking-summary">
-                            <h4>📋 Booking Summary</h4>
-                            <div className="summary-item">
-                                <span>Room:</span>
-                                <span>{bookingDetails.roomName}</span>
-                            </div>
-                            <div className="summary-item">
-                                <span>Check-in:</span>
-                                <span>{new Date(bookingDetails.checkIn).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}</span>
-                            </div>
-                            <div className="summary-item">
-                                <span>Check-out:</span>
-                                <span>{new Date(bookingDetails.checkOut).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}</span>
-                            </div>
-                            <div className="summary-item">
-                                <span>Duration:</span>
-                                <span>{bookingDetails.nights} night(s)</span>
-                            </div>
-                            <div className="summary-item total">
-                                <span>Total Amount:</span>
-                                <span>₹{bookingDetails.totalPrice.toLocaleString('en-IN')}</span>
-                            </div>
-                        </div>
-
-                        <div className="modal-instructions">
-                            <div className="instruction-icon">📧</div>
-                            <h4>Check Your Email!</h4>
-                            <p>We have sent a confirmation email to:</p>
-                            <p className="email-highlight">{bookingDetails.email}</p>
-                            <p className="instruction-text">
-                                Please check your inbox (and spam folder) for detailed instructions
-                                on how to confirm your booking with advance payment.
-                            </p>
-                        </div>
-
-                        <div className="modal-steps">
-                            <h4>📝 Next Steps:</h4>
-                            <ol>
-                                <li>Open the confirmation email we sent you</li>
-                                <li>Contact us via phone/WhatsApp for payment</li>
-                                <li>Complete the advance payment</li>
-                            </ol>
-                        </div>
-
-                        <div className="modal-note">
-                            <span className="note-icon">⚠️</span>
-                            <span>Your booking is <strong>pending</strong> until advance payment is received.</span>
-                        </div>
-                    </div>
-
-                    <div className="modal-footer">
-                        <button
-                            className="modal-close-btn"
-                            onClick={() => setShowSuccessModal(false)}
-                        >
-                            Got it, I'll check my email!
-                        </button>
-                    </div>
-                </div>
-            </div>
-        )}
-
-        {/* Lightbox Component */}
-        <ImageLightbox
-            isOpen={lightboxState.isOpen}
-            images={lightboxState.images}
-            initialIndex={lightboxState.index}
-            onClose={closeLightbox}
-        />
-
-        {/* --- GLOBAL MODALS (Overlay) --- */}
-
-        {/* 1. Calendar Modal */}
-        {showCalendar && (
-            <div className="picker-modal-overlay" onClick={() => setShowCalendar(false)}>
-                <div className="picker-modal-content calendar-modal" onClick={(e) => e.stopPropagation()}>
-                    <h4 style={{ margin: '0 0 15px 0', color: '#2c3e50', textAlign: 'center' }}>Select Dates</h4>
-                    <div className="calendar-container-styled" style={{ boxShadow: 'none', padding: 0, border: 'none' }}>
-                        <Calendar
-                            key={calendarKey}
-                            selectRange={true}
-                            onChange={handleDateChange}
-                            defaultValue={formData.checkIn && formData.checkOut ? [new Date(formData.checkIn), new Date(formData.checkOut)] : undefined}
-                            minDate={new Date()}
-                            tileContent={getTileContent}
-                            tileClassName={getTileClassName}
-                        />
-                    </div>
-                    <div style={{ textAlign: 'center', marginTop: '20px' }}>
-                        <button
-                            type="button"
-                            onClick={() => setShowCalendar(false)}
-                            style={{ background: '#2ecc71', color: 'white', border: 'none', padding: '10px 30px', borderRadius: '25px', fontWeight: 'bold', cursor: 'pointer', fontSize: '1rem', boxShadow: '0 4px 10px rgba(46, 204, 113, 0.3)' }}
-                        >
-                            Confirm Dates
-                        </button>
-                    </div>
-                </div>
-            </div>
-        )}
-
-        {/* 2. Room Picker Modal */}
-        {showRoomPicker && (
-            <div className="picker-modal-overlay" onClick={() => setShowRoomPicker(false)}>
-                <div className="picker-modal-content room-modal" onClick={(e) => e.stopPropagation()}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', paddingBottom: '10px', borderBottom: '1px solid #eee' }}>
-                        <h3 style={{ margin: 0, color: '#2c3e50' }}>Select Rooms</h3>
-                        <button onClick={() => setShowRoomPicker(false)} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#95a5a6' }}>&times;</button>
-                    </div>
-
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                        {ROOMS.map(room => {
-                            const isSelected = formData.selectedRooms.some(r => r.id === room.id);
-                            return (
+                            {/* Date Picker Trigger */}
+                            <div className="form-group" style={{ marginBottom: '20px', position: 'relative' }}>
+                                <label style={{ fontWeight: '700', marginBottom: '8px', display: 'block', color: '#2c3e50', fontSize: '0.9rem', letterSpacing: '0.5px' }}>DATES</label>
                                 <div
-                                    key={room.id}
-                                    className={`room-card-detailed ${isSelected ? 'selected' : ''}`}
-                                    onClick={() => toggleRoom(room)}
+                                    className="date-trigger"
+                                    onClick={() => { setShowCalendar(!showCalendar); setShowRoomPicker(false); }}
                                     style={{
-                                        border: isSelected ? '2px solid #3498db' : '1px solid #e0e0e0',
-                                        background: isSelected ? '#fbfdff' : 'white',
-                                        borderRadius: '16px',
-                                        overflow: 'hidden',
+                                        padding: '12px 15px',
+                                        borderRadius: '10px',
+                                        background: '#f8f9fa',
+                                        border: '2px solid transparent',
                                         cursor: 'pointer',
-                                        transition: 'all 0.3s ease',
-                                        boxShadow: isSelected ? '0 8px 16px rgba(52,152,219,0.15)' : '0 4px 12px rgba(0,0,0,0.05)',
-                                        position: 'relative'
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        alignItems: 'center',
+                                        transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                                        boxShadow: showCalendar ? '0 0 0 3px rgba(52, 152, 219, 0.2)' : 'none',
+                                        borderColor: showCalendar ? '#3498db' : '#e9ecef'
                                     }}
                                 >
-                                    {/* Selection Badge */}
-                                    {isSelected && (
-                                        <div style={{
-                                            position: 'absolute',
-                                            top: '15px',
-                                            right: '15px',
-                                            background: '#3498db',
-                                            color: 'white',
-                                            padding: '6px 14px',
-                                            borderRadius: '20px',
-                                            fontWeight: 'bold',
-                                            fontSize: '0.85rem',
-                                            zIndex: 10,
-                                            boxShadow: '0 2px 8px rgba(52,152,219,0.4)'
-                                        }}>
-                                            ✓ Selected
-                                        </div>
-                                    )}
-
-                                    {/* Image Carousel */}
-                                    <div style={{ pointerEvents: 'auto' }} onClick={(e) => e.stopPropagation()}>
-                                        <ImageCarousel images={room.images} height="220px" onImageClick={() => toggleRoom(room)} />
-                                    </div>
-
-                                    {/* Content */}
-                                    <div style={{ padding: '20px' }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '10px' }}>
-                                            <h3 style={{ margin: 0, fontSize: '1.25rem', color: '#2c3e50', fontWeight: '700' }}>{room.name}</h3>
-                                            <div style={{ textAlign: 'right' }}>
-                                                <div style={{ fontSize: '1.2rem', fontWeight: '800', color: '#e67e22' }}>
-                                                    ₹{getSeasonalRoomPrice(formData.checkIn ? new Date(formData.checkIn) : new Date(), room.id).toLocaleString('en-IN')}
-                                                </div>
-                                                <div style={{ fontSize: '0.8rem', color: '#95a5a6' }}>/ night</div>
-                                            </div>
-                                        </div>
-
-                                        {/* Specs Grid */}
-                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '15px', fontSize: '0.9rem', color: '#546e7a' }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>🛏️ {room.beds}</div>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>📏 {room.size}</div>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>🏞️ {room.view}</div>
-                                            {room.extraBed && <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#27ae60' }}>➕ {room.extraBed}</div>}
-                                        </div>
-
-                                        {/* Features */}
-                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                                            {room.features.slice(0, 4).map((feature, idx) => (
-                                                <span key={idx} style={{ background: '#f8f9fa', padding: '4px 10px', borderRadius: '4px', fontSize: '0.8rem', color: '#636e72', border: '1px solid #eee' }}>
-                                                    {feature}
-                                                </span>
-                                            ))}
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                        <span style={{ fontSize: '1.2rem' }}>📅</span>
+                                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                            <span style={{ fontSize: '0.95rem', fontWeight: '600', color: '#2c3e50' }}>{formData.checkIn ? new Date(formData.checkIn).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : 'Check-in'}</span>
+                                            <span style={{ fontSize: '0.75rem', color: '#7f8c8d' }}>to</span>
+                                            <span style={{ fontSize: '0.95rem', fontWeight: '600', color: '#2c3e50' }}>{formData.checkOut ? new Date(formData.checkOut).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : 'Check-out'}</span>
                                         </div>
                                     </div>
+                                    <span style={{ fontSize: '0.8rem', color: '#95a5a6' }}>{showCalendar ? '▲' : '▼'}</span>
                                 </div>
-                            );
-                        })}
+
+
+                            </div>
+
+                            {/* Room Picker Trigger */}
+                            <div className="form-group" style={{ marginBottom: '20px', position: 'relative' }}>
+                                <label style={{ fontWeight: '700', marginBottom: '8px', display: 'block', color: '#2c3e50', fontSize: '0.9rem', letterSpacing: '0.5px' }}>ROOMS</label>
+                                <div
+                                    className="room-trigger"
+                                    onClick={() => { setShowRoomPicker(!showRoomPicker); setShowCalendar(false); }}
+                                    style={{
+                                        padding: '12px 15px',
+                                        borderRadius: '10px',
+                                        background: '#f8f9fa',
+                                        border: '2px solid transparent',
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        alignItems: 'center',
+                                        transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                                        boxShadow: showRoomPicker ? '0 0 0 3px rgba(52, 152, 219, 0.2)' : 'none',
+                                        borderColor: showRoomPicker ? '#3498db' : '#e9ecef'
+                                    }}
+                                >
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                        <span style={{ fontSize: '1.2rem' }}>🛏️</span>
+                                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                            <span style={{ fontSize: '0.95rem', fontWeight: '600', color: '#2c3e50' }}>{formData.selectedRooms.length > 0 ? `${formData.selectedRooms.length} Room${formData.selectedRooms.length > 1 ? 's' : ''} Selected` : 'Select Rooms'}</span>
+                                            <span style={{ fontSize: '0.75rem', color: '#7f8c8d' }}>{formData.selectedRooms.length > 0 ? 'Tap to edit' : 'Tap to choose'}</span>
+                                        </div>
+                                    </div>
+                                    <span style={{ fontSize: '0.8rem', color: '#95a5a6' }}>{showRoomPicker ? '▲' : '▼'}</span>
+                                </div>
+                            </div>
+
+                            {/* Guest Selector (Moved here for cohesion) */}
+                            <div className="form-group" style={{ marginBottom: '10px' }}>
+                                <label style={{ fontWeight: '700', marginBottom: '8px', display: 'block', color: '#2c3e50', fontSize: '0.9rem', letterSpacing: '0.5px' }}>GUESTS</label>
+                                <select
+                                    name="guests"
+                                    value={formData.guests}
+                                    onChange={handleChange}
+                                    style={{
+                                        width: '100%',
+                                        padding: '12px 15px',
+                                        borderRadius: '10px',
+                                        border: '2px solid #e9ecef',
+                                        fontSize: '0.95rem',
+                                        backgroundColor: '#f8f9fa',
+                                        cursor: 'pointer',
+                                        outline: 'none',
+                                        transition: 'border-color 0.2s',
+                                        appearance: 'none',
+                                        backgroundImage: `url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%232c3e50%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E")`,
+                                        backgroundRepeat: 'no-repeat',
+                                        backgroundPosition: 'right 15px top 50%',
+                                        backgroundSize: '12px auto'
+                                    }}
+                                >
+                                    {[...Array(15)].map((_, i) => (
+                                        <option key={i} value={i + 1}>{i + 1} Guest{i > 0 ? 's' : ''}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {!formData.checkIn && <p style={{ color: '#e74c3c', marginTop: '15px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '5px' }}><span>ℹ️</span> Select dates to see prices.</p>}
+                        </div>
+
+                        {/* Hidden Inputs */}
+                        <input type="hidden" name="checkIn" value={formData.checkIn} required />
+                        <input type="hidden" name="checkOut" value={formData.checkOut} required />
                     </div>
 
-                    <div style={{ textAlign: 'center', marginTop: '25px', borderTop: '1px solid #eee', paddingTop: '20px' }}>
-                        <button
-                            type="button"
-                            onClick={() => setShowRoomPicker(false)}
-                            style={{ background: '#3498db', color: 'white', border: 'none', padding: '12px 40px', borderRadius: '30px', fontWeight: 'bold', cursor: 'pointer', fontSize: '1rem', boxShadow: '0 4px 15px rgba(52, 152, 219, 0.3)' }}
-                        >
-                            Done
-                        </button>
+
+
+                    {/* COL 3: Cart & Checkout */}
+                    <div className="col-cart" style={{ flex: '1 1 300px', maxWidth: '350px' }}>
+                        <h3 style={{ fontSize: '1.2rem', marginBottom: '15px', paddingBottom: '10px', borderBottom: '1px solid #eee' }}>2. Booking Details</h3>
+
+                        <div className="cart-card" style={{ background: 'white', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 20px rgba(0,0,0,0.08)', position: 'sticky', top: '20px' }}>
+                            {/* Cart Items */}
+                            <div className="selected-rooms-summary" style={{ marginBottom: '15px' }}>
+                                <h4 style={{ fontSize: '0.95rem', color: '#34495e', marginBottom: '8px' }}>Selected Rooms:</h4>
+                                {formData.selectedRooms.length === 0 ? (
+                                    <p style={{ color: '#95a5a6', fontStyle: 'italic', background: '#f8f9fa', padding: '8px', borderRadius: '4px', fontSize: '0.9rem' }}>No rooms selected.</p>
+                                ) : (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                                        {formData.selectedRooms.map(room => (
+                                            <div key={room.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', padding: '6px', background: '#f8f9fa', borderRadius: '4px' }}>
+                                                <span>{room.name}</span>
+                                                <span style={{ fontWeight: '600' }}>₹{getSeasonalRoomPrice(formData.checkIn ? new Date(formData.checkIn) : new Date(), room.id).toLocaleString('en-IN')}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Capacity Warning */}
+                            {showCapacityWarning && (
+                                <div style={{ background: '#fff3cd', color: '#856404', padding: '10px', borderRadius: '6px', fontSize: '0.85rem', marginBottom: '15px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <span>⚠️</span>
+                                    <span>Guests ({currentGuests}) &gt; Beds ({currentCapacity}). Add rooms!</span>
+                                </div>
+                            )}
+
+                            {/* Meals Option */}
+                            <div className="meals-option" style={{ marginBottom: '15px', padding: '15px', background: '#fff9e6', borderRadius: '12px', border: '1px solid #ffeeba' }}>
+                                <h4 style={{ fontSize: '1rem', color: '#d35400', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <span>🍽️</span> Add Meals <span style={{ fontSize: '0.8rem', fontWeight: 'normal', color: '#e67e22' }}>(Per Person/Day)</span>
+                                </h4>
+
+                                {/* Meal Type Selection */}
+                                <div style={{ display: 'flex', gap: '15px', marginBottom: '15px' }}>
+                                    <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', fontSize: '0.9rem' }}>
+                                        <input
+                                            type="radio"
+                                            name="mealType"
+                                            value="veg"
+                                            checked={formData.mealType === 'veg'}
+                                            onChange={handleChange}
+                                            style={{ accentColor: '#27ae60' }}
+                                        />
+                                        <span style={{ color: '#27ae60', fontWeight: 'bold' }}>Veg</span>
+                                    </label>
+                                    <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', fontSize: '0.9rem' }}>
+                                        <input
+                                            type="radio"
+                                            name="mealType"
+                                            value="non-veg"
+                                            checked={formData.mealType === 'non-veg'}
+                                            onChange={handleChange}
+                                            style={{ accentColor: '#c0392b' }}
+                                        />
+                                        <span style={{ color: '#c0392b', fontWeight: 'bold' }}>Non-Veg</span>
+                                    </label>
+                                </div>
+
+                                {/* Meal Checkboxes */}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                    <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', fontSize: '0.9rem' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <input
+                                                type="checkbox"
+                                                name="meal_breakfast"
+                                                checked={formData.mealSelection.breakfast}
+                                                onChange={handleChange}
+                                                style={{ width: '16px', height: '16px' }}
+                                            />
+                                            <span>Breakfast</span>
+                                        </div>
+                                        <span style={{ fontWeight: '600', color: '#e67e22' }}>₹{MEAL_PRICES.breakfast}</span>
+                                    </label>
+
+                                    <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', fontSize: '0.9rem' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <input
+                                                type="checkbox"
+                                                name="meal_lunch"
+                                                checked={formData.mealSelection.lunch}
+                                                onChange={handleChange}
+                                                style={{ width: '16px', height: '16px' }}
+                                            />
+                                            <span>Lunch</span>
+                                        </div>
+                                        <span style={{ fontWeight: '600', color: '#e67e22' }}>₹{MEAL_PRICES.lunch}</span>
+                                    </label>
+
+                                    <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', fontSize: '0.9rem' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <input
+                                                type="checkbox"
+                                                name="meal_dinner"
+                                                checked={formData.mealSelection.dinner}
+                                                onChange={handleChange}
+                                                style={{ width: '16px', height: '16px' }}
+                                            />
+                                            <span>Dinner</span>
+                                        </div>
+                                        <span style={{ fontWeight: '600', color: '#e67e22' }}>₹{MEAL_PRICES.dinner}</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            {/* Totals */}
+                            {totalPrice > 0 && (
+                                <div className="totals-display" style={{ paddingTop: '15px', borderTop: '2px solid #eee', marginBottom: '20px' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px', color: '#7f8c8d', fontSize: '0.9rem' }}>
+                                        <span>Duration:</span>
+                                        <span>{numberOfNights} Nights</span>
+                                    </div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.3rem', fontWeight: '800', color: '#2c3e50', marginTop: '5px' }}>
+                                        <span>Total:</span>
+                                        <span>₹{totalPrice.toLocaleString('en-IN')}</span>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Checkout Form */}
+                            <form onSubmit={handleSubmit} className="checkout-form">
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
+                                    <input type="text" name="name" value={formData.name} onChange={handleChange} placeholder="Name" required style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ddd', fontSize: '0.9rem' }} />
+                                    <input type="tel" name="phone" value={formData.phone} onChange={handleChange} placeholder="Phone" required style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ddd', fontSize: '0.9rem' }} />
+                                </div>
+                                <input type="email" name="email" value={formData.email} onChange={handleChange} placeholder="Email" required style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ddd', marginBottom: '10px', fontSize: '0.9rem' }} />
+                                <textarea name="message" value={formData.message} onChange={handleChange} placeholder="Message" rows="2" style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ddd', marginBottom: '15px', fontSize: '0.9rem' }} />
+
+                                <button type="submit" disabled={isSubmitting || formData.selectedRooms.length === 0} style={{ width: '100%', padding: '12px', background: isSubmitting || formData.selectedRooms.length === 0 ? '#bdc3c7' : '#2ecc71', color: 'white', border: 'none', borderRadius: '8px', fontSize: '1.1rem', fontWeight: 'bold', cursor: isSubmitting || formData.selectedRooms.length === 0 ? 'not-allowed' : 'pointer', transition: 'background 0.3s' }}>
+                                    {isSubmitting ? '...' : 'Confirm'}
+                                </button>
+                            </form>
+
+                        </div>
                     </div>
                 </div>
             </div>
-        )}
 
-    </section>
-);
+
+
+            {/* Success Modal Popup */}
+            {showSuccessModal && bookingDetails && (
+                <div className="modal-overlay" onClick={() => setShowSuccessModal(false)}>
+                    <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                        <div className="modal-header success">
+                            <span className="modal-icon">✅</span>
+                            <h2>Booking Request Submitted!</h2>
+                        </div>
+
+                        <div className="modal-body">
+                            <div className="modal-greeting">
+                                <p>Dear <strong>{bookingDetails.name}</strong>,</p>
+                                <p>Your booking request has been received successfully!</p>
+                            </div>
+
+                            <div className="modal-booking-summary">
+                                <h4>📋 Booking Summary</h4>
+                                <div className="summary-item">
+                                    <span>Room:</span>
+                                    <span>{bookingDetails.roomName}</span>
+                                </div>
+                                <div className="summary-item">
+                                    <span>Check-in:</span>
+                                    <span>{new Date(bookingDetails.checkIn).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                                </div>
+                                <div className="summary-item">
+                                    <span>Check-out:</span>
+                                    <span>{new Date(bookingDetails.checkOut).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                                </div>
+                                <div className="summary-item">
+                                    <span>Duration:</span>
+                                    <span>{bookingDetails.nights} night(s)</span>
+                                </div>
+                                <div className="summary-item total">
+                                    <span>Total Amount:</span>
+                                    <span>₹{bookingDetails.totalPrice.toLocaleString('en-IN')}</span>
+                                </div>
+                            </div>
+
+                            <div className="modal-instructions">
+                                <div className="instruction-icon">📧</div>
+                                <h4>Check Your Email!</h4>
+                                <p>We have sent a confirmation email to:</p>
+                                <p className="email-highlight">{bookingDetails.email}</p>
+                                <p className="instruction-text">
+                                    Please check your inbox (and spam folder) for detailed instructions
+                                    on how to confirm your booking with advance payment.
+                                </p>
+                            </div>
+
+                            <div className="modal-steps">
+                                <h4>📝 Next Steps:</h4>
+                                <ol>
+                                    <li>Open the confirmation email we sent you</li>
+                                    <li>Contact us via phone/WhatsApp for payment</li>
+                                    <li>Complete the advance payment</li>
+                                </ol>
+                            </div>
+
+                            <div className="modal-note">
+                                <span className="note-icon">⚠️</span>
+                                <span>Your booking is <strong>pending</strong> until advance payment is received.</span>
+                            </div>
+                        </div>
+
+                        <div className="modal-footer">
+                            <button
+                                className="modal-close-btn"
+                                onClick={() => setShowSuccessModal(false)}
+                            >
+                                Got it, I'll check my email!
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Lightbox Component */}
+            <ImageLightbox
+                isOpen={lightboxState.isOpen}
+                images={lightboxState.images}
+                initialIndex={lightboxState.index}
+                onClose={closeLightbox}
+            />
+
+            {/* --- GLOBAL MODALS (Overlay) --- */}
+
+            {/* 1. Calendar Modal */}
+            {showCalendar && (
+                <div className="picker-modal-overlay" onClick={() => setShowCalendar(false)}>
+                    <div className="picker-modal-content calendar-modal" onClick={(e) => e.stopPropagation()}>
+                        <h4 style={{ margin: '0 0 15px 0', color: '#2c3e50', textAlign: 'center' }}>Select Dates</h4>
+                        <div className="calendar-container-styled" style={{ boxShadow: 'none', padding: 0, border: 'none' }}>
+                            <Calendar
+                                key={calendarKey}
+                                selectRange={true}
+                                onChange={handleDateChange}
+                                defaultValue={formData.checkIn && formData.checkOut ? [new Date(formData.checkIn), new Date(formData.checkOut)] : undefined}
+                                minDate={new Date()}
+                                tileContent={getTileContent}
+                                tileClassName={getTileClassName}
+                            />
+                        </div>
+                        <div style={{ textAlign: 'center', marginTop: '20px' }}>
+                            <button
+                                type="button"
+                                onClick={() => setShowCalendar(false)}
+                                style={{ background: '#2ecc71', color: 'white', border: 'none', padding: '10px 30px', borderRadius: '25px', fontWeight: 'bold', cursor: 'pointer', fontSize: '1rem', boxShadow: '0 4px 10px rgba(46, 204, 113, 0.3)' }}
+                            >
+                                Confirm Dates
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* 2. Room Picker Modal */}
+            {showRoomPicker && (
+                <div className="picker-modal-overlay" onClick={() => setShowRoomPicker(false)}>
+                    <div className="picker-modal-content room-modal" onClick={(e) => e.stopPropagation()}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', paddingBottom: '10px', borderBottom: '1px solid #eee' }}>
+                            <h3 style={{ margin: 0, color: '#2c3e50' }}>Select Rooms</h3>
+                            <button onClick={() => setShowRoomPicker(false)} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#95a5a6' }}>&times;</button>
+                        </div>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                            {ROOMS.map(room => {
+                                const isSelected = formData.selectedRooms.some(r => r.id === room.id);
+                                return (
+                                    <div
+                                        key={room.id}
+                                        className={`room-card-detailed ${isSelected ? 'selected' : ''}`}
+                                        onClick={() => toggleRoom(room)}
+                                        style={{
+                                            border: isSelected ? '2px solid #3498db' : '1px solid #e0e0e0',
+                                            background: isSelected ? '#fbfdff' : 'white',
+                                            borderRadius: '16px',
+                                            overflow: 'hidden',
+                                            cursor: 'pointer',
+                                            transition: 'all 0.3s ease',
+                                            boxShadow: isSelected ? '0 8px 16px rgba(52,152,219,0.15)' : '0 4px 12px rgba(0,0,0,0.05)',
+                                            position: 'relative'
+                                        }}
+                                    >
+                                        {/* Selection Badge */}
+                                        {isSelected && (
+                                            <div style={{
+                                                position: 'absolute',
+                                                top: '15px',
+                                                right: '15px',
+                                                background: '#3498db',
+                                                color: 'white',
+                                                padding: '6px 14px',
+                                                borderRadius: '20px',
+                                                fontWeight: 'bold',
+                                                fontSize: '0.85rem',
+                                                zIndex: 10,
+                                                boxShadow: '0 2px 8px rgba(52,152,219,0.4)'
+                                            }}>
+                                                ✓ Selected
+                                            </div>
+                                        )}
+
+                                        {/* Image Carousel */}
+                                        <div style={{ pointerEvents: 'auto' }} onClick={(e) => e.stopPropagation()}>
+                                            <ImageCarousel images={room.images} height="220px" onImageClick={() => toggleRoom(room)} />
+                                        </div>
+
+                                        {/* Content */}
+                                        <div style={{ padding: '20px' }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '10px' }}>
+                                                <h3 style={{ margin: 0, fontSize: '1.25rem', color: '#2c3e50', fontWeight: '700' }}>{room.name}</h3>
+                                                <div style={{ textAlign: 'right' }}>
+                                                    <div style={{ fontSize: '1.2rem', fontWeight: '800', color: '#e67e22' }}>
+                                                        ₹{getSeasonalRoomPrice(formData.checkIn ? new Date(formData.checkIn) : new Date(), room.id).toLocaleString('en-IN')}
+                                                    </div>
+                                                    <div style={{ fontSize: '0.8rem', color: '#95a5a6' }}>/ night</div>
+                                                </div>
+                                            </div>
+
+                                            {/* Specs Grid */}
+                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '15px', fontSize: '0.9rem', color: '#546e7a' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>🛏️ {room.beds}</div>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>📏 {room.size}</div>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>🏞️ {room.view}</div>
+                                                {room.extraBed && <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#27ae60' }}>➕ {room.extraBed}</div>}
+                                            </div>
+
+                                            {/* Features */}
+                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                                                {room.features.slice(0, 4).map((feature, idx) => (
+                                                    <span key={idx} style={{ background: '#f8f9fa', padding: '4px 10px', borderRadius: '4px', fontSize: '0.8rem', color: '#636e72', border: '1px solid #eee' }}>
+                                                        {feature}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+
+                        <div style={{ textAlign: 'center', marginTop: '25px', borderTop: '1px solid #eee', paddingTop: '20px' }}>
+                            <button
+                                type="button"
+                                onClick={() => setShowRoomPicker(false)}
+                                style={{ background: '#3498db', color: 'white', border: 'none', padding: '12px 40px', borderRadius: '30px', fontWeight: 'bold', cursor: 'pointer', fontSize: '1rem', boxShadow: '0 4px 15px rgba(52, 152, 219, 0.3)' }}
+                            >
+                                Done
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+        </section>
+    );
 };
 
 export default BookingForm;
