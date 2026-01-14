@@ -36,7 +36,6 @@ const About = () => {
                             <div className="host-avatar">NH</div>
                             <div className="host-details">
                                 <h4>Namaste Hills</h4>
-                                <p>Your local host since 2020 • Quick responder</p>
                             </div>
                         </div>
                     </div>
