@@ -500,7 +500,17 @@ const BookingForm = ({ onToast }) => {
             if (parts.length === 3) {
                 const meal = parts[1];
                 const diet = parts[2];
-                const count = Math.max(0, parseInt(value) || 0);
+                let count = Math.max(0, parseInt(value) || 0);
+
+                // VALIDATION: Total meals for this time cannot exceed guests
+                const totalGuests = parseInt(formData.guests) || 1;
+                const otherDiet = diet === 'veg' ? 'nonVeg' : 'veg';
+                const otherCount = formData.mealSelection[meal][otherDiet];
+
+                if (count + otherCount > totalGuests) {
+                    onToast(`Total ${meal} meals cannot exceed number of guests (${totalGuests})`, 'error');
+                    count = Math.max(0, totalGuests - otherCount);
+                }
 
                 setFormData(prev => ({
                     ...prev,
