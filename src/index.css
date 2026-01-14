@@ -2125,3 +2125,19 @@ section {
     width: 100%;
   }
 }
+
+.cookie-link {
+  background: none;
+  border: none;
+  padding: 0;
+  color: #3498db;
+  text-decoration: underline;
+  cursor: pointer;
+  font-size: inherit;
+  font-family: inherit;
+  margin: 0 4px;
+}
+
+.cookie-link:hover {
+  color: #2980b9;
+}

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-const CookieConsent = () => {
+const CookieConsent = ({ onOpenPolicy }) => {
     const [isVisible, setIsVisible] = useState(false);
 
     useEffect(() => {
@@ -28,7 +28,9 @@ const CookieConsent = () => {
         <div className="cookie-banner">
             <div className="cookie-content">
                 <p>
-                    We use cookies to enhance your experience. By continuing to visit this site you agree to our use of cookies.
+                    We use cookies to enhance your experience. <button className="cookie-link" onClick={() => onOpenPolicy('privacy')}>Learn more</button>
+                    <br />
+                    By continuing to visit this site you agree to our use of cookies.
                 </p>
                 <div className="cookie-actions">
                     <button onClick={handleDecline} className="cookie-btn cookie-decline">

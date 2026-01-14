@@ -1,9 +1,5 @@
-import { useState } from 'react';
-import PolicyModal from './PolicyModal';
-
-const Footer = () => {
+const Footer = ({ onOpenPolicy }) => {
     const currentYear = new Date().getFullYear();
-    const [policyType, setPolicyType] = useState(null);
 
     const scrollToSection = (e, sectionId) => {
         e.preventDefault();
@@ -36,14 +32,12 @@ const Footer = () => {
                 <div className="footer-bottom">
                     <p>© {currentYear} Bethany Homestay. All rights reserved. | Namaste Hills</p>
                     <div className="footer-legal">
-                        <button onClick={() => setPolicyType('terms')}>Terms & Conditions</button>
+                        <button onClick={() => onOpenPolicy('terms')}>Terms & Conditions</button>
                         <span>|</span>
-                        <button onClick={() => setPolicyType('privacy')}>Privacy Policy</button>
+                        <button onClick={() => onOpenPolicy('privacy')}>Privacy Policy</button>
                     </div>
                 </div>
             </div>
-
-            <PolicyModal type={policyType} onClose={() => setPolicyType(null)} />
         </footer>
     );
 };

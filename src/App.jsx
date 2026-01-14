@@ -11,12 +11,19 @@ import Contact from './components/Contact';
 import Footer from './components/Footer';
 import CookieConsent from './components/CookieConsent';
 
+import PolicyModal from './components/PolicyModal';
+
 function App() {
   const [toast, setToast] = useState(null);
+  const [policyType, setPolicyType] = useState(null);
 
   const showToast = (message, type = 'success') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 4000);
+  };
+
+  const openPolicy = (type) => {
+    setPolicyType(type);
   };
 
   return (
@@ -31,7 +38,7 @@ function App() {
         <Amenities />
         <Contact />
       </main>
-      <Footer />
+      <Footer onOpenPolicy={openPolicy} />
 
       {/* Toast Notification */}
       {toast && (
@@ -40,7 +47,8 @@ function App() {
         </div>
       )}
 
-      <CookieConsent />
+      <CookieConsent onOpenPolicy={openPolicy} />
+      <PolicyModal type={policyType} onClose={() => setPolicyType(null)} />
     </>
   );
 }
