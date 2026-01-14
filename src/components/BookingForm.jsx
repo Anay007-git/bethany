@@ -214,7 +214,7 @@ const BookingForm = ({ onToast }) => {
     const [bookingDetails, setBookingDetails] = useState(null);
 
     // Google Sheets Web App URL (Apps Script deployment)
-    const GOOGLE_SHEETS_URL = 'https://script.google.com/macros/s/AKfycbwK4ImQyrF_W8e2g9ZGjbLypWW9vaNVk4Pwh_t5uyWknnFWpGz2tiKxYJ13Js4srAar/exec';
+    const GOOGLE_SHEETS_URL = 'https://script.google.com/macros/s/AKfycbwCh7e84B44r49_S84abs7DfNyu6V8IV6umuQUNYH6qRmtGDIVKzXWR4EXD8yFrLFNksw/exec';
 
     // Fetch existing bookings for availability check
     useEffect(() => {
