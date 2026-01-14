@@ -529,8 +529,8 @@ section {
 
 .amenities-grid {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  /* Force single row for 5 items */
+  grid-template-columns: repeat(4, 1fr);
+  /* Force single row for 4 items */
   gap: 16px;
   /* Tighter gap */
   overflow-x: auto;
