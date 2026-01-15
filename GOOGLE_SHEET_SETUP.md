@@ -1,15 +1,15 @@
 # Google Sheet & Apps Script Setup
 
-To receive **Meal Details** and retain your **Email Notifications**, please replace your **entire** Apps Script with the code below.
+To receive **Meal Details** and enable **Automatic "Booked" Confirmation Emails**, using the code below.
 
 ## 1. Update Your Google Sheet Columns
-**IMPORTANT:** Because we are adding a "Meals" column, the column order changes. Please adjust your Google Sheet Header Row (Row 1) to match this **New Order**:
+**IMPORTANT:** Column order is critical. Please match this exact order:
 
-| Col A | Col B | Col C | Col D | Col E | Col F | Col G | Col H | **Col I** | Col J | Col K | Col L | Col M | Col N |
+| A | B | C | D | E | F | G | H | **I** | J | K | L | M | N |
 | :-- | :-- | :-- | :-- | :-- | :-- | :-- | :-- | :-- | :-- | :-- | :-- | :-- | :-- |
 | Timestamp | Name | Email | Phone | Check-In | Check-Out | Guests | Room Type | **Meals** | Price/Night | Nights | Total Price | Status | Message |
 
-> *Note: pass "Status" moves to Column M, "Message" to Column N.*
+> *Note: "Status" must be Column M.*
 
 ---
 
@@ -17,19 +17,20 @@ To receive **Meal Details** and retain your **Email Notifications**, please repl
 Copy **ALL** of the code below and replace everything in your `Code.gs` file.
 
 ```javascript
-/* 
-   UPDATED SCRIPT (2026-01-15)
-   - Added 'Meals' column support
-   - Included 'Meal Plan' in Email Notifications
-   - Updated Column Indexes for Status/Availability Check
-*/
+/* -----------------------------------------------------------
+   BETHANY HOMESTAY BACKEND SCRIPT
+   - Handles form submissions (doPost)
+   - Handles availability checks (doGet)
+   - Sends Confirmation Emails on "Booked" status change
+   ----------------------------------------------------------- */
 
-const OWNER_EMAIL = 'biswasanay07@gmail.com';  // Your email
-const OWNER_PHONE = '+91 94478 24335';         // Your phone (Update if needed)
+const OWNER_EMAIL = 'biswasanay07@gmail.com'; 
+const OWNER_PHONE = '+91 94478 24335';
 const HOMESTAY_NAME = 'Bethany Homestay';
 const HOMESTAY_ADDRESS = 'Munnar, Kerala, India';
 
-// Handle GET requests
+// --- PART 1: WEB APP HANDLING ---
+
 function doGet(e) {
     var output;
     try {
@@ -47,145 +48,150 @@ function doGet(e) {
     return output.setMimeType(ContentService.MimeType.JSON);
 }
 
-// Handle POST requests
 function doPost(e) { return doGet(e); }
 
-// Save a new booking
 function saveBooking(params) {
     const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
-
-    // Add new row with booking data including MEALS
     sheet.appendRow([
-        new Date(),                      // A: Timestamp
-        params.name || '',               // B: Name
-        params.email || '',              // C: Email
-        params.phone || '',              // D: Phone
-        params.checkIn || '',            // E: Check-in
-        params.checkOut || '',           // F: Check-out
-        params.guests || '',             // G: Guests
-        params.roomType || '',           // H: Room Type
-        params.meals || 'None',          // I: MEALS (NEW)
-        params.pricePerNight || '',      // J: Price/Night
-        params.numberOfNights || '',     // K: Nights
-        params.totalPrice || '',         // L: Total Price
-        'Pending',                       // M: Status (Moved)
-        params.message || ''             // N: Special Requests
+        new Date(),                      // A
+        params.name || '',               // B
+        params.email || '',              // C
+        params.phone || '',              // D
+        params.checkIn || '',            // E
+        params.checkOut || '',           // F
+        params.guests || '',             // G
+        params.roomType || '',           // H
+        params.meals || 'None',          // I
+        params.pricePerNight || '',      // J
+        params.numberOfNights || '',     // K
+        params.totalPrice || '',         // L
+        'Pending',                       // M (Status)
+        params.message || ''             // N
     ]);
 
-    // Send emails
     try { sendCustomerEmail(params); } catch (e) { console.log('Customer email error:', e); }
     try { sendOwnerNotification(params); } catch (e) { console.log('Owner email error:', e); }
 
     return ContentService.createTextOutput(JSON.stringify({ success: true, message: 'Booking saved successfully' }));
 }
 
-// Send confirmation email to customer
+// --- PART 2: EMAIL NOTIFICATIONS (SUBMISSION) ---
+
 function sendCustomerEmail(params) {
     const customerEmail = params.email;
     if (!customerEmail) return;
 
     const subject = `🏡 Booking Request Received - ${HOMESTAY_NAME}`;
-    
-    // HTML Template
     const htmlBody = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <style>
-        body { font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #333; }
-        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-        .header { background: linear-gradient(135deg, #FF5A5F, #E04B50); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
-        .content { background: #f9f9f9; padding: 30px; border: 1px solid #ddd; }
-        .booking-details { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #FF5A5F; }
-        .detail-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #eee; }
-        .detail-label { color: #666; }
-        .detail-value { font-weight: bold; color: #333; }
-        .total-row { background: #FF5A5F; color: white; padding: 15px; margin: 10px -20px -20px; border-radius: 0 0 8px 8px; }
-        .status-badge { display: inline-block; background: #ffc107; color: #333; padding: 5px 15px; border-radius: 20px; font-weight: bold; }
-      </style>
-    </head>
-    <body>
-      <div class="container">
-        <div class="header"><h1>🏡 ${HOMESTAY_NAME}</h1><p>Booking Request Confirmation</p></div>
-        <div class="content">
-          <p>Dear <strong>${params.name}</strong>,</p>
-          <p>Thank you for choosing ${HOMESTAY_NAME}! We have received your booking request.</p>
-          <p style="text-align: center;"><span class="status-badge">⏳ PENDING CONFIRMATION</span></p>
-          
-          <div class="booking-details">
-            <h3 style="margin-top: 0; color: #FF5A5F;">📋 Booking Details</h3>
-            <div class="detail-row"><span class="detail-label">Room Type:</span><span class="detail-value">${params.roomType}</span></div>
-            <div class="detail-row"><span class="detail-label">Check-in:</span><span class="detail-value">${params.checkIn}</span></div>
-            <div class="detail-row"><span class="detail-label">Check-out:</span><span class="detail-value">${params.checkOut}</span></div>
-            <div class="detail-row"><span class="detail-label">Duration:</span><span class="detail-value">${params.numberOfNights} night(s)</span></div>
-            <div class="detail-row"><span class="detail-label">Guests:</span><span class="detail-value">${params.guests}</span></div>
-            ${params.meals && params.meals !== 'None' ? 
-            `<div class="detail-row" style="flex-direction:column; align-items:flex-start;">
-                <span class="detail-label" style="margin-bottom:5px;">Meal Plan:</span>
-                <span class="detail-value" style="font-size:0.9em; color:#555;">${params.meals}</span>
-             </div>` : ''}
-            <div class="total-row">
-              <div style="display: flex; justify-content: space-between;">
-                <span>Total Amount:</span><span style="font-size: 24px; font-weight: bold;">₹${params.totalPrice}</span>
-              </div>
-            </div>
-          </div>
-          
-          <div style="background: #fff3cd; border: 1px solid #ffc107; padding: 20px; border-radius: 8px; margin: 20px 0;">
-            <div style="color: #856404; font-weight: bold; margin-bottom: 10px;">⚠️ Action Required</div>
-            <p>To confirm your booking, please contact us for advance payment:</p>
-            <p><strong>📞 Phone:</strong> ${OWNER_PHONE}<br><strong>📧 Email:</strong> ${OWNER_EMAIL}</p>
-          </div>
-          
-          <p>Warm regards,<br><strong>Team ${HOMESTAY_NAME}</strong></p>
+    <!DOCTYPE html><html><body style="font-family: Arial, sans-serif; color: #333;">
+      <div style="max-width: 600px; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
+        <h2 style="color: #E04B50;">🏡 Booking Request Received</h2>
+        <p>Dear <strong>${params.name}</strong>,</p>
+        <p>Thank you for choosing ${HOMESTAY_NAME}. Status: <strong style="color:orange">PENDING</strong></p>
+        
+        <div style="background: #f9f9f9; padding: 15px; border-radius: 5px;">
+          <p><strong>Room:</strong> ${params.roomType}</p>
+          <p><strong>Dates:</strong> ${params.checkIn} to ${params.checkOut}</p>
+          <p><strong>Meals:</strong> ${params.meals || 'None'}</p>
+          <p><strong>Total:</strong> ₹${params.totalPrice}</p>
+        </div>
+        
+        <div style="background: #fff3cd; border: 1px solid #ffc107; padding: 15px; margin-top: 15px; border-radius: 5px;">
+          <strong>⚠️ Action Required:</strong><br>
+          Please contact us to pay the advance and confirm your booking.<br>
+          📞 Phone: ${OWNER_PHONE}
         </div>
       </div>
-    </body>
-    </html>`;
+    </body></html>`;
 
-    MailApp.sendEmail({
-        to: customerEmail,
-        subject: subject,
-        body: `Booking Received. Total: ₹${params.totalPrice}. Please check HTML email.`,
-        htmlBody: htmlBody
-    });
+    MailApp.sendEmail({ to: customerEmail, subject: subject, htmlBody: htmlBody });
 }
 
-// Send notification to owner
 function sendOwnerNotification(params) {
-    const subject = `🔔 New Booking - ${params.roomType} (${params.checkIn})`;
-    
+    const subject = `🔔 New Booking - ${params.roomType}`;
     const htmlBody = `
-    <!DOCTYPE html>
-    <html>
-    <head><style>.row { padding: 5px 0; border-bottom: 1px solid #eee; }</style></head>
-    <body>
-      <h2 style="color: #28a745;">🔔 New Booking Request</h2>
-      <div style="background: #f8f9fa; padding: 20px; border-radius: 8px;">
-        <h3>Customer:</h3>
-        <div class="row"><strong>Name:</strong> ${params.name}</div>
-        <div class="row"><strong>Phone:</strong> ${params.phone}</div>
-        <div class="row"><strong>Email:</strong> ${params.email}</div>
-        
-        <h3>Details:</h3>
-        <div class="row"><strong>Room:</strong> ${params.roomType}</div>
-        <div class="row"><strong>Dates:</strong> ${params.checkIn} to ${params.checkOut}</div>
-        <div class="row"><strong>Meals:</strong> ${params.meals || 'None'}</div>
-        <div class="row"><strong>Total:</strong> ₹${params.totalPrice}</div>
-        <div class="row"><strong>Message:</strong> ${params.message || 'None'}</div>
-      </div>
-    </body>
-    </html>`;
+    <!DOCTYPE html><html><body>
+      <h2 style="color:green;">New Booking Request</h2>
+      <p><strong>Name:</strong> ${params.name}</p>
+      <p><strong>Phone:</strong> ${params.phone}</p>
+      <p><strong>Room:</strong> ${params.roomType}</p>
+      <p><strong>Dates:</strong> ${params.checkIn} to ${params.checkOut}</p>
+      <p><strong>Meals:</strong> ${params.meals || 'None'}</p>
+      <p><strong>Total:</strong> ₹${params.totalPrice}</p>
+      <p><strong>Message:</strong> ${params.message}</p>
+    </body></html>`;
 
-    MailApp.sendEmail({
-        to: OWNER_EMAIL,
-        subject: subject,
-        body: `New Booking: ${params.name}, ${params.roomType}, Total: ₹${params.totalPrice}`,
-        htmlBody: htmlBody
-    });
+    MailApp.sendEmail({ to: OWNER_EMAIL, subject: subject, htmlBody: htmlBody });
 }
 
-// Get existing bookings (UPDATED COLUMN INDEXES)
+// --- PART 3: TRIGGER ON EDIT (STATUS CHANGE) ---
+
+/* 
+   IMPORTANT: This function runs when you edit the sheet.
+   It checks if you changed Column M (13) to 'Booked'.
+*/
+function onStatusEdit(e) {
+  var sheet = e.source.getActiveSheet();
+  var range = e.range;
+  var col = range.getColumn();
+  var row = range.getRow();
+  var val = range.getValue();
+  
+  // Column M is index 13.
+  if (col === 13 && row > 1 && String(val).toLowerCase() === 'booked') {
+    
+    // Get row data
+    // Indexes are 0-based in the array: 
+    // Col B (Name) = 1, Col C (Email) = 2, Col E (In) = 4, Col F (Out) = 5
+    // Col H (Room) = 7, Col L (Total) = 11
+    
+    var data = sheet.getRange(row, 1, 1, 14).getValues()[0];
+    
+    var customerName = data[1];
+    var customerEmail = data[2];
+    var checkIn = formatDate(data[4]);
+    var checkOut = formatDate(data[5]);
+    var roomName = data[7];
+    var totalAmount = data[11];
+    
+    if (customerEmail) {
+      sendConfirmationSuccessEmail(customerName, customerEmail, roomName, checkIn, checkOut, totalAmount);
+    }
+  }
+}
+
+function sendConfirmationSuccessEmail(name, email, room, checkIn, checkOut, total) {
+  var subject = `✅ Booking Confirmed! - ${HOMESTAY_NAME}`;
+  var htmlBody = `
+    <!DOCTYPE html><html><body style="font-family: Arial, sans-serif; color: #333;">
+      <div style="max-width: 600px; padding: 20px; border: 1px solid #27ae60; border-radius: 8px;">
+        <h2 style="color: #27ae60;">✅ Booking Confirmed!</h2>
+        <p>Dear <strong>${name}</strong>,</p>
+        <p>We are happy to confirm your stay at ${HOMESTAY_NAME}.</p>
+        
+        <div style="background: #e8f5e9; padding: 15px; border-radius: 5px; margin: 15px 0;">
+          <p><strong>Room:</strong> ${room}</p>
+          <p><strong>Check-in:</strong> ${checkIn}</p>
+          <p><strong>Check-out:</strong> ${checkOut}</p>
+          <p><strong>Total Amount:</strong> ₹${total}</p>
+        </div>
+        
+        <p>See you soon!</p>
+        <p><strong>${HOMESTAY_NAME}</strong><br>${HOMESTAY_ADDRESS}<br>📞 ${OWNER_PHONE}</p>
+      </div>
+    </body></html>`;
+    
+  MailApp.sendEmail({ to: email, subject: subject, htmlBody: htmlBody });
+}
+
+// Helper
+function formatDate(dateVal) {
+  if (dateVal instanceof Date) { return Utilities.formatDate(dateVal, Session.getScriptTimeZone(), 'yyyy-MM-dd'); }
+  return dateVal;
+}
+
+// --- PART 4: DATA FETCHING ---
+
 function getBookings() {
     const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
     const data = sheet.getDataRange().getValues();
@@ -193,30 +199,33 @@ function getBookings() {
 
     for (var i = 1; i < data.length; i++) {
         var row = data[i];
-        
-        // COLUMN INDEXES SHIFTED BY 1 DUE TO 'MEALS' (Col I)
-        // Check-in (E) = row[4], Check-out (F) = row[5] -> Unchanged
-        // RoomType (H) = row[7] -> Unchanged
-        // Status is now Column M = row[12] (Previously L/11)
-        
+        // Status is Column M (index 12)
         var status = String(row[12] || '').trim(); 
-        var roomType = String(row[7] || '').trim();
+        var roomType = String(row[7] || '').trim(); // Col H
         var checkIn = row[4];
         var checkOut = row[5];
 
         if (status === 'Pending' || status === 'Booked') {
             var checkInStr = (checkIn instanceof Date) ? Utilities.formatDate(checkIn, Session.getScriptTimeZone(), 'yyyy-MM-dd') : String(checkIn);
             var checkOutStr = (checkOut instanceof Date) ? Utilities.formatDate(checkOut, Session.getScriptTimeZone(), 'yyyy-MM-dd') : String(checkOut);
-            
             bookings.push({ checkIn: checkInStr, checkOut: checkOutStr, roomType: roomType, status: status });
         }
     }
-
     return ContentService.createTextOutput(JSON.stringify({ success: true, bookings: bookings }));
 }
 ```
 
-### **3. Deploy**
-1. **Extensions** > **Apps Script**.
-2. Paste the code above.
-3. **Deploy** > **Manage deployments** > **Edit** (Pencil icon) > **New Version** > **Deploy**.
+## 3. IMPORTANT: Enable the Trigger
+For the "Booked" confirmation to work, you must set up an **Installable Trigger**. Simple `onEdit` triggers cannot send emails.
+
+1.  In the Apps Script Editor, click the **Triggers** icon (Clock 🕒) on the left sidebar.
+2.  Click **+ Add Trigger** (blue button at bottom right).
+3.  Configure these **exact settings**:
+    *   **Choose which function to run**: `onStatusEdit`
+    *   **Choose which deployment should run**: `Head`
+    *   **Select event source**: `From spreadsheet`
+    *   **Select event type**: `On edit`
+4.  Click **Save**.
+5.  It will ask for permissions again (because it now needs to "See your spreadsheets" and "Send email as you" whenever an edit happens). **Accept/Allow**.
+
+Now, whenever you manually type "Booked" (or select it from a dropdown) in **Column M**, the email will fire! 🚀
