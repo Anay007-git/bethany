@@ -1046,6 +1046,26 @@ section {
   list-style: none;
 }
 
+.footer-social {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.footer-social a {
+  color: white;
+  opacity: 0.8;
+  transition: opacity 0.3s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.footer-social a:hover {
+  opacity: 1;
+  color: var(--airbnb-primary);
+}
+
 .footer-links a {
   color: rgba(255, 255, 255, 0.7);
   text-decoration: none;
