@@ -777,6 +777,11 @@ const BookingForm = ({ onToast }) => {
                                     ))}
                                 </select>
                             </div>
+                            {formData.guests > 4 && (
+                                <div style={{ fontSize: '0.8rem', color: '#7f8c8d', marginBottom: '10px', fontStyle: 'italic' }}>
+                                    💡 Tip: For {formData.guests} guests, you'll need at least {Math.ceil(parseInt(formData.guests) / 4)} rooms.
+                                </div>
+                            )}
 
                             {!formData.checkIn && <p style={{ color: '#e74c3c', marginTop: '15px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '5px' }}><span>ℹ️</span> Select dates to see prices.</p>}
                         </div>
@@ -812,9 +817,16 @@ const BookingForm = ({ onToast }) => {
 
                             {/* Capacity Warning */}
                             {showCapacityWarning && (
-                                <div style={{ background: '#fff3cd', color: '#856404', padding: '10px', borderRadius: '6px', fontSize: '0.85rem', marginBottom: '15px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <span>⚠️</span>
-                                    <span>Guests ({currentGuests}) &gt; Beds ({currentCapacity}). Add rooms!</span>
+                                <div style={{ background: '#fadbd8', color: '#c0392b', padding: '12px', borderRadius: '8px', fontSize: '0.9rem', marginBottom: '15px', display: 'flex', alignItems: 'flex-start', gap: '10px', border: '1px solid #e74c3c' }}>
+                                    <span style={{ fontSize: '1.2rem' }}>⚠️</span>
+                                    <div>
+                                        <strong>Not Enough Space!</strong>
+                                        <div style={{ marginTop: '4px' }}>
+                                            You selected <strong>{currentGuests} guests</strong> but only have beds for <strong>{currentCapacity}</strong>.
+                                            <br />
+                                            Please <strong>add another room</strong>.
+                                        </div>
+                                    </div>
                                 </div>
                             )}
 
@@ -859,8 +871,8 @@ const BookingForm = ({ onToast }) => {
                                 <input type="email" name="email" value={formData.email} onChange={handleChange} placeholder="Email" required style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ddd', marginBottom: '10px', fontSize: '0.9rem' }} />
                                 <textarea name="message" value={formData.message} onChange={handleChange} placeholder="Message" rows="2" style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ddd', marginBottom: '15px', fontSize: '0.9rem' }} />
 
-                                <button type="submit" disabled={isSubmitting || formData.selectedRooms.length === 0} style={{ width: '100%', padding: '12px', background: isSubmitting || formData.selectedRooms.length === 0 ? '#bdc3c7' : '#2ecc71', color: 'white', border: 'none', borderRadius: '8px', fontSize: '1.1rem', fontWeight: 'bold', cursor: isSubmitting || formData.selectedRooms.length === 0 ? 'not-allowed' : 'pointer', transition: 'background 0.3s' }}>
-                                    {isSubmitting ? '...' : 'Confirm'}
+                                <button type="submit" disabled={isSubmitting || formData.selectedRooms.length === 0 || showCapacityWarning} style={{ width: '100%', padding: '12px', background: isSubmitting || formData.selectedRooms.length === 0 || showCapacityWarning ? '#bdc3c7' : '#2ecc71', color: 'white', border: 'none', borderRadius: '8px', fontSize: '1.1rem', fontWeight: 'bold', cursor: isSubmitting || formData.selectedRooms.length === 0 || showCapacityWarning ? 'not-allowed' : 'pointer', transition: 'background 0.3s' }}>
+                                    {showCapacityWarning ? 'Select More Rooms' : (isSubmitting ? '...' : 'Confirm Request')}
                                 </button>
                             </form>
 
