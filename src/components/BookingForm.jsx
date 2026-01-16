@@ -354,12 +354,24 @@ const BookingForm = ({ onToast }) => {
                 });
 
                 // Meal Cost
+                // Meal Cost (Sum of specific plates * price)
                 let dailyMealCost = 0;
-                if (formData.mealSelection.breakfast) dailyMealCost += MEAL_PRICES.breakfast;
-                if (formData.mealSelection.lunch) dailyMealCost += MEAL_PRICES.lunch;
-                if (formData.mealSelection.dinner) dailyMealCost += MEAL_PRICES.dinner;
 
-                totalMealCost += (dailyMealCost * currentGuests);
+                // Breakfast
+                const bCount = (formData.mealSelection.breakfast.veg || 0) + (formData.mealSelection.breakfast.nonVeg || 0);
+                dailyMealCost += bCount * MEAL_PRICES.breakfast;
+
+                // Lunch
+                const lCount = (formData.mealSelection.lunch.veg || 0) + (formData.mealSelection.lunch.nonVeg || 0);
+                dailyMealCost += lCount * MEAL_PRICES.lunch;
+
+                // Dinner
+                const dCount = (formData.mealSelection.dinner.veg || 0) + (formData.mealSelection.dinner.nonVeg || 0);
+                dailyMealCost += dCount * MEAL_PRICES.dinner;
+
+                // NOTE: We do NOT multiply by 'currentGuests' here because the counts (bCount, lCount, etc.)
+                // are already the specific number of plates selected by the user.
+                totalMealCost += dailyMealCost;
             }
 
             setRoomPriceTotal(totalRoomCost);
