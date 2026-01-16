@@ -987,17 +987,22 @@ const BookingForm = ({ onToast }) => {
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
                             {ROOMS.map(room => {
                                 const isSelected = formData.selectedRooms.some(r => r.id === room.id);
+                                const status = getRoomStatus(room.id);
+                                const isBooked = status === 'booked';
+                                const isPartial = status === 'partial';
+
                                 return (
                                     <div
                                         key={room.id}
-                                        className={`room-card-detailed ${isSelected ? 'selected' : ''}`}
-                                        onClick={() => toggleRoom(room)}
+                                        className={`room-card-detailed ${isSelected ? 'selected' : ''} ${isBooked ? 'booked-card' : ''}`}
+                                        onClick={() => !isBooked && toggleRoom(room)}
                                         style={{
                                             border: isSelected ? '2px solid #3498db' : '1px solid #e0e0e0',
-                                            background: isSelected ? '#fbfdff' : 'white',
+                                            background: isSelected ? '#fbfdff' : (isBooked ? '#f8f9fa' : 'white'),
                                             borderRadius: '16px',
                                             overflow: 'hidden',
-                                            cursor: 'pointer',
+                                            cursor: isBooked ? 'not-allowed' : 'pointer',
+                                            opacity: isBooked ? 0.7 : 1,
                                             transition: 'all 0.3s ease',
                                             boxShadow: isSelected ? '0 8px 16px rgba(52,152,219,0.15)' : '0 4px 12px rgba(0,0,0,0.05)',
                                             position: 'relative'
@@ -1019,6 +1024,32 @@ const BookingForm = ({ onToast }) => {
                                                 boxShadow: '0 2px 8px rgba(52,152,219,0.4)'
                                             }}>
                                                 ✓ Selected
+                                            </div>
+                                        )}
+
+                                        {/* Booked Overlay Badge */}
+                                        {isBooked && (
+                                            <div style={{
+                                                position: 'absolute',
+                                                top: 0, left: 0, right: 0, bottom: 0,
+                                                background: 'rgba(255,255,255,0.6)',
+                                                zIndex: 20,
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center'
+                                            }}>
+                                                <div style={{
+                                                    background: '#e74c3c',
+                                                    color: 'white',
+                                                    padding: '10px 25px',
+                                                    borderRadius: '30px',
+                                                    fontWeight: 'bold',
+                                                    fontSize: '1.2rem',
+                                                    boxShadow: '0 4px 15px rgba(231, 76, 60, 0.4)',
+                                                    transform: 'rotate(-5deg)'
+                                                }}>
+                                                    SOLD OUT
+                                                </div>
                                             </div>
                                         )}
 
