@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useRef } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import React from 'react';
@@ -11,6 +11,19 @@ gsap.registerPlugin(ScrollTrigger);
 const Hero = () => {
     const heroRef = useRef(null);
     const contentRef = useRef(null);
+    const audioRef = useRef(null);
+    const [isMuted, setIsMuted] = useState(true);
+
+    const toggleAudio = () => {
+        if (audioRef.current) {
+            if (isMuted) {
+                audioRef.current.play().catch(e => console.log("Audio play failed", e));
+            } else {
+                audioRef.current.pause();
+            }
+            setIsMuted(!isMuted);
+        }
+    };
 
     const scrollToBooking = (e) => {
         e.preventDefault();
@@ -109,6 +122,43 @@ const Hero = () => {
                         Explore More
                     </a>
                 </div>
+            </div>
+            {/* Ambient Sound Controller */}
+            <div style={{ position: 'absolute', bottom: '30px', right: '30px', zIndex: 10 }}>
+                <button
+                    onClick={toggleAudio}
+                    style={{
+                        background: 'rgba(0,0,0,0.4)',
+                        backdropFilter: 'blur(5px)',
+                        border: '1px solid rgba(255,255,255,0.3)',
+                        color: 'white',
+                        borderRadius: '50%',
+                        width: '45px',
+                        height: '45px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                        transition: 'all 0.3s ease'
+                    }}
+                    title={isMuted ? "Unmute Nature Sounds" : "Mute Nature Sounds"}
+                >
+                    {isMuted ? (
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M11 5L6 9H2v6h4l5 4V5z" />
+                            <line x1="23" y1="9" x2="17" y2="15" />
+                            <line x1="17" y1="9" x2="23" y2="15" />
+                        </svg>
+                    ) : (
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                            <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07" />
+                        </svg>
+                    )}
+                </button>
+                <audio ref={audioRef} loop>
+                    <source src="/nature.mp3" type="audio/mpeg" />
+                </audio>
             </div>
         </section>
     );
