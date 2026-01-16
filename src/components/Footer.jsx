@@ -29,7 +29,7 @@ const Footer = ({ onOpenPolicy }) => {
                     </ul>
 
                     <div className="footer-social">
-                        <a href="https://www.facebook.com/share/p/1H6yWthiWR/" target="_blank" rel="noopener noreferrer" aria-label="Facebook">
+                        <a href="https://www.facebook.com/people/Bethany-Homestay-Kalimpong/100076588549205/" target="_blank" rel="noopener noreferrer" aria-label="Facebook">
                             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
                                 <path d="M9 8h-3v4h3v12h5v-12h3.642l.358-4h-4v-1.667c0-.955.192-1.333 1.115-1.333h2.885v-5h-3.808c-3.596 0-5.192 1.583-5.192 4.615v3.385z" />
                             </svg>
