@@ -3,8 +3,8 @@ import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import React from 'react';
 
-// Lazy Load 3D Scene
-const HeroScene = React.lazy(() => import('./3d/HeroScene'));
+// Lazy Load 3D Scene - Keeping commented out if we want to switch back
+// const HeroScene = React.lazy(() => import('./3d/HeroScene'));
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -57,15 +57,22 @@ const Hero = () => {
     return (
         <section ref={heroRef} className="hero" style={{ position: 'relative', overflow: 'hidden', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
 
-            {/* 3D Background */}
-            <div className="hero-3d-background" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 0 }}>
-                <Suspense fallback={<div style={{ width: '100%', height: '100%', background: 'linear-gradient(to bottom, #dbeafe, #fff)' }} />}>
-                    <HeroScene />
-                </Suspense>
+            {/* Video Background */}
+            <div className="hero-video-background" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 0 }}>
+                <video
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                >
+                    <source src="/hero-video.mp4" type="video/mp4" />
+                    Your browser does not support the video tag.
+                </video>
             </div>
 
             {/* Gradient Overlay for Text Readability */}
-            <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', background: 'linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.4) 100%)', zIndex: 1, pointerEvents: 'none' }}></div>
+            <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', background: 'linear-gradient(to bottom, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.5) 100%)', zIndex: 1, pointerEvents: 'none' }}></div>
 
             <div ref={contentRef} className="hero-content" style={{ position: 'relative', zIndex: 2, textAlign: 'center', color: 'white', maxWidth: '800px', padding: '20px' }}>
                 <span className="hero-badge hero-animate" style={{ display: 'inline-block', padding: '6px 12px', background: 'rgba(255,255,255,0.2)', backdropFilter: 'blur(8px)', borderRadius: '20px', fontSize: '0.9rem', marginBottom: '20px', border: '1px solid rgba(255,255,255,0.4)' }}>
