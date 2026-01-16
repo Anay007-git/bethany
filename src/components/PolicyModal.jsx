@@ -129,9 +129,10 @@ const PolicyModal = ({ type, onClose }) => {
                 <h4>9. Contact Us</h4>
                 <ul>
                     <li>For questions related to bookings, payments, refunds, or privacy, please contact us:</li>
-                    <li><strong>Email:</strong> biswasanay07@gmail.com</li>
-                    <li><strong>Phone:</strong> +91 94478 24335</li>
-                    <li><strong>Address:</strong> Bethany Homestay, Munnar, Kerala, India</li>
+                    <li><strong>Phone:</strong> +91 83489 93048</li>
+                    <li><strong>Chat (WhatsApp):</strong> +91 89109 11758</li>
+                    <li><strong>Email:</strong> namastehills.kol@gmail.com</li>
+                    <li><strong>Address:</strong> Graham's Home Block B, Dr. Graham's Homes, Kalimpong-I, Kalimpong, West Bengal, India.<br />(Landmark: Near Science Centre)</li>
                 </ul>
             </>
         )

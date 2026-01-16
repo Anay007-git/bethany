@@ -5,10 +5,10 @@
 */
 
 // ... (previous setup constants) ...
-const OWNER_EMAIL = 'biswasanay07@gmail.com'; 
-const OWNER_PHONE = '+91 94478 24335';
-const HOMESTAY_NAME = 'Bethany Homestay';
-const HOMESTAY_ADDRESS = 'Munnar, Kerala, India';
+const OWNER_EMAIL = 'namastehills.kol@gmail.com'; 
+const OWNER_PHONE = '+91 83489 93048';
+const HOMESTAY_NAME = 'Namaste Hills';
+const HOMESTAY_ADDRESS = 'Kalimpong, West Bengal, India';
 
 // --- PART 1: WEB APP HANDLING ---
 
