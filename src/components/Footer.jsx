@@ -30,7 +30,7 @@ const Footer = ({ onOpenPolicy }) => {
                 </div>
 
                 <div className="footer-bottom">
-                    <p>© {currentYear} Namaste Hills (formerly Bethany Homestay). All rights reserved.</p>
+                    <p>© {currentYear} Namaste Hills Bethany Homestay. All rights reserved.</p>
                     <div className="footer-legal">
                         <button onClick={() => onOpenPolicy('terms')}>Terms & Conditions</button>
                         <span>|</span>
