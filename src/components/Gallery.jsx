@@ -13,6 +13,9 @@ const galleryItems = [
     { type: 'image', src: '/explore-nature/WhatsApp Image 2026-01-13 at 10.45.42 PM.jpeg', alt: 'Bethany Nature View 6', likes: 175 },
     { type: 'video', src: '/explore-nature/WhatsApp Video 2026-01-14 at 12.47.24 AM.mp4' },
     { type: 'video', src: '/explore-nature/WhatsApp Video 2026-01-14 at 12.44.44 AM.mp4' },
+    { type: 'video', src: '/explore-nature/WhatsApp Video 2026-01-14 at 12.44.44 AM.mp4' },
+    { type: 'youtube', src: 'lUZBGCCRp-Y', alt: 'Bethany Homestay Vibes' },
+    { type: 'youtube', src: 'WfWgYTlUkWY', alt: 'Munnar Beauty' },
 ];
 
 const Gallery = () => {
@@ -55,6 +58,21 @@ const Gallery = () => {
                                         </svg>
                                     </div>
                                 </div>
+                            ) : item.type === 'youtube' ? (
+                                <div className="media-wrapper">
+                                    <img
+                                        src={`https://img.youtube.com/vi/${item.src}/hqdefault.jpg`}
+                                        alt={item.alt}
+                                        loading="lazy"
+                                        className="gallery-media"
+                                        style={{ objectFit: 'cover' }}
+                                    />
+                                    <div className="video-icon" style={{ background: '#ff0000', color: 'white' }}>
+                                        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                                            <path d="M8 5v14l11-7z" />
+                                        </svg>
+                                    </div>
+                                </div>
                             ) : (
                                 <div className="media-wrapper">
                                     <img
@@ -85,7 +103,7 @@ const Gallery = () => {
                 initialIndex={currentImageIndex}
                 onClose={() => setLightboxOpen(false)}
             />
-        </section>
+        </section >
     );
 };
 

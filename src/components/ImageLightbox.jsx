@@ -34,6 +34,24 @@ const ImageLightbox = ({ isOpen, images, initialIndex, onClose }) => {
                         style={{ maxHeight: '90vh', maxWidth: '90vw', borderRadius: '4px', boxShadow: '0 0 30px rgba(0,0,0,0.5)' }}
                         onClick={(e) => e.stopPropagation()}
                     />
+                ) : currentItem?.type === 'youtube' ? (
+                    <iframe
+                        width="100%"
+                        height="100%"
+                        src={`https://www.youtube.com/embed/${src}?autoplay=1&rel=0`}
+                        title="YouTube video"
+                        frameBorder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                        style={{
+                            width: '80vw',
+                            height: '80vh',
+                            maxWidth: '500px', // Shorts format vertical
+                            borderRadius: '12px',
+                            boxShadow: '0 0 30px rgba(0,0,0,0.5)'
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                    ></iframe>
                 ) : (
                     <img
                         src={src}
