@@ -413,3 +413,22 @@
         padding: 15px;
     }
 }
+
+/* FIX: Ensure selected holidays turn Blue (Active) instead of staying Yellow */
+.react-calendar__tile--active.holiday-date,
+.react-calendar__tile--active.holiday-date:enabled:hover,
+.react-calendar__tile--active.holiday-date:enabled:focus {
+    background: #3498db !important;
+    border-color: #3498db !important;
+    color: white !important;
+}
+
+/* Make the "Holiday Name" tag look good on the Blue background */
+.react-calendar__tile--active.holiday-date .holiday-name {
+    background: rgba(255, 255, 255, 0.25);
+    color: white;
+}
+
+.react-calendar__tile--active.holiday-date .price-tag {
+    color: white !important;
+}
