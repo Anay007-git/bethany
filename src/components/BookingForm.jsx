@@ -384,7 +384,7 @@ const BookingForm = ({ onToast }) => {
             setRoomPriceTotal(0);
             setMealPriceTotal(0);
         }
-    }, [formData.checkIn, formData.checkOut, formData.selectedRooms, formData.guests, formData.addMeals]);
+    }, [formData.checkIn, formData.checkOut, formData.selectedRooms, formData.guests, formData.addMeals, formData.mealSelection]);
 
     // Helper for Local YYYY-MM-DD
     const getLocalYMD = (date) => {
