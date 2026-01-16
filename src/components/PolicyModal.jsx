@@ -128,7 +128,10 @@ const PolicyModal = ({ type, onClose }) => {
 
                 <h4>9. Contact Us</h4>
                 <ul>
-                    <li>For questions related to bookings, payments, refunds, or privacy, please contact us through the details provided on our website.</li>
+                    <li>For questions related to bookings, payments, refunds, or privacy, please contact us:</li>
+                    <li><strong>Email:</strong> biswasanay07@gmail.com</li>
+                    <li><strong>Phone:</strong> +91 94478 24335</li>
+                    <li><strong>Address:</strong> Bethany Homestay, Munnar, Kerala, India</li>
                 </ul>
             </>
         )
