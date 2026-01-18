@@ -40,20 +40,37 @@ const Hero = () => {
     // GSAP Intro & Parallax
     useEffect(() => {
         const ctx = gsap.context(() => {
-            // Intro Animation (Fade Up)
-            gsap.from(".hero-animate", {
-                y: 50,
+            // 1. Initial State Setting
+            gsap.set(".hero-animate", {
+                y: 30,
                 opacity: 0,
-                duration: 1.2,
-                stagger: 0.2,
-                ease: "power3.out",
-                delay: 0.5
+                filter: "blur(10px)"
             });
 
-            // Parallax Effect (Content moves faster than background)
+            // 2. Cinematic Blur Reveal
+            gsap.to(".hero-animate", {
+                y: 0,
+                opacity: 1,
+                filter: "blur(0px)",
+                duration: 1.5,
+                stagger: 0.2,
+                ease: "power2.out",
+                delay: 0.2
+            });
+
+            // 3. Special "Namaste Hills" Shimmer
+            gsap.to(".shimmer-text", {
+                backgroundPosition: "200% center",
+                duration: 3,
+                repeat: -1,
+                ease: "linear"
+            });
+
+            // 4. Parallax Effect (Content moves faster than background)
             gsap.to(contentRef.current, {
                 y: 100, // Move content down slightly on scroll
                 opacity: 0,
+                filter: "blur(5px)", // Fade out with blur
                 ease: "none",
                 scrollTrigger: {
                     trigger: heroRef.current,
@@ -92,10 +109,21 @@ const Hero = () => {
                     ✨ Authentic Himalayan Experience
                 </span>
 
-                <h1 className="hero-animate" style={{ fontSize: 'clamp(2.5rem, 5vw, 4.5rem)', fontWeight: '800', margin: '0 0 10px 0', lineHeight: 1.1, textShadow: '0 4px 20px rgba(0,0,0,0.2)' }}>
+                <h1 className="hero-animate" style={{ fontSize: 'clamp(2.5rem, 5vw, 4.5rem)', fontWeight: '800', margin: '0 0 10px 0', lineHeight: 1.1, textShadow: '0 4px 20px rgba(0,0,0,0.2)', letterSpacing: '-1px' }}>
                     BETHANY HOMESTAY
-                    <span style={{ display: 'block', fontSize: '1rem', fontWeight: '500', marginTop: '12px', letterSpacing: '2px', opacity: '0.9', fontFamily: 'Inter, sans-serif' }}>
-                        <span style={{ opacity: 0.8 }}>🤝 Official Hospitality Partner:</span> <span style={{ fontWeight: '600', color: '#ffdde1' }}>Namaste Hills</span>
+                    <span style={{ display: 'block', fontSize: '1rem', fontWeight: '500', marginTop: '12px', letterSpacing: '3px', opacity: '0.9', fontFamily: 'Inter, sans-serif', textTransform: 'uppercase' }}>
+                        <span style={{ opacity: 0.8 }}>🤝 Official Hospitality Partner:</span>
+                        <span className="shimmer-text" style={{
+                            fontWeight: '700',
+                            background: 'linear-gradient(90deg, #ffdde1 0%, #ffffff 50%, #ffdde1 100%)',
+                            backgroundSize: '200% auto',
+                            WebkitBackgroundClip: 'text',
+                            WebkitTextFillColor: 'transparent',
+                            marginLeft: '8px',
+                            display: 'inline-block'
+                        }}>
+                            NAMASTE HILLS
+                        </span>
                     </span>
                 </h1>
 
