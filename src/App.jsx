@@ -12,10 +12,12 @@ import Footer from './components/Footer';
 import CookieConsent from './components/CookieConsent';
 
 import PolicyModal from './components/PolicyModal';
+import AdminDashboard from './components/AdminDashboard';
 
 function App() {
   const [toast, setToast] = useState(null);
   const [policyType, setPolicyType] = useState(null);
+  const [showAdmin, setShowAdmin] = useState(false);
 
   const showToast = (message, type = 'success') => {
     setToast({ message, type });
@@ -38,7 +40,7 @@ function App() {
         <Amenities />
         <Contact />
       </main>
-      <Footer onOpenPolicy={openPolicy} />
+      <Footer onOpenPolicy={openPolicy} onOpenAdmin={() => setShowAdmin(true)} />
 
       {/* Toast Notification */}
       {toast && (
@@ -49,6 +51,16 @@ function App() {
 
       <CookieConsent onOpenPolicy={openPolicy} />
       <PolicyModal type={policyType} onClose={() => setPolicyType(null)} />
+
+      {/* Admin Dashboard Modal */}
+      {showAdmin && (
+        <div className="modal-overlay" onClick={() => setShowAdmin(false)}>
+          <div className="modal-content admin-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '1200px', width: '95%', maxHeight: '90vh', overflowY: 'auto' }}>
+            <button className="close-modal" onClick={() => setShowAdmin(false)}>&times;</button>
+            <AdminDashboard />
+          </div>
+        </div>
+      )}
     </>
   );
 }
