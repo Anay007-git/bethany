@@ -2,7 +2,10 @@ import { useState } from 'react';
 import AdminDashboard from './AdminDashboard';
 
 const AdminLogin = () => {
-    const [isAuthenticated, setIsAuthenticated] = useState(false);
+    // Check localStorage on initial render
+    const [isAuthenticated, setIsAuthenticated] = useState(() => {
+        return localStorage.getItem('bethany_admin_auth') === 'true';
+    });
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
@@ -12,6 +15,7 @@ const AdminLogin = () => {
         // Hardcoded credentials as requested by user
         if (username === 'Namastehills' && password === 'Nama$te@1234') {
             setIsAuthenticated(true);
+            localStorage.setItem('bethany_admin_auth', 'true'); // Persist
             setError('');
         } else {
             setError('Invalid credentials');
@@ -20,6 +24,7 @@ const AdminLogin = () => {
 
     const handleLogout = () => {
         setIsAuthenticated(false);
+        localStorage.removeItem('bethany_admin_auth'); // Clear
         setUsername('');
         setPassword('');
     };
