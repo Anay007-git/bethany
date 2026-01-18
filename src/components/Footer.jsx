@@ -1,4 +1,4 @@
-const Footer = ({ onOpenPolicy, onOpenAdmin }) => {
+const Footer = ({ onOpenPolicy }) => {
     const currentYear = new Date().getFullYear();
 
     const scrollToSection = (e, sectionId) => {
@@ -43,8 +43,6 @@ const Footer = ({ onOpenPolicy, onOpenAdmin }) => {
                         <button onClick={() => onOpenPolicy('terms')}>Terms & Conditions</button>
                         <span>|</span>
                         <button onClick={() => onOpenPolicy('privacy')}>Privacy Policy</button>
-                        <span>|</span>
-                        <button onClick={onOpenAdmin} style={{ opacity: 0.7 }}>Host Login</button>
                     </div>
                 </div>
             </div>

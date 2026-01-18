@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import Calendar from 'react-calendar'; // Import Calendar
 import ImageLightbox from './ImageLightbox'; // Import Shared Lightbox
 import TiltCard from './3d/TiltCard'; // Import 3D Tilt Card
-import { SupabaseService } from '../services/SupabaseService'; // Import Supabase Service
 import './Calendar.css'; // Import Custom Styles
 
 // Room data based on MakeMyTrip listing
@@ -626,17 +625,19 @@ const BookingForm = ({ onToast }) => {
             });
 
             setBookingDetails({
-                name: submissionData.name,
-                roomName: submissionData.selectedRooms.map(r => r.name).join(', '),
-                dates: `${submissionData.checkIn} to ${submissionData.checkOut}`,
-                id: Math.floor(Math.random() * 10000) // Temp ID for display
+                name: formData.name,
+                email: formData.email,
+                roomName: roomNames,
+                checkIn: formData.checkIn,
+                checkOut: formData.checkOut,
+                nights: numberOfNights,
+                totalPrice: totalPrice,
+                guests: formData.guests,
+                mealsIncluded: formData.addMeals
             });
-            setShowSuccessModal(true);
-            onToast('Booking Request Sent!', 'success');
 
-            // Reset Form (Optional - keep some data?)
-            setFormData(prev => ({
-                ...prev,
+            setShowSuccessModal(true);
+            setFormData({
                 name: '', email: '', phone: '', checkIn: '', checkOut: '',
                 guests: '1', selectedRooms: [], message: '',
                 mealSelection: {
@@ -644,13 +645,13 @@ const BookingForm = ({ onToast }) => {
                     lunch: { veg: 0, nonVeg: 0 },
                     dinner: { veg: 0, nonVeg: 0 }
                 }
-            }));
+            });
             setTotalPrice(0); setRoomPriceTotal(0); setMealPriceTotal(0); setNumberOfNights(0);
             fetchExistingBookings();
 
         } catch (error) {
             console.error('Booking error:', error);
-            onToast('Failed to save booking. Please try again.', 'error');
+            onToast('Failed to send booking request. Please try again.', 'error');
         } finally {
             setIsSubmitting(false);
         }
