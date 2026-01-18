@@ -62,7 +62,8 @@ export const SupabaseService = {
                     )
                 `)
                 .order('created_at', { ascending: false })
-                .limit(50);
+                .order('created_at', { ascending: false });
+            // .limit(50); // REMOVED LIMIT to allow full analytics calculation on client side
 
             if (error) throw error;
 

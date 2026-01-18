@@ -1,0 +1,6 @@
+Booking Date,Check In,Check Out,Guest Name,Phone,Rooms,Amount,Status
+2026-01-18,2026-01-22,2026-01-23,"ddfddf","789451211","Carmel",3600,booked
+2026-01-18,2026-01-30,2026-01-31,"dfdfddf","545412121","Carmel",3600,pending
+2026-01-18,2026-01-29,2026-01-30,"Anay","898966997","Carmel",3600,booked
+2026-01-18,2026-01-29,2026-01-30,"retret","6545454545","Carmel",3600,confirmed
+2026-01-18,2026-01-30,2026-01-31,"Anay","9804239301","Carmel",3600,booked

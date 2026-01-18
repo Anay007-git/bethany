@@ -1,148 +1,226 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { SupabaseService } from '../../services/SupabaseService';
+import './AdminDashboard.css';
 
 const AdminDashboard = ({ onLogout }) => {
-    const [stats, setStats] = useState(null);
+    const [allBookings, setAllBookings] = useState([]);
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        loadStats();
-    }, []);
+    const [dateRange, setDateRange] = useState({
+        start: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
+        end: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().split('T')[0]
+    });
 
-    const loadStats = async () => {
+    useEffect(() => { loadData(); }, []);
+
+    const loadData = async () => {
         setLoading(true);
-        const data = await SupabaseService.getDashboardStats();
-        setStats(data);
+        const stats = await SupabaseService.getDashboardStats();
+        if (stats && stats.recentBookings) setAllBookings(stats.recentBookings);
         setLoading(false);
     };
 
     const handleStatusChange = async (bookingId, newStatus) => {
-        if (!window.confirm(`Are you sure you want to change status to ${newStatus.toUpperCase()}?`)) return;
-
+        if (!window.confirm(`Change status to ${newStatus.toUpperCase()}?`)) return;
         const result = await SupabaseService.updateBookingStatus(bookingId, newStatus);
-        if (result.success) {
-            // Optimistic update or reload
-            loadStats();
-        } else {
-            alert('Failed to update status. Check console.');
-        }
+        if (result.success) loadData();
+        else alert('Update failed');
     };
 
-    if (loading) return <div style={{ padding: '50px', textAlign: 'center' }}>Loading Dashboard...</div>;
-    if (!stats) return <div style={{ padding: '50px', textAlign: 'center', color: 'red' }}>Failed to load stats. Check Supabase connection.</div>;
+    // Filter Logic
+    const filteredBookings = useMemo(() => {
+        return allBookings.filter(b => {
+            const checkIn = b.check_in.split('T')[0];
+            return checkIn >= dateRange.start && checkIn <= dateRange.end;
+        });
+    }, [allBookings, dateRange]);
+
+    // Metrics Logic
+    const metrics = useMemo(() => {
+        const confirmed = filteredBookings.filter(b => ['booked', 'confirmed'].includes(b.status.toLowerCase()));
+        return {
+            revenue: confirmed.reduce((sum, b) => sum + (b.total_price || 0), 0),
+            bookings: confirmed.length,
+            totalRequests: filteredBookings.length,
+            pending: filteredBookings.filter(b => b.status === 'pending').length
+        };
+    }, [filteredBookings]);
+
+    // Graph Logic
+    const monthlyData = useMemo(() => {
+        const monthMap = {};
+        allBookings.forEach(b => {
+            if (['booked', 'confirmed'].includes(b.status.toLowerCase())) {
+                const date = new Date(b.check_in);
+                const key = `${date.toLocaleString('default', { month: 'short' })} ${date.getFullYear()}`;
+                monthMap[key] = (monthMap[key] || 0) + (b.total_price || 0);
+            }
+        });
+        return Object.entries(monthMap).map(([label, value]) => ({ label, value }));
+        // Note: Real sorting would require date objects, for now simple object order is usually chaotic but sufficient for MVP or can be improved later
+    }, [allBookings]);
+
+    const exportCSV = () => {
+        const headers = ["Booking Date", "Check In", "Check Out", "Guest Name", "Phone", "Rooms", "Amount", "Status"];
+        const rows = filteredBookings.map(b => [
+            b.created_at.split('T')[0],
+            b.check_in,
+            b.check_out,
+            `"${b.guests?.full_name || 'N/A'}"`,
+            `"${b.guests?.phone || 'N/A'}"`,
+            `"${(b.room_ids || []).map(r => r.name).join(', ')}"`,
+            b.total_price,
+            b.status
+        ]);
+        const csvContent = "data:text/csv;charset=utf-8," + headers.join(",") + "\n" + rows.map(e => e.join(",")).join("\n");
+        const link = document.createElement("a");
+        link.setAttribute("href", encodeURI(csvContent));
+        link.setAttribute("download", `bethany_bookings_${dateRange.start}_to_${dateRange.end}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
+    if (loading) return <div className="loading-state">Loading Analytics...</div>;
 
     return (
-        <div style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto', fontFamily: 'Inter, sans-serif' }}>
+        <div className="admin-container">
             {/* Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px', borderBottom: '1px solid #eee', paddingBottom: '20px' }}>
-                <div>
-                    <h1 style={{ margin: 0, color: '#2c3e50' }}>Admin Dashboard</h1>
-                    <p style={{ margin: '5px 0 0', color: '#7f8c8d' }}>Namaste Hills Admin Panel</p>
+            <div className="admin-header">
+                <div className="admin-title">
+                    <h1>Dashboard & Analytics</h1>
+                    <p>Welcome back, Admin</p>
                 </div>
-                <button
-                    onClick={onLogout}
-                    style={{ background: '#e74c3c', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '6px', cursor: 'pointer' }}
-                >
-                    Logout
-                </button>
+                <div className="admin-controls">
+                    <span style={{ fontSize: '0.9rem', color: '#64748b', fontWeight: '500' }}>Filter:</span>
+                    <input type="date" value={dateRange.start} onChange={e => setDateRange(p => ({ ...p, start: e.target.value }))} className="date-input" />
+                    <span style={{ color: '#cbd5e1' }}>—</span>
+                    <input type="date" value={dateRange.end} onChange={e => setDateRange(p => ({ ...p, end: e.target.value }))} className="date-input" />
+
+                    <button onClick={exportCSV} className="btn-primary">
+                        <span>📥</span> Export CSV
+                    </button>
+                    <button onClick={onLogout} className="btn-logout">
+                        Logout
+                    </button>
+                </div>
             </div>
 
             {/* KPI Cards */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px', marginBottom: '40px' }}>
-                <StatCard title="Total Revenue" value={`₹${stats.totalRevenue.toLocaleString('en-IN')}`} icon="💰" color="#2ecc71" />
-                <StatCard title="Total Bookings" value={stats.totalBookings} icon="📅" color="#3498db" />
-                <StatCard title="Pending Requests" value={stats.pendingBookings} icon="⏳" color="#f39c12" />
+            <div className="stats-grid">
+                <StatCard title="Confirmed Revenue" value={`₹${metrics.revenue.toLocaleString('en-IN')}`} icon="💰" color="#10b981" subtitle="In selected range" />
+                <StatCard title="Confirmed Bookings" value={metrics.bookings} icon="✅" color="#3b82f6" subtitle="Validated stays" />
+                <StatCard title="Pending Review" value={metrics.pending} icon="⏳" color="#f59e0b" subtitle="Action needed" />
+                <StatCard title="Total Enquiries" value={metrics.totalRequests} icon="📊" color="#8b5cf6" subtitle="All requests" />
             </div>
 
-            {/* Recent Bookings Table */}
-            <div style={{ background: 'white', borderRadius: '10px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
-                <div style={{ padding: '20px', background: '#f8f9fa', borderBottom: '1px solid #eee', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <h3 style={{ margin: 0 }}>Recent Bookings</h3>
-                    <button onClick={loadStats} style={{ background: 'none', border: 'none', color: '#3498db', cursor: 'pointer' }}>↻ Refresh</button>
+            <div className="dashboard-layout">
+                {/* Graph */}
+                <div className="card-panel">
+                    <h3 style={{ fontSize: '1.2rem', fontWeight: '700', marginBottom: '10px', color: '#1e293b' }}>Revenue Trends</h3>
+                    <div className="chart-container">
+                        {monthlyData.length === 0 && <p style={{ color: '#94a3b8', width: '100%', textAlign: 'center' }}>No revenue data available.</p>}
+                        {monthlyData.map((d, i) => {
+                            const maxVal = Math.max(...monthlyData.map(md => md.value)) || 1;
+                            const heightPct = (d.value / maxVal) * 100;
+                            return (
+                                <div key={i} className="chart-bar-group">
+                                    <span className="chart-tooltip">₹{d.value.toLocaleString()}</span>
+                                    <div className="chart-bar" style={{ height: `${Math.max(heightPct, 5)}%` }}></div>
+                                    <span className="chart-label">{d.label}</span>
+                                </div>
+                            )
+                        })}
+                    </div>
                 </div>
-                <div style={{ overflowX: 'auto' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
-                        <thead>
-                            <tr style={{ background: '#f1f2f6', color: '#2c3e50', textAlign: 'left' }}>
-                                <th style={{ padding: '12px 15px' }}>Booking Date</th>
-                                <th style={{ padding: '12px 15px' }}>Check In</th>
-                                <th style={{ padding: '12px 15px' }}>Check Out</th>
-                                <th style={{ padding: '12px 15px' }}>Guest Details</th>
-                                <th style={{ padding: '12px 15px' }}>Rooms & Meals</th>
-                                <th style={{ padding: '12px 15px' }}>Price</th>
-                                <th style={{ padding: '12px 15px' }}>Status</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {stats.recentBookings.map(booking => (
-                                <tr key={booking.id} style={{ borderBottom: '1px solid #eee' }}>
-                                    <td style={{ padding: '12px 15px', fontSize: '0.85rem', color: '#7f8c8d' }}>
-                                        {new Date(booking.created_at).toLocaleDateString()}
-                                    </td>
-                                    <td style={{ padding: '12px 15px', fontWeight: 'bold', color: '#2980b9' }}>
-                                        {new Date(booking.check_in).toLocaleDateString()}
-                                    </td>
-                                    <td style={{ padding: '12px 15px', fontWeight: 'bold', color: '#c0392b' }}>
-                                        {new Date(booking.check_out).toLocaleDateString()}
-                                    </td>
-                                    <td style={{ padding: '12px 15px' }}>
-                                        <div style={{ fontWeight: 'bold' }}>{booking.guests?.full_name || 'Guest Details Missing'}</div>
-                                        <div style={{ fontSize: '0.8rem', color: '#7f8c8d' }}>{booking.guests?.email}</div>
-                                        <div style={{ fontSize: '0.8rem', color: '#7f8c8d' }}>{booking.guests?.phone}</div>
-                                    </td>
-                                    <td style={{ padding: '12px 15px' }}>
-                                        <div><strong>Rooms:</strong> {(booking.room_ids || []).map(r => r.name).join(', ')}</div>
-                                        {booking.meal_preferences && (
-                                            <div style={{ marginTop: '5px', fontSize: '0.85rem', color: '#e67e22' }}>
-                                                <strong>🍽️ Meals:</strong> {booking.meal_preferences}
-                                            </div>
-                                        )}
-                                        {booking.special_requests && (
-                                            <div style={{ marginTop: '5px', fontSize: '0.8rem', fontStyle: 'italic', color: '#7f8c8d' }}>
-                                                "{booking.special_requests}"
-                                            </div>
-                                        )}
-                                    </td>
-                                    <td style={{ padding: '12px 15px', fontWeight: 'bold' }}>₹{booking.total_price.toLocaleString('en-IN')}</td>
-                                    <td style={{ padding: '12px 15px' }}>
-                                        <select
-                                            value={booking.status}
-                                            onChange={(e) => handleStatusChange(booking.id, e.target.value)}
-                                            style={{
-                                                padding: '4px 8px',
-                                                borderRadius: '4px',
-                                                border: '1px solid #ddd',
-                                                fontSize: '0.8rem',
-                                                background: booking.status === 'confirmed' || booking.status === 'booked' ? '#d5f5e3' : (booking.status === 'pending' ? '#fdebd0' : '#fadbd8'),
-                                                color: booking.status === 'confirmed' || booking.status === 'booked' ? '#27ae60' : (booking.status === 'pending' ? '#e67e22' : '#c0392b'),
-                                                fontWeight: 'bold',
-                                                cursor: 'pointer'
-                                            }}
-                                        >
-                                            <option value="pending">PENDING</option>
-                                            <option value="booked">BOOKED</option>
-                                            <option value="confirmed">CONFIRMED</option>
-                                            <option value="cancelled">CANCELLED</option>
-                                        </select>
-                                    </td>
+
+                {/* Table */}
+                <div className="card-panel">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                        <h3 style={{ fontSize: '1.2rem', fontWeight: '700', margin: 0, color: '#1e293b' }}>Recent Bookings</h3>
+                        <button onClick={loadData} className="btn-refresh">↻ Refresh</button>
+                    </div>
+                    <div className="table-container">
+                        <table className="admin-table">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Guest</th>
+                                    <th>Details</th>
+                                    <th>Rooms & Meals</th>
+                                    <th>Amount</th>
+                                    <th>Status</th>
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                {filteredBookings.length === 0 ? (
+                                    <tr><td colSpan="6" style={{ textAlign: 'center', padding: '30px', color: '#94a3b8' }}>No bookings found.</td></tr>
+                                ) : (
+                                    filteredBookings.map(booking => (
+                                        <tr key={booking.id}>
+                                            <td>
+                                                <div style={{ fontWeight: '600', color: '#334155' }}>{new Date(booking.check_in).toLocaleDateString()}</div>
+                                                <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>to {new Date(booking.check_out).toLocaleDateString()}</div>
+                                            </td>
+                                            <td>
+                                                <div style={{ fontWeight: '600', color: '#1e293b' }}>{booking.guests?.full_name || 'N/A'}</div>
+                                                <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{booking.guests?.phone}</div>
+                                            </td>
+                                            <td>
+                                                <div style={{ fontSize: '0.8rem', color: '#64748b' }}>Booked: {new Date(booking.created_at).toLocaleDateString()}</div>
+                                            </td>
+                                            <td>
+                                                <div style={{ fontWeight: '500', color: '#334155' }}>{(booking.room_ids || []).map(r => r.name).join(', ')}</div>
+                                                {booking.meal_preferences && <div style={{ fontSize: '0.75rem', color: '#ea580c', marginTop: '4px' }}>🍽️ {booking.meal_preferences}</div>}
+                                            </td>
+                                            <td>
+                                                <div style={{ fontWeight: '700', color: '#059669' }}>₹{booking.total_price.toLocaleString('en-IN')}</div>
+                                            </td>
+                                            <td>
+                                                <select
+                                                    value={booking.status}
+                                                    onChange={(e) => handleStatusChange(booking.id, e.target.value)}
+                                                    className="status-select"
+                                                    style={getStatusStyle(booking.status)}
+                                                >
+                                                    <option value="pending">PENDING</option>
+                                                    <option value="booked">BOOKED</option>
+                                                    <option value="confirmed">CONFIRMED</option>
+                                                    <option value="cancelled">CANCELLED</option>
+                                                </select>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
     );
 };
 
-const StatCard = ({ title, value, icon, color }) => (
-    <div style={{ background: 'white', padding: '20px', borderRadius: '10px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', display: 'flex', alignItems: 'center', gap: '15px', borderLeft: `4px solid ${color}` }}>
-        <div style={{ fontSize: '2rem', background: '#f8f9fa', width: '60px', height: '60px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%' }}>
+// Utilities
+const getStatusStyle = (status) => {
+    switch ((status || '').toLowerCase()) {
+        case 'booked':
+        case 'confirmed': return { background: '#d1fae5', color: '#059669' }; // Green
+        case 'cancelled': return { background: '#fee2e2', color: '#dc2626' }; // Red
+        case 'pending': return { background: '#ffedd5', color: '#ea580c' }; // Orange
+        default: return { background: '#f1f5f9', color: '#64748b' }; // Gray
+    }
+};
+
+const StatCard = ({ title, value, icon, color, subtitle }) => (
+    <div className="stat-card">
+        <div className="stat-icon" style={{ background: `${color}15`, color: color }}>
             {icon}
         </div>
-        <div>
-            <div style={{ color: '#7f8c8d', fontSize: '0.9rem', marginBottom: '5px' }}>{title}</div>
-            <div style={{ color: '#2c3e50', fontSize: '1.5rem', fontWeight: 'bold' }}>{value}</div>
+        <div className="stat-content">
+            <h3>{title}</h3>
+            <div className="value">{value}</div>
+            <div className="subtitle">{subtitle}</div>
         </div>
     </div>
 );

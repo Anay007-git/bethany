@@ -1,0 +1,330 @@
+/* AdminDashboard.css */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+.admin-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 30px;
+    font-family: 'Inter', sans-serif;
+    color: #1e293b;
+    background-color: #f8fafc;
+    min-height: 100vh;
+}
+
+/* Header Section */
+.admin-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 40px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.admin-title h1 {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #0f172a;
+    letter-spacing: -0.5px;
+    margin: 0;
+}
+
+.admin-title p {
+    color: #64748b;
+    margin-top: 5px;
+    font-size: 0.95rem;
+}
+
+/* Controls & Filters */
+.admin-controls {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    background: white;
+    padding: 10px 15px;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    border: 1px solid #e2e8f0;
+}
+
+.date-input {
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-family: inherit;
+    color: #334155;
+    outline: none;
+    transition: all 0.2s;
+}
+
+.date-input:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.btn-primary,
+.btn-logout,
+.btn-refresh {
+    border: none;
+    border-radius: 8px;
+    padding: 9px 16px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.btn-primary {
+    background: #10b981;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #059669;
+    transform: translateY(-1px);
+}
+
+.btn-logout {
+    background: #ef4444;
+    color: white;
+}
+
+.btn-logout:hover {
+    background: #dc2626;
+    transform: translateY(-1px);
+}
+
+.btn-refresh {
+    background: transparent;
+    color: #3b82f6;
+}
+
+.btn-refresh:hover {
+    background: #eff6ff;
+}
+
+/* KPI Stats Grid */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 24px;
+    margin-bottom: 40px;
+}
+
+.stat-card {
+    background: white;
+    padding: 24px;
+    border-radius: 16px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    border: 1px solid #f1f5f9;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    transition: transform 0.2s;
+}
+
+.stat-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+}
+
+.stat-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.8rem;
+}
+
+.stat-content h3 {
+    color: #64748b;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin: 0 0 5px 0;
+    font-weight: 600;
+}
+
+.stat-content .value {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.stat-content .subtitle {
+    font-size: 0.75rem;
+    color: #94a3b8;
+    margin-top: 2px;
+}
+
+/* Layout Grid */
+.dashboard-layout {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 30px;
+}
+
+@media (min-width: 1024px) {
+    .dashboard-layout {
+        grid-template-columns: 400px 1fr;
+    }
+
+    /* Chart on side, table main, or stacked? Let's stack for simplicity unless huge screen */
+    .dashboard-layout {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Card Containers */
+.card-panel {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    padding: 30px;
+    border: 1px solid #f1f5f9;
+}
+
+/* Charts */
+.chart-container {
+    display: flex;
+    align-items: flex-end;
+    height: 240px;
+    gap: 12px;
+    padding-top: 30px;
+    padding-bottom: 20px;
+    overflow-x: auto;
+}
+
+.chart-bar-group {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 60px;
+    height: 100%;
+    justify-content: flex-end;
+    position: relative;
+    cursor: pointer;
+}
+
+.chart-bar {
+    width: 80%;
+    background: linear-gradient(180deg, #60a5fa 0%, #3b82f6 100%);
+    border-radius: 6px 6px 0 0;
+    transition: height 0.6s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s;
+    opacity: 0.9;
+    position: relative;
+}
+
+.chart-bar:hover {
+    opacity: 1;
+    transform: scaleX(1.1);
+}
+
+.chart-label {
+    margin-top: 10px;
+    font-size: 0.75rem;
+    color: #64748b;
+    font-weight: 500;
+}
+
+.chart-tooltip {
+    position: absolute;
+    top: -35px;
+    background: #1e293b;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    opacity: 0;
+    transition: opacity 0.2s;
+    pointer-events: none;
+    white-space: nowrap;
+}
+
+.chart-bar-group:hover .chart-tooltip {
+    opacity: 1;
+    top: -45px;
+}
+
+/* Table */
+.table-container {
+    overflow-x: auto;
+}
+
+.admin-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.admin-table th {
+    text-align: left;
+    padding: 16px;
+    background: #f8fafc;
+    color: #475569;
+    font-weight: 600;
+    border-bottom: 2px solid #e2e8f0;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+}
+
+.admin-table td {
+    padding: 16px;
+    border-bottom: 1px solid #f1f5f9;
+    font-size: 0.9rem;
+    vertical-align: middle;
+}
+
+.admin-table tr:hover td {
+    background: #fdfdfd;
+}
+
+.admin-table tr:last-child td {
+    border-bottom: none;
+}
+
+/* Status Badges */
+.status-select {
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    appearance: none;
+    /* Hide default arrow partially */
+    text-align: center;
+    background-size: 10px;
+    outline: none;
+    transition: all 0.2s;
+}
+
+.status-select:hover {
+    filter: brightness(0.95);
+}
+
+/* Custom Scrollbar for x-overflow */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
