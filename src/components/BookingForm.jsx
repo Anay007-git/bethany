@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import Calendar from 'react-calendar'; // Import Calendar
 import ImageLightbox from './ImageLightbox'; // Import Shared Lightbox
 import TiltCard from './3d/TiltCard'; // Import 3D Tilt Card
+import { SupabaseService } from '../services/SupabaseService'; // Supabase Service
 import './Calendar.css'; // Import Custom Styles
 
 // Room data based on MakeMyTrip listing
@@ -232,15 +233,62 @@ const BookingForm = ({ onToast }) => {
     const fetchExistingBookings = async () => {
         setIsLoadingBookings(true);
         try {
-            const response = await fetch(`${GOOGLE_SHEETS_URL}?action=getBookings`, {
-                method: 'GET',
-                redirect: 'follow'
+            // Parallel Fetch: Google Sheets (Legacy/Primary) & Supabase (Modern/Sync)
+            const [sheetRes, supabaseData] = await Promise.all([
+                fetch(`${GOOGLE_SHEETS_URL}?action=getBookings`).then(res => res.json()).catch(err => ({ bookings: [] })),
+                SupabaseService.getAllBookings()
+            ]);
+
+            console.log('Google Sheet Bookings:', sheetRes.bookings);
+            console.log('Supabase Bookings:', supabaseData);
+
+            // Normalize Supabase Data to match Sheet structure for frontend logic
+            // Supabase returns: { check_in, check_out, room_ids: [{id, name}], status: 'booked' }
+            // Frontend expects: { checkIn: 'YYYY-MM-DD', checkOut: 'YYYY-MM-DD', roomType: 'Carmel, Room 2', status: 'Booked' }
+
+            const supabaseFormatted = (supabaseData || []).map(b => {
+                // Parse YYYY-MM-DD to ensure local midnight consistency, avoiding UTC shifts
+                const parseDate = (dateStr) => {
+                    if (!dateStr) return null;
+                    const parts = dateStr.split('-'); // 2026, 01, 31
+                    // Create date at local midnight: new Date(year, monthIndex, day)
+                    return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+                };
+
+                // Robustly parse room_ids (handle both Array and JSON string)
+                let roomsArr = [];
+                if (Array.isArray(b.room_ids)) {
+                    roomsArr = b.room_ids;
+                } else if (typeof b.room_ids === 'string') {
+                    try {
+                        roomsArr = JSON.parse(b.room_ids);
+                    } catch (e) {
+                        console.error('Failed to parse room_ids JSON:', b.room_ids);
+                        roomsArr = [];
+                    }
+                }
+
+                // Map to comma-separated string of names
+                const roomTypeStr = roomsArr.map(r => r.name || r.id || '').join(', ');
+
+                return {
+                    checkIn: parseDate(b.check_in),
+                    checkOut: parseDate(b.check_out),
+                    roomType: roomTypeStr,
+                    status: b.status // Pass raw status
+                };
             });
-            if (response.ok) {
-                const data = await response.json();
-                console.log('Fetched bookings:', data);
-                setExistingBookings(data.bookings || []);
-            }
+
+            // Format Sheet Data (assuming it returns { bookings: [{ checkIn, checkOut, roomType... }] })
+            const sheetFormatted = sheetRes.bookings || [];
+
+            // Merge Unique Bookings
+            const allBookings = [...sheetFormatted, ...supabaseFormatted];
+
+            console.log('FINAL MERGED BOOKINGS:', allBookings);
+
+            setExistingBookings(allBookings);
+
         } catch (error) {
             console.log('Could not fetch existing bookings:', error);
         } finally {
@@ -469,14 +517,28 @@ const BookingForm = ({ onToast }) => {
                 bookedRoom === currentRoomName || bookedRoom.includes(currentRoomName) || currentRoomName.includes(bookedRoom)
             );
 
+            // DEBUG: Trace logic for Carmel if checking
+            if (roomId === 'carmel' && isRoomBooked) {
+                console.log(`Checking Carmel overlap. Ref: ${checkIn.toDateString()} - ${checkOut.toDateString()} vs Booking: ${new Date(booking.checkIn).toDateString()} - ${new Date(booking.checkOut).toDateString()}`);
+            }
+
             if (isRoomBooked) {
                 const bookingCheckIn = new Date(booking.checkIn);
                 const bookingCheckOut = new Date(booking.checkOut);
-                const hasOverlap = checkIn < bookingCheckOut && checkOut > bookingCheckIn;
+
+                // Normalize dates to midnight for strict comparison
+                bookingCheckIn.setHours(0, 0, 0, 0);
+                bookingCheckOut.setHours(0, 0, 0, 0);
+                const userCheckIn = new Date(checkIn); userCheckIn.setHours(0, 0, 0, 0);
+                const userCheckOut = new Date(checkOut); userCheckOut.setHours(0, 0, 0, 0);
+
+                const hasOverlap = userCheckIn < bookingCheckOut && userCheckOut > bookingCheckIn;
 
                 if (hasOverlap) {
-                    if (booking.status === 'Booked') return 'booked';
-                    else if (booking.status === 'Pending') return 'partial';
+                    const status = (booking.status || '').toLowerCase();
+                    console.log(`Overlap Found! Status: ${status}`);
+                    if (status === 'booked' || status === 'confirmed') return 'booked';
+                    else if (status === 'pending') return 'partial';
                 }
             }
         }
@@ -603,39 +665,65 @@ const BookingForm = ({ onToast }) => {
                 finalMessage = `[MEALS: ${selectedMeals.join(' | ')}] ${finalMessage}`;
             }
 
-            const params = new URLSearchParams({
+            // Variables for new structure
+            const selectedRoomNames = roomNames; // Already defined as roomNames
+            const mealDetails = selectedMeals.length > 0 ? selectedMeals.join(' | ') : 'None';
+
+            // 2. Format Data for Google Sheets
+            const formDataObj = new FormData();
+            formDataObj.append('checkIn', formData.checkIn);
+            formDataObj.append('checkOut', formData.checkOut);
+            formDataObj.append('guests', formData.guests);
+            formDataObj.append('roomType', selectedRoomNames); // Fixed key to match Apps Script
+            formDataObj.append('name', formData.name);
+            formDataObj.append('email', formData.email);
+            formDataObj.append('phone', formData.phone);
+            formDataObj.append('message', finalMessage); // Use finalMessage here
+            formDataObj.append('totalPrice', totalPrice);
+            formDataObj.append('meals', mealDetails);
+            formDataObj.append('pricePerNight', Math.round(roomPriceTotal / numberOfNights)); // Avg Room price
+            formDataObj.append('numberOfNights', numberOfNights);
+            // 3. SEQUENTIAL EXECUTION: Supabase First (to get ID), then Google Sheets
+
+            // Step A: Create in Supabase
+            const supabaseResult = await SupabaseService.createBooking({
                 name: formData.name,
                 email: formData.email,
                 phone: formData.phone,
+                selectedRooms: formData.selectedRooms,
                 checkIn: formData.checkIn,
                 checkOut: formData.checkOut,
                 guests: formData.guests,
-                roomType: roomNames,
-                meals: selectedMeals.length > 0 ? selectedMeals.join(' | ') : 'None',
-                pricePerNight: Math.round(roomPriceTotal / numberOfNights), // Avg Room price
-                numberOfNights: numberOfNights,
                 totalPrice: totalPrice,
-                status: 'Pending',
+                meals: mealDetails,
                 message: finalMessage
             });
 
-            await fetch(`${GOOGLE_SHEETS_URL}?${params.toString()}`, {
-                method: 'GET',
+            if (!supabaseResult.success) {
+                onToast("Booking failed. Please check your connection.", 'error');
+                setIsSubmitting(false);
+                return;
+            }
+
+            const bookingId = supabaseResult.booking.id;
+
+            // Step B: Send to Google Sheets (Now with Booking ID)
+            formDataObj.append('bookingId', bookingId);
+            formDataObj.append('status', 'Pending');
+
+            fetch(GOOGLE_SHEETS_URL, {
+                method: 'POST',
+                body: formDataObj,
                 mode: 'no-cors'
-            });
+            }).catch(err => console.error('Sheet Submission Error:', err));
 
+            // Step C: Success UI
             setBookingDetails({
-                name: formData.name,
-                email: formData.email,
-                roomName: roomNames,
-                checkIn: formData.checkIn,
-                checkOut: formData.checkOut,
-                nights: numberOfNights,
-                totalPrice: totalPrice,
-                guests: formData.guests,
-                mealsIncluded: formData.addMeals
+                ...formData,
+                roomNames: selectedRoomNames,
+                totalPrice,
+                bookingId: bookingId
             });
-
             setShowSuccessModal(true);
             setFormData({
                 name: '', email: '', phone: '', checkIn: '', checkOut: '',
