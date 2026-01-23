@@ -32,6 +32,72 @@ const AdminDashboard = ({ onLogout }) => {
         setLoading(false);
     };
 
+    // --- Helpers for Offline Booking Logic ---
+
+    const isHighSeason = (date) => {
+        const month = date.getMonth();
+        const day = date.getDate();
+        if (month === 11 || month === 0) return true; // Dec, Jan
+        if (month === 2) return true; // Mar
+        if (month === 3 && day <= 15) return true; // Apr 1-15
+        if (month === 9) return true; // Oct
+        if (month === 10 && day <= 7) return true; // Nov 1-7
+        return false;
+    };
+
+    const getSeasonalRoomPrice = (date, roomId) => {
+        const highSeason = isHighSeason(date);
+        const room = rooms.find(r => r.id === roomId);
+        if (!room) return 0;
+        return highSeason ? room.price_high_season : room.price_low_season;
+    };
+
+    // Check availability against allBookings
+    const isRoomAvailable = (roomId, startStr, endStr) => {
+        if (!roomId || !startStr || !endStr) return true; // Assume available if incomplete
+
+        const checkIn = new Date(startStr); checkIn.setHours(0, 0, 0, 0);
+        const checkOut = new Date(endStr); checkOut.setHours(0, 0, 0, 0);
+
+        return !allBookings.some(b => {
+            // Only check  confirmed/booked/pending
+            if (!['booked', 'confirmed', 'pending'].includes(b.status.toLowerCase())) return false;
+
+            // Check if room matches
+            const rIds = b.room_ids || []; // Array of {id, name}
+            const hasRoom = rIds.some(r => r.id === roomId);
+            if (!hasRoom) return false;
+
+            // Check Overlap
+            const bStart = new Date(b.check_in); bStart.setHours(0, 0, 0, 0);
+            const bEnd = new Date(b.check_out); bEnd.setHours(0, 0, 0, 0);
+
+            return checkIn < bEnd && checkOut > bStart;
+        });
+    };
+
+    // Auto-Calculate Price Effect
+    useEffect(() => {
+        if (offlineForm.checkIn && offlineForm.checkOut && offlineForm.room) {
+            const start = new Date(offlineForm.checkIn);
+            const end = new Date(offlineForm.checkOut);
+
+            if (end <= start) return;
+
+            const diffTime = end - start;
+            const nights = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+            let total = 0;
+            for (let i = 0; i < nights; i++) {
+                let d = new Date(start);
+                d.setDate(start.getDate() + i);
+                total += Number(getSeasonalRoomPrice(d, offlineForm.room));
+            }
+
+            setOfflineForm(prev => ({ ...prev, price: total }));
+        }
+    }, [offlineForm.checkIn, offlineForm.checkOut, offlineForm.room, rooms]);
+
     const handleStatusChange = async (bookingId, newStatus) => {
         if (!window.confirm(`Change status to ${newStatus.toUpperCase()}?`)) return;
         const result = await SupabaseService.updateBookingStatus(bookingId, newStatus);
@@ -198,6 +264,8 @@ const AdminDashboard = ({ onLogout }) => {
                 <div className="card-panel" style={{ maxWidth: '600px', margin: '0 auto' }}>
                     <h3>Create Offline Booking</h3>
                     <form onSubmit={handleOfflineSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+
+                        {/* Guest Details */}
                         <div className="form-group">
                             <label>Guest Name</label>
                             <input type="text" value={offlineForm.name} onChange={e => setOfflineForm({ ...offlineForm, name: e.target.value })} required className="form-input" />
@@ -206,6 +274,8 @@ const AdminDashboard = ({ onLogout }) => {
                             <label>Phone</label>
                             <input type="text" value={offlineForm.phone} onChange={e => setOfflineForm({ ...offlineForm, phone: e.target.value })} required className="form-input" />
                         </div>
+
+                        {/* Dates */}
                         <div style={{ display: 'flex', gap: '10px' }}>
                             <div className="form-group" style={{ flex: 1 }}>
                                 <label>Check In</label>
@@ -216,18 +286,41 @@ const AdminDashboard = ({ onLogout }) => {
                                 <input type="date" value={offlineForm.checkOut} onChange={e => setOfflineForm({ ...offlineForm, checkOut: e.target.value })} required className="form-input" />
                             </div>
                         </div>
+
+                        {/* Room Selection & Availability Status */}
                         <div className="form-group">
                             <label>Room</label>
                             <select value={offlineForm.room} onChange={e => setOfflineForm({ ...offlineForm, room: e.target.value })} required className="form-input">
                                 <option value="">Select Room</option>
                                 {rooms.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
                             </select>
+                            {/* Availability Feedback */}
+                            {offlineForm.room && offlineForm.checkIn && offlineForm.checkOut && (
+                                <div style={{
+                                    marginTop: '5px',
+                                    fontSize: '0.9rem',
+                                    fontWeight: 'bold',
+                                    color: isRoomAvailable(offlineForm.room, offlineForm.checkIn, offlineForm.checkOut) ? '#10b981' : '#ef4444'
+                                }}>
+                                    {isRoomAvailable(offlineForm.room, offlineForm.checkIn, offlineForm.checkOut) ? '✅ Available' : '❌ Already Booked'}
+                                </div>
+                            )}
                         </div>
+
+                        {/* Auto-Calculated Price */}
                         <div className="form-group">
-                            <label>Total Price (₹)</label>
+                            <label>Total Price (₹) - <small>Auto-calculated</small></label>
                             <input type="number" value={offlineForm.price} onChange={e => setOfflineForm({ ...offlineForm, price: e.target.value })} required className="form-input" />
                         </div>
-                        <button type="submit" className="btn-primary" style={{ marginTop: '10px' }}>Confirm Booking</button>
+
+                        <button
+                            type="submit"
+                            className="btn-primary"
+                            style={{ marginTop: '10px', opacity: isRoomAvailable(offlineForm.room, offlineForm.checkIn, offlineForm.checkOut) ? 1 : 0.5 }}
+                            disabled={!isRoomAvailable(offlineForm.room, offlineForm.checkIn, offlineForm.checkOut)}
+                        >
+                            Confirm Booking
+                        </button>
                     </form>
                 </div>
             )}
