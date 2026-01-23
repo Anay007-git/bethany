@@ -325,6 +325,10 @@ const AdminDashboard = ({ onLogout }) => {
                             <label>Phone</label>
                             <input type="text" value={offlineForm.phone} onChange={e => setOfflineForm({ ...offlineForm, phone: e.target.value })} required className="form-input" />
                         </div>
+                        <div className="form-group">
+                            <label>Number of Guests</label>
+                            <input type="number" min="1" value={offlineForm.guests} onChange={e => setOfflineForm({ ...offlineForm, guests: e.target.value })} required className="form-input" />
+                        </div>
 
                         {/* Dates */}
                         <div style={{ display: 'flex', gap: '10px' }}>
