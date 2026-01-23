@@ -179,5 +179,31 @@ export const SupabaseService = {
             console.error('Update Status Error:', error);
             return { success: false, error };
         }
+    },
+
+    // 5. Upload Invoice PDF
+    uploadInvoice: async (fileBlob, fileName) => {
+        try {
+            // 1. Upload to Supabase Storage
+            const { data, error } = await supabase.storage
+                .from('invoices')
+                .upload(fileName, fileBlob, {
+                    contentType: 'application/pdf',
+                    upsert: true
+                });
+
+            if (error) throw error;
+
+            // 2. Get Public URL
+            const { data: { publicUrl } } = supabase.storage
+                .from('invoices')
+                .getPublicUrl(fileName);
+
+            return { success: true, publicUrl };
+
+        } catch (error) {
+            console.error('Invoice Upload Error:', error);
+            return { success: false, error };
+        }
     }
 };

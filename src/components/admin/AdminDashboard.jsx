@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { SupabaseService } from '../../services/SupabaseService';
+import jsPDF from 'jspdf';
 import './AdminDashboard.css';
 
 const AdminDashboard = ({ onLogout }) => {
@@ -168,6 +169,67 @@ const AdminDashboard = ({ onLogout }) => {
 
         const result = await SupabaseService.createBooking(bookingData);
         if (result.success) {
+
+            // --- GENERATE INVOICE PDF ---
+            try {
+                const doc = new jsPDF();
+
+                // Logo / Brand
+                doc.setFontSize(22);
+                doc.setTextColor(40, 167, 69); // Green brand color
+                doc.text("NAMASTE HILLS", 105, 20, { align: "center" });
+
+                doc.setFontSize(12);
+                doc.setTextColor(0, 0, 0);
+                doc.text("Bethany Homestay", 105, 28, { align: "center" });
+                doc.text("Official Invoice", 105, 35, { align: "center" });
+
+                // Booking Details
+                doc.line(20, 40, 190, 40); // Horizontal line
+
+                doc.setFontSize(10);
+                doc.text(`Guest Name: ${offlineForm.name}`, 20, 50);
+                doc.text(`Phone: ${offlineForm.phone}`, 20, 56);
+                doc.text(`Check In: ${offlineForm.checkIn}`, 20, 62);
+                doc.text(`Check Out: ${offlineForm.checkOut}`, 20, 68);
+                doc.text(`Room: ${selectedRoomObj.name}`, 20, 74);
+                doc.text(`Guests: ${offlineForm.guests}`, 20, 80);
+
+                if (mealString) {
+                    // Wrap meal string text if long
+                    const splitMeals = doc.splitTextToSize(`Meals: ${mealString}`, 170);
+                    doc.text(splitMeals, 20, 88);
+                }
+
+                // Total Price
+                doc.setFontSize(16);
+                doc.setFont("helvetica", "bold");
+                doc.text(`Total Amount: INR ${offlineForm.price}`, 190, 110, { align: "right" });
+
+                doc.setFontSize(10);
+                doc.setFont("helvetica", "normal");
+                doc.text("Thank you for choosing Namaste Hills!", 105, 130, { align: "center" });
+
+                // Create Blob
+                const pdfBlob = doc.output('blob');
+                const fileName = `invoice_${Date.now()}_${offlineForm.phone}.pdf`;
+
+                // Upload
+                const uploadRes = await SupabaseService.uploadInvoice(pdfBlob, fileName);
+
+                if (uploadRes.success) {
+                    const waLink = `https://wa.me/${offlineForm.phone}?text=${encodeURIComponent(`Hello ${offlineForm.name}, thank you for choosing Namaste Hills!\n\nHere is your invoice link:\n${uploadRes.publicUrl}\n\nWe look forward to hosting you!`)}`;
+                    window.open(waLink, '_blank');
+                } else {
+                    console.error("Invoice Upload Failed", uploadRes.error);
+                    alert("Booking saved, but Invoice Upload failed.");
+                }
+
+            } catch (err) {
+                console.error("PDF Generation Error", err);
+                alert("Booking saved, but PDF generation failed.");
+            }
+
             alert('Offline Booking Created Successfully!');
             setOfflineForm({
                 name: '', phone: '', email: 'offline@bethany.com',
