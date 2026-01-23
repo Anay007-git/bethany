@@ -40,9 +40,11 @@ const Footer = ({ onOpenPolicy }) => {
                 <div className="footer-bottom">
                     <p>© {currentYear} Namaste Hills Bethany Homestay. All rights reserved.</p>
                     <div className="footer-legal">
-                        <button onClick={() => onOpenPolicy('terms')}>Terms & Conditions</button>
+                        <a href="/terms">Terms & Conditions</a>
                         <span>|</span>
-                        <button onClick={() => onOpenPolicy('privacy')}>Privacy Policy</button>
+                        <a href="/privacy">Privacy Policy</a>
+                        <span>|</span>
+                        <a href="/refund-policy">Cancellation & Refund Policy</a>
                     </div>
                 </div>
             </div>
