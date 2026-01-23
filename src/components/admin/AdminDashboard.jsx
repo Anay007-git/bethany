@@ -284,6 +284,7 @@ const AdminDashboard = ({ onLogout }) => {
                                                 <td>
                                                     <div style={{ fontWeight: '600', color: '#1e293b' }}>{booking.guests?.full_name || 'N/A'}</div>
                                                     <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{booking.guests?.phone}</div>
+                                                    <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{booking.guests?.email}</div>
                                                 </td>
                                                 <td>
                                                     <div style={{ fontSize: '0.8rem', color: '#64748b' }}>Booked: {new Date(booking.created_at).toLocaleDateString()}</div>
