@@ -5,69 +5,7 @@ import TiltCard from './3d/TiltCard'; // Import 3D Tilt Card
 import { SupabaseService } from '../services/SupabaseService'; // Supabase Service
 import './Calendar.css'; // Import Custom Styles
 
-// Room data based on MakeMyTrip listing
-const ROOMS = [
-    {
-        id: 'carmel',
-        name: 'Carmel',
-        price: 3000,
-        beds: '4 Adults + 1 Kid',
-        extraBed: 'Extra 1 Mattress available',
-        view: 'Mountain View',
-        size: '616 sq.ft (57 sq.mt)',
-        features: ['Attached Bathroom', 'Daily Housekeeping', 'Wi-Fi', 'Air Purifier'],
-        images: [
-            'https://r1imghtlak.mmtcdn.com/bc566280898d11ec90380a58a9feac02.jpg?output-quality=75&downsize=*:500&crop=990:500', // Bedroom
-            'https://r1imghtlak.mmtcdn.com/6ff89f94-7679-4e40-a7c5-aa5b01a354a9.jpg?output-quality=75&downsize=*:500&crop=990:500', // Interior
-            'https://r1imghtlak.mmtcdn.com/cd07ac6a898d11ecae540a58a9feac02.jpg?output-quality=75&downsize=*:500&crop=990:500'  // View
-        ]
-    },
-    {
-        id: 'jordan',
-        name: 'Jordan',
-        price: 2500,
-        beds: '4 Adults',
-        extraBed: null,
-        view: 'Courtyard View',
-        size: '380 sq.ft (35 sq.mt)',
-        features: ['Attached Bathroom'],
-        images: [
-            'https://r1imghtlak.mmtcdn.com/cd07ac6a898d11ecae540a58a9feac02.jpg?output-quality=75&downsize=*:500&crop=990:500',
-            'https://r1imghtlak.mmtcdn.com/e3a1d318-3eea-4b47-a1ee-9b5d41b619dd.jpg?output-quality=75&downsize=*:500&crop=990:500',
-            'https://r1imghtlak.mmtcdn.com/d5e107d3-6fb4-40f4-af8d-41fd9d277ee0.jpg?output-quality=75&downsize=*:500&crop=990:500'
-        ]
-    },
-    {
-        id: 'sion',
-        name: 'Sion Room',
-        price: 2500,
-        beds: '4 Adults',
-        extraBed: 'Extra 1 Cot available',
-        view: 'City View',
-        size: '320 sq.ft (28 sq.mt)',
-        features: ['Attached Bathroom'],
-        images: [
-            'https://r1imghtlak.mmtcdn.com/d13f1656898d11ec8dd80a58a9feac02.jpg?output-quality=75&downsize=*:500&crop=990:500',
-            'https://r1imghtlak.mmtcdn.com/e2ee5312898d11ec93030a58a9feac02.jpg?output-quality=75&downsize=*:500&crop=990:500',
-            'https://r1imghtlak.mmtcdn.com/bc566280898d11ec90380a58a9feac02.jpg?output-quality=75&downsize=*:500&crop=990:500'
-        ]
-    },
-    {
-        id: 'zion',
-        name: 'Zion',
-        price: 2500,
-        beds: '4 Adults',
-        extraBed: null,
-        view: 'City View',
-        size: '528 sq.ft (48 sq.mt)',
-        features: ['Attached Bathroom'],
-        images: [
-            'https://r1imghtlak.mmtcdn.com/e2ee5312898d11ec93030a58a9feac02.jpg?output-quality=75&downsize=*:500&crop=990:500',
-            'https://r1imghtlak.mmtcdn.com/6ff89f94-7679-4e40-a7c5-aa5b01a354a9.jpg?output-quality=75&downsize=*:500&crop=990:500',
-            'https://r1imghtlak.mmtcdn.com/cd07ac6a898d11ecae540a58a9feac02.jpg?output-quality=75&downsize=*:500&crop=990:500'
-        ]
-    }
-];
+// Room data is now fetched from Supabase via SupabaseService.getRooms()
 
 // --- Sub-components for Image Gallery ---
 
@@ -160,6 +98,10 @@ const ImageCarousel = ({ images, height = '200px', onImageClick }) => {
 
 
 const BookingForm = ({ onToast }) => {
+    // State for Dynamic Rooms
+    const [rooms, setRooms] = useState([]);
+    const [loadingRooms, setLoadingRooms] = useState(true);
+
     const [formData, setFormData] = useState({
         name: '',
         email: '',
@@ -196,6 +138,54 @@ const BookingForm = ({ onToast }) => {
             setCalendarKey(prev => prev + 1);
         }
     }, [formData.checkIn, formData.checkOut]);
+
+    // Fetch Rooms on Load
+    useEffect(() => {
+        const loadRooms = async () => {
+            // Fallback for immediate render before DB is ready
+            const defaultRooms = [
+                {
+                    id: 'carmel', name: 'Carmel', price: 3000, beds: '4 Adults + 1 Kid',
+                    extraBed: 'Extra 1 Mattress available', view: 'Mountain View', size: '616 sq.ft (57 sq.mt)',
+                    features: ['Attached Bathroom', 'Daily Housekeeping', 'Wi-Fi', 'Air Purifier'],
+                    images: ['https://r1imghtlak.mmtcdn.com/bc566280898d11ec90380a58a9feac02.jpg?output-quality=75&downsize=*:500&crop=990:500', 'https://r1imghtlak.mmtcdn.com/6ff89f94-7679-4e40-a7c5-aa5b01a354a9.jpg?output-quality=75&downsize=*:500&crop=990:500', 'https://r1imghtlak.mmtcdn.com/cd07ac6a898d11ecae540a58a9feac02.jpg?output-quality=75&downsize=*:500&crop=990:500']
+                },
+                {
+                    id: 'jordan', name: 'Jordan', price: 2500, beds: '4 Adults', extraBed: null,
+                    view: 'Courtyard View', size: '380 sq.ft (35 sq.mt)', features: ['Attached Bathroom'],
+                    images: ['https://r1imghtlak.mmtcdn.com/cd07ac6a898d11ecae540a58a9feac02.jpg?output-quality=75&downsize=*:500&crop=990:500', 'https://r1imghtlak.mmtcdn.com/e3a1d318-3eea-4b47-a1ee-9b5d41b619dd.jpg?output-quality=75&downsize=*:500&crop=990:500', 'https://r1imghtlak.mmtcdn.com/d5e107d3-6fb4-40f4-af8d-41fd9d277ee0.jpg?output-quality=75&downsize=*:500&crop=990:500']
+                },
+                {
+                    id: 'sion', name: 'Sion Room', price: 2500, beds: '4 Adults', extraBed: 'Extra 1 Cot available',
+                    view: 'City View', size: '320 sq.ft (28 sq.mt)', features: ['Attached Bathroom'],
+                    images: ['https://r1imghtlak.mmtcdn.com/d13f1656898d11ec8dd80a58a9feac02.jpg?output-quality=75&downsize=*:500&crop=990:500', 'https://r1imghtlak.mmtcdn.com/e2ee5312898d11ec93030a58a9feac02.jpg?output-quality=75&downsize=*:500&crop=990:500', 'https://r1imghtlak.mmtcdn.com/bc566280898d11ec90380a58a9feac02.jpg?output-quality=75&downsize=*:500&crop=990:500']
+                },
+                {
+                    id: 'zion', name: 'Zion', price: 2500, beds: '4 Adults', extraBed: null,
+                    view: 'City View', size: '528 sq.ft (48 sq.mt)', features: ['Attached Bathroom'],
+                    images: ['https://r1imghtlak.mmtcdn.com/e2ee5312898d11ec93030a58a9feac02.jpg?output-quality=75&downsize=*:500&crop=990:500', 'https://r1imghtlak.mmtcdn.com/6ff89f94-7679-4e40-a7c5-aa5b01a354a9.jpg?output-quality=75&downsize=*:500&crop=990:500', 'https://r1imghtlak.mmtcdn.com/cd07ac6a898d11ecae540a58a9feac02.jpg?output-quality=75&downsize=*:500&crop=990:500']
+                }
+            ];
+
+            const dbRooms = await SupabaseService.getRooms();
+            if (dbRooms && dbRooms.length > 0) {
+                // Map DB structure if significantly different, but currently it aligns
+                // Just ensuring features/images are arrays
+                const formattedRooms = dbRooms.map(r => ({
+                    ...r,
+                    price: r.price_low_season, // Default to low season for display base price
+                    beds: r.capacity,
+                    features: r.features || [],
+                    images: r.images || []
+                }));
+                setRooms(formattedRooms);
+            } else {
+                setRooms(defaultRooms);
+            }
+            setLoadingRooms(false);
+        };
+        loadRooms();
+    }, []);
 
     const openLightbox = (images, index = 0) => {
         setLightboxState({ isOpen: true, images, index });
@@ -504,7 +494,7 @@ const BookingForm = ({ onToast }) => {
 
         const checkIn = new Date(formData.checkIn);
         const checkOut = new Date(formData.checkOut);
-        const room = ROOMS.find(r => r.id === roomId);
+        const room = rooms.find(r => r.id === roomId);
         if (!room) return 'available';
 
         for (const booking of existingBookings) {
@@ -1098,7 +1088,7 @@ const BookingForm = ({ onToast }) => {
                         </div>
 
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                            {ROOMS.map(room => {
+                            {rooms.map(room => {
                                 const isSelected = formData.selectedRooms.some(r => r.id === room.id);
                                 const status = getRoomStatus(room.id);
                                 const isBooked = status === 'booked';

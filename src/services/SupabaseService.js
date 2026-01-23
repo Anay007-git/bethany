@@ -3,9 +3,10 @@ import { supabase } from './supabase';
 export const SupabaseService = {
 
     // 1. Create a New Booking (Dual Write Support)
+    // 1. Create a New Booking (Dual Write Support)
     createBooking: async (bookingData) => {
         try {
-            // A. Create Guest Record (or find existing - simplistic for now, just create)
+            // A. Create Guest Record
             const { data: guest, error: guestError } = await supabase
                 .from('guests')
                 .insert([{
@@ -19,19 +20,21 @@ export const SupabaseService = {
             if (guestError) throw guestError;
 
             // B. Create Booking Record
+            const roomIds = bookingData.selectedRooms.map(r => ({ id: r.id, name: r.name }));
+
             const { data: booking, error: bookingError } = await supabase
                 .from('bookings')
                 .insert([{
                     guest_id: guest.id,
-                    room_ids: bookingData.selectedRooms.map(r => ({ id: r.id, name: r.name })),
+                    room_ids: roomIds,
                     check_in: bookingData.checkIn,
                     check_out: bookingData.checkOut,
                     guests_count: parseInt(bookingData.guests),
                     total_price: bookingData.totalPrice,
-                    meal_preferences: bookingData.meals, // Map 'meals' from bookingData
-                    special_requests: bookingData.message, // Map 'message' from bookingData
-                    status: 'pending',
-                    source: 'website'
+                    meal_preferences: bookingData.meals,
+                    special_requests: bookingData.message,
+                    status: bookingData.source === 'offline' ? 'confirmed' : 'pending',
+                    source: bookingData.source || 'website'
                 }])
                 .select()
                 .single();
@@ -42,9 +45,38 @@ export const SupabaseService = {
 
         } catch (error) {
             console.error('Supabase Booking Error:', error);
-            // We do NOT block the UI if Supabase fails, as GSheets is primary for now.
             return { success: false, error };
         }
+    },
+
+    // --- INVENTORY MANAGEMENT ---
+
+    // Get all rooms
+    getRooms: async () => {
+        const { data, error } = await supabase
+            .from('rooms')
+            .select('*')
+            .order('id');
+        if (error) {
+            console.error('Error fetching rooms:', error);
+            return [];
+        }
+        return data;
+    },
+
+    // Update room details
+    updateRoom: async (roomId, updates) => {
+        const { data, error } = await supabase
+            .from('rooms')
+            .update(updates)
+            .eq('id', roomId)
+            .select();
+
+        if (error) {
+            console.error('Error updating room:', error);
+            return { success: false, error };
+        }
+        return { success: true, data };
     },
 
     // 2. Admin: Get Dashboard Stats
