@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { SupabaseService } from '../../services/SupabaseService';
 import jsPDF from 'jspdf';
+import titleBarImg from '../../assets/title-bar.jpeg';
 import './AdminDashboard.css';
 
 const AdminDashboard = ({ onLogout }) => {
@@ -173,52 +174,107 @@ const AdminDashboard = ({ onLogout }) => {
             // --- GENERATE INVOICE PDF ---
             try {
                 const doc = new jsPDF();
+                const invNum = `INV-${Date.now().toString().slice(-6)}`;
+                const billDate = new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
 
-                // Logo / Brand
-                doc.setFontSize(22);
-                doc.setTextColor(40, 167, 69); // Green brand color
-                doc.text("NAMASTE HILLS", 105, 20, { align: "center" });
+                // Load Logo
+                const img = new Image();
+                img.src = titleBarImg;
+                await new Promise((resolve) => {
+                    if (img.complete) resolve();
+                    else img.onload = resolve;
+                    img.onerror = resolve; // Continue even if image fails
+                });
 
-                doc.setFontSize(12);
-                doc.setTextColor(0, 0, 0);
-                doc.text("Bethany Homestay", 105, 28, { align: "center" });
-                doc.text("Official Invoice", 105, 35, { align: "center" });
+                // --- HEADER ---
+                // Logo (Top Left)
+                try {
+                    doc.addImage(img, 'JPEG', 15, 15, 50, 25); // x, y, w, h
+                } catch (e) { console.warn("Logo add failed", e); }
 
-                // Booking Details
-                doc.line(20, 40, 190, 40); // Horizontal line
+                // Company Details (Right aligned to logo)
+                doc.setFontSize(20);
+                doc.setTextColor(40, 167, 69);
+                doc.setFont("helvetica", "bold");
+                doc.text("NAMASTE HILLS", 195, 25, { align: "right" });
 
                 doc.setFontSize(10);
-                doc.text(`Guest Name: ${offlineForm.name}`, 20, 50);
-                doc.text(`Phone: ${offlineForm.phone}`, 20, 56);
-                doc.text(`Check In: ${offlineForm.checkIn}`, 20, 62);
-                doc.text(`Check Out: ${offlineForm.checkOut}`, 20, 68);
-                doc.text(`Room: ${selectedRoomObj.name}`, 20, 74);
-                doc.text(`Guests: ${offlineForm.guests}`, 20, 80);
+                doc.setTextColor(0, 0, 0);
+                doc.setFont("helvetica", "normal");
+                doc.text("Bethany Homestay", 195, 32, { align: "right" });
+                doc.text("Ramgarh, Uttarakhand", 195, 37, { align: "right" });
+
+                // Invoice Meta (Below Logo)
+                doc.line(15, 45, 195, 45); // Divider
+
+                doc.setFontSize(10);
+                doc.text(`Invoice #: ${invNum}`, 15, 55);
+                doc.text(`Date: ${billDate}`, 195, 55, { align: "right" });
+
+                // --- BILL TO ---
+                doc.setFont("helvetica", "bold");
+                doc.text("Bill To:", 15, 65);
+                doc.setFont("helvetica", "normal");
+                doc.text(offlineForm.name, 15, 71);
+                doc.text(`Phone: ${offlineForm.phone}`, 15, 76);
+
+                // --- BOOKING DETAILS TABLE ---
+                let y = 90;
+
+                // Table Header
+                doc.setFillColor(240, 240, 240);
+                doc.rect(15, y, 180, 10, 'F');
+                doc.setFont("helvetica", "bold");
+                doc.text("Description", 20, y + 7);
+                doc.text("Details", 100, y + 7);
+
+                y += 18;
+                doc.setFont("helvetica", "normal");
+
+                // Rows
+                const row = (label, value) => {
+                    doc.text(label, 20, y);
+                    doc.text(String(value), 100, y);
+                    y += 8;
+                };
+
+                row("Room", selectedRoomObj.name);
+                row("Check In", offlineForm.checkIn);
+                row("Check Out", offlineForm.checkOut);
+                row("Guests", offlineForm.guests);
 
                 if (mealString) {
-                    // Wrap meal string text if long
-                    const splitMeals = doc.splitTextToSize(`Meals: ${mealString}`, 170);
-                    doc.text(splitMeals, 20, 88);
+                    const splitMeals = doc.splitTextToSize(mealString, 90);
+                    doc.text("Meals", 20, y);
+                    doc.text(splitMeals, 100, y);
+                    y += (splitMeals.length * 6) + 4;
                 }
 
-                // Total Price
-                doc.setFontSize(16);
-                doc.setFont("helvetica", "bold");
-                doc.text(`Total Amount: INR ${offlineForm.price}`, 190, 110, { align: "right" });
+                doc.line(15, y, 195, y); // Bottom divider
+                y += 10;
 
-                doc.setFontSize(10);
-                doc.setFont("helvetica", "normal");
-                doc.text("Thank you for choosing Namaste Hills!", 105, 130, { align: "center" });
+                // --- TOTAL ---
+                doc.setFontSize(14);
+                doc.setFont("helvetica", "bold");
+                doc.text(`Total Amount:`, 140, y);
+                doc.setTextColor(40, 167, 69);
+                doc.text(`INR ${offlineForm.price}`, 195, y, { align: "right" });
+                doc.setTextColor(0, 0, 0);
+
+                // Footer
+                doc.setFontSize(9);
+                doc.setFont("helvetica", "italic");
+                doc.text("Thank you for choosing Namaste Hills Bethany Homestay!", 105, 280, { align: "center" });
 
                 // Create Blob
                 const pdfBlob = doc.output('blob');
-                const fileName = `invoice_${Date.now()}_${offlineForm.phone}.pdf`;
+                const fileName = `invoice_${invNum}.pdf`;
 
                 // Upload
                 const uploadRes = await SupabaseService.uploadInvoice(pdfBlob, fileName);
 
                 if (uploadRes.success) {
-                    const waLink = `https://wa.me/${offlineForm.phone}?text=${encodeURIComponent(`Hello ${offlineForm.name}, thank you for choosing Namaste Hills!\n\nHere is your invoice link:\n${uploadRes.publicUrl}\n\nWe look forward to hosting you!`)}`;
+                    const waLink = `https://wa.me/${offlineForm.phone}?text=${encodeURIComponent(`Namaste ${offlineForm.name}, \n\nCheck out your invoice from Bethany Homestay: ${uploadRes.publicUrl} \n\nThank you!`)}`;
                     window.open(waLink, '_blank');
                 } else {
                     console.error("Invoice Upload Failed", uploadRes.error);
