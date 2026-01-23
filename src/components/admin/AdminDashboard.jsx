@@ -95,15 +95,27 @@ const AdminDashboard = ({ onLogout }) => {
             const nights = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
             let total = 0;
+            const ms = offlineForm.mealSelection;
+
+            // Helper to safely get number or 0
+            const getCount = (val) => {
+                const num = parseInt(val, 10);
+                return isNaN(num) ? 0 : num;
+            };
+
+            const prices = MEAL_PRICES || { breakfast: 0, lunch: 0, dinner: 0 };
+
+            const dailyMealCost =
+                (getCount(ms.breakfast?.veg) + getCount(ms.breakfast?.nonVeg)) * prices.breakfast +
+                (getCount(ms.lunch?.veg) + getCount(ms.lunch?.nonVeg)) * prices.lunch +
+                (getCount(ms.dinner?.veg) + getCount(ms.dinner?.nonVeg)) * prices.dinner;
+
             for (let i = 0; i < nights; i++) {
                 let d = new Date(start);
                 d.setDate(start.getDate() + i);
-                total += Number(getSeasonalRoomPrice(d, offlineForm.room));
 
-                // Add meal costs for each night
-                const dailyMealCost = (offlineForm.mealSelection.breakfast.veg + offlineForm.mealSelection.breakfast.nonVeg) * MEAL_PRICES.breakfast +
-                    (offlineForm.mealSelection.lunch.veg + offlineForm.mealSelection.lunch.nonVeg) * MEAL_PRICES.lunch +
-                    (offlineForm.mealSelection.dinner.veg + offlineForm.mealSelection.dinner.nonVeg) * MEAL_PRICES.dinner;
+                const roomPrice = Number(getSeasonalRoomPrice(d, offlineForm.room)) || 0;
+                total += roomPrice;
                 total += dailyMealCost;
             }
 
