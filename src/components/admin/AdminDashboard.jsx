@@ -202,24 +202,28 @@ const AdminDashboard = ({ onLogout }) => {
                 doc.setTextColor(0, 0, 0);
                 doc.setFont("helvetica", "normal");
                 doc.text("Bethany Homestay", 195, 32, { align: "right" });
-                doc.text("Ramgarh, Uttarakhand", 195, 37, { align: "right" });
+                doc.setFontSize(9);
+                doc.text("Dr. Graham's Homes, Block 'B'", 195, 37, { align: "right" });
+                doc.text("Kalimpong-I, Thapatar Para", 195, 41, { align: "right" });
+                doc.text("P.O Topkhana, P.S Kalimpong", 195, 45, { align: "right" });
+                doc.text("PIN - 734316", 195, 49, { align: "right" });
 
                 // Invoice Meta (Below Logo)
-                doc.line(15, 45, 195, 45); // Divider
+                doc.line(15, 52, 195, 52); // Divider
 
                 doc.setFontSize(10);
-                doc.text(`Invoice #: ${invNum}`, 15, 55);
-                doc.text(`Date: ${billDate}`, 195, 55, { align: "right" });
+                doc.text(`Invoice #: ${invNum}`, 15, 60);
+                doc.text(`Date: ${billDate}`, 195, 60, { align: "right" });
 
                 // --- BILL TO ---
                 doc.setFont("helvetica", "bold");
-                doc.text("Bill To:", 15, 65);
+                doc.text("Bill To:", 15, 70);
                 doc.setFont("helvetica", "normal");
-                doc.text(offlineForm.name, 15, 71);
-                doc.text(`Phone: ${offlineForm.phone}`, 15, 76);
+                doc.text(offlineForm.name, 15, 76);
+                doc.text(`Phone: ${offlineForm.phone}`, 15, 81);
 
                 // --- BOOKING DETAILS TABLE ---
-                let y = 90;
+                let y = 95;
 
                 // Table Header
                 doc.setFillColor(240, 240, 240);
