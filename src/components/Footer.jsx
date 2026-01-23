@@ -1,11 +1,19 @@
+import { useLocation, useNavigate } from 'react-router-dom';
+
 const Footer = ({ onOpenPolicy }) => {
     const currentYear = new Date().getFullYear();
+    const location = useLocation();
+    const navigate = useNavigate();
 
     const scrollToSection = (e, sectionId) => {
         e.preventDefault();
-        const element = document.getElementById(sectionId);
-        if (element) {
-            element.scrollIntoView({ behavior: 'smooth' });
+        if (location.pathname === '/') {
+            const element = document.getElementById(sectionId);
+            if (element) {
+                element.scrollIntoView({ behavior: 'smooth' });
+            }
+        } else {
+            navigate('/', { state: { scrollTo: sectionId } });
         }
     };
 
@@ -21,11 +29,11 @@ const Footer = ({ onOpenPolicy }) => {
                     </div>
 
                     <ul className="footer-links">
-                        <li><a href="#about" onClick={(e) => scrollToSection(e, 'about')}>About</a></li>
-                        <li><a href="#amenities" onClick={(e) => scrollToSection(e, 'amenities')}>Feature</a></li>
-                        <li><a href="#gallery" onClick={(e) => scrollToSection(e, 'gallery')}>Gallery</a></li>
-                        <li><a href="#booking" onClick={(e) => scrollToSection(e, 'booking')}>Book Now</a></li>
-                        <li><a href="#contact" onClick={(e) => scrollToSection(e, 'contact')}>Contact</a></li>
+                        <li><a href="/#about" onClick={(e) => scrollToSection(e, 'about')}>About</a></li>
+                        <li><a href="/#amenities" onClick={(e) => scrollToSection(e, 'amenities')}>Feature</a></li>
+                        <li><a href="/#gallery" onClick={(e) => scrollToSection(e, 'gallery')}>Gallery</a></li>
+                        <li><a href="/#booking" onClick={(e) => scrollToSection(e, 'booking')}>Book Now</a></li>
+                        <li><a href="/contact">Contact</a></li>
                     </ul>
 
                     <div className="footer-social">
