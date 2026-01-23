@@ -16,8 +16,15 @@ const AdminDashboard = ({ onLogout }) => {
     // Offline Booking Form State
     const [offlineForm, setOfflineForm] = useState({
         name: '', phone: '', email: 'offline@bethany.com',
-        checkIn: '', checkOut: '', room: '', guests: 1, price: 0
+        checkIn: '', checkOut: '', room: '', guests: 1, price: 0,
+        mealSelection: {
+            breakfast: { veg: 0, nonVeg: 0 },
+            lunch: { veg: 0, nonVeg: 0 },
+            dinner: { veg: 0, nonVeg: 0 }
+        }
     });
+
+    const MEAL_PRICES = { breakfast: 120, lunch: 200, dinner: 200 };
 
     useEffect(() => { loadData(); }, []);
 
@@ -92,11 +99,17 @@ const AdminDashboard = ({ onLogout }) => {
                 let d = new Date(start);
                 d.setDate(start.getDate() + i);
                 total += Number(getSeasonalRoomPrice(d, offlineForm.room));
+
+                // Add meal costs for each night
+                const dailyMealCost = (offlineForm.mealSelection.breakfast.veg + offlineForm.mealSelection.breakfast.nonVeg) * MEAL_PRICES.breakfast +
+                    (offlineForm.mealSelection.lunch.veg + offlineForm.mealSelection.lunch.nonVeg) * MEAL_PRICES.lunch +
+                    (offlineForm.mealSelection.dinner.veg + offlineForm.mealSelection.dinner.nonVeg) * MEAL_PRICES.dinner;
+                total += dailyMealCost;
             }
 
             setOfflineForm(prev => ({ ...prev, price: total }));
         }
-    }, [offlineForm.checkIn, offlineForm.checkOut, offlineForm.room, rooms]);
+    }, [offlineForm.checkIn, offlineForm.checkOut, offlineForm.room, offlineForm.mealSelection, rooms]);
 
     const handleStatusChange = async (bookingId, newStatus) => {
         if (!window.confirm(`Change status to ${newStatus.toUpperCase()}?`)) return;
@@ -111,6 +124,22 @@ const AdminDashboard = ({ onLogout }) => {
 
         const selectedRoomObj = rooms.find(r => r.id === offlineForm.room);
 
+        // Format Meals String
+        const ms = offlineForm.mealSelection;
+        const formatMeal = (name, data) => {
+            const parts = [];
+            if (data.veg > 0) parts.push(`${data.veg} Veg`);
+            if (data.nonVeg > 0) parts.push(`${data.nonVeg} Non-Veg`);
+            return parts.length > 0 ? `${name}: ${parts.join(', ')}` : null;
+        };
+        const selectedMeals = [
+            formatMeal('Breakfast', ms.breakfast),
+            formatMeal('Lunch', ms.lunch),
+            formatMeal('Dinner', ms.dinner)
+        ].filter(Boolean);
+
+        const mealString = selectedMeals.length > 0 ? selectedMeals.join(' | ') : 'No Meals Selected';
+
         const bookingData = {
             name: offlineForm.name,
             phone: offlineForm.phone,
@@ -120,7 +149,7 @@ const AdminDashboard = ({ onLogout }) => {
             guests: offlineForm.guests,
             totalPrice: offlineForm.price,
             selectedRooms: [selectedRoomObj],
-            meals: 'Offline Booking - No Meal Data',
+            meals: mealString,
             message: 'Manual Booking by Admin',
             source: 'offline'
         };
@@ -128,7 +157,11 @@ const AdminDashboard = ({ onLogout }) => {
         const result = await SupabaseService.createBooking(bookingData);
         if (result.success) {
             alert('Offline Booking Created Successfully!');
-            setOfflineForm({ name: '', phone: '', email: 'offline@bethany.com', checkIn: '', checkOut: '', room: '', guests: 1, price: 0 });
+            setOfflineForm({
+                name: '', phone: '', email: 'offline@bethany.com',
+                checkIn: '', checkOut: '', room: '', guests: 1, price: 0,
+                mealSelection: { breakfast: { veg: 0, nonVeg: 0 }, lunch: { veg: 0, nonVeg: 0 }, dinner: { veg: 0, nonVeg: 0 } }
+            });
             loadData();
             setActiveTab('dashboard');
         } else {
@@ -140,7 +173,10 @@ const AdminDashboard = ({ onLogout }) => {
     const filteredBookings = useMemo(() => {
         return allBookings.filter(b => {
             const checkIn = b.check_in.split('T')[0];
-            return checkIn >= dateRange.start && checkIn <= dateRange.end;
+            // Simple null check
+            const start = dateRange.start || '2000-01-01';
+            const end = dateRange.end || '2099-12-31';
+            return checkIn >= start && checkIn <= end;
         });
     }, [allBookings, dateRange]);
 
@@ -188,6 +224,21 @@ const AdminDashboard = ({ onLogout }) => {
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+    };
+
+    // Helper for Meal Change
+    const handleMealChange = (type, diet, val) => {
+        const count = Math.max(0, parseInt(val) || 0);
+        setOfflineForm(prev => ({
+            ...prev,
+            mealSelection: {
+                ...prev.mealSelection,
+                [type]: {
+                    ...prev.mealSelection[type],
+                    [diet]: count
+                }
+            }
+        }));
     };
 
     if (loading) return <div className="loading-state">Loading Analytics...</div>;
@@ -307,9 +358,41 @@ const AdminDashboard = ({ onLogout }) => {
                             )}
                         </div>
 
+                        {/* MEAL SELECTION */}
+                        <div className="form-group" style={{ background: '#f8f9fa', padding: '15px', borderRadius: '8px' }}>
+                            <label style={{ marginBottom: '10px', display: 'block', fontWeight: 'bold' }}>Daily Meals (Per person count)</label>
+
+                            {/* Breakfast */}
+                            <div style={{ marginBottom: '10px' }}>
+                                <div style={{ fontSize: '0.9rem', fontWeight: '600', marginBottom: '5px' }}>Breakfast (₹{MEAL_PRICES.breakfast})</div>
+                                <div style={{ display: 'flex', gap: '10px' }}>
+                                    <input type="number" min="0" placeholder="Veg Qty" value={offlineForm.mealSelection.breakfast.veg || ''} onChange={(e) => handleMealChange('breakfast', 'veg', e.target.value)} style={{ flex: 1, padding: '5px' }} />
+                                    <input type="number" min="0" placeholder="Non-Veg Qty" value={offlineForm.mealSelection.breakfast.nonVeg || ''} onChange={(e) => handleMealChange('breakfast', 'nonVeg', e.target.value)} style={{ flex: 1, padding: '5px' }} />
+                                </div>
+                            </div>
+
+                            {/* Lunch */}
+                            <div style={{ marginBottom: '10px' }}>
+                                <div style={{ fontSize: '0.9rem', fontWeight: '600', marginBottom: '5px' }}>Lunch (₹{MEAL_PRICES.lunch})</div>
+                                <div style={{ display: 'flex', gap: '10px' }}>
+                                    <input type="number" min="0" placeholder="Veg Qty" value={offlineForm.mealSelection.lunch.veg || ''} onChange={(e) => handleMealChange('lunch', 'veg', e.target.value)} style={{ flex: 1, padding: '5px' }} />
+                                    <input type="number" min="0" placeholder="Non-Veg Qty" value={offlineForm.mealSelection.lunch.nonVeg || ''} onChange={(e) => handleMealChange('lunch', 'nonVeg', e.target.value)} style={{ flex: 1, padding: '5px' }} />
+                                </div>
+                            </div>
+
+                            {/* Dinner */}
+                            <div style={{ marginBottom: '10px' }}>
+                                <div style={{ fontSize: '0.9rem', fontWeight: '600', marginBottom: '5px' }}>Dinner (₹{MEAL_PRICES.dinner})</div>
+                                <div style={{ display: 'flex', gap: '10px' }}>
+                                    <input type="number" min="0" placeholder="Veg Qty" value={offlineForm.mealSelection.dinner.veg || ''} onChange={(e) => handleMealChange('dinner', 'veg', e.target.value)} style={{ flex: 1, padding: '5px' }} />
+                                    <input type="number" min="0" placeholder="Non-Veg Qty" value={offlineForm.mealSelection.dinner.nonVeg || ''} onChange={(e) => handleMealChange('dinner', 'nonVeg', e.target.value)} style={{ flex: 1, padding: '5px' }} />
+                                </div>
+                            </div>
+                        </div>
+
                         {/* Auto-Calculated Price */}
                         <div className="form-group">
-                            <label>Total Price (₹) - <small>Auto-calculated</small></label>
+                            <label>Total Price (Rooms + Meals) (₹) - <small>Auto-calculated</small></label>
                             <input type="number" value={offlineForm.price} onChange={e => setOfflineForm({ ...offlineForm, price: e.target.value })} required className="form-input" />
                         </div>
 
