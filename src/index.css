@@ -83,10 +83,11 @@ body {
   text-decoration: none;
 }
 
-.navbar-logo svg {
-  width: 32px;
-  height: 32px;
-  fill: var(--airbnb-primary);
+.navbar-logo-img {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+  border-radius: 50%;
 }
 
 .navbar-logo span {
