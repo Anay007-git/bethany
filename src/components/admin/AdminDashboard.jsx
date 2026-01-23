@@ -5,6 +5,13 @@ import './AdminDashboard.css';
 const AdminDashboard = ({ onLogout }) => {
     const [activeTab, setActiveTab] = useState('dashboard');
     const [rooms, setRooms] = useState([]);
+    const [allBookings, setAllBookings] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    const [dateRange, setDateRange] = useState({
+        start: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
+        end: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().split('T')[0]
+    });
 
     // Offline Booking Form State
     const [offlineForm, setOfflineForm] = useState({
