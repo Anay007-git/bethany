@@ -95,7 +95,7 @@ const BillView = () => {
             </header>
 
             {/* Invoice Info */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '40px' }}>
+            <div className="invoice-info-container" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '40px' }}>
                 <div>
                     <h3 style={{ margin: '0 0 10px 0', fontSize: '14px', color: '#888', textTransform: 'uppercase' }}>Bill To:</h3>
                     <div style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '5px' }}>{booking.guests?.full_name}</div>
@@ -140,37 +140,39 @@ const BillView = () => {
             </div>
 
             {/* Detailed Breakdown Table */}
-            <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '30px' }}>
-                <thead>
-                    <tr style={{ background: '#f8f9fa', borderBottom: '2px solid #eee' }}>
-                        <th style={{ padding: '12px', textAlign: 'left', color: '#444' }}>Description</th>
-                        <th style={{ padding: '12px', textAlign: 'center', color: '#444' }}>Qty</th>
-                        <th style={{ padding: '12px', textAlign: 'right', color: '#444' }}>Unit Price</th>
-                        <th style={{ padding: '12px', textAlign: 'right', color: '#444' }}>Total</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {/* Render Line Items from Invoice Record if available */}
-                    {lineItems.length > 0 ? (
-                        lineItems.map((item, index) => (
-                            <tr key={index} style={{ borderBottom: '1px solid #eee' }}>
-                                <td style={{ padding: '12px', color: '#555' }}>{item.description}</td>
-                                <td style={{ padding: '12px', textAlign: 'center', color: '#555' }}>{item.quantity}</td>
-                                <td style={{ padding: '12px', textAlign: 'right', color: '#555' }}>₹{item.unit_price}</td>
-                                <td style={{ padding: '12px', textAlign: 'right', color: '#333', fontWeight: '500' }}>₹{item.total}</td>
-                            </tr>
-                        ))
-                    ) : (
-                        // Fallback logic for old bookings matching previous UI
-                        <tr style={{ borderBottom: '1px solid #eee' }}>
-                            <td style={{ padding: '12px', color: '#555' }}>Legacy Booking (Details not itemized)</td>
-                            <td style={{ padding: '12px', textAlign: 'center', color: '#555' }}>1</td>
-                            <td style={{ padding: '12px', textAlign: 'right', color: '#555' }}>-</td>
-                            <td style={{ padding: '12px', textAlign: 'right', color: '#333' }}>₹{booking.total_price}</td>
+            <div className="table-wrapper">
+                <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '30px', minWidth: '500px' }}>
+                    <thead>
+                        <tr style={{ background: '#f8f9fa', borderBottom: '2px solid #eee' }}>
+                            <th style={{ padding: '12px', textAlign: 'left', color: '#444' }}>Description</th>
+                            <th style={{ padding: '12px', textAlign: 'center', color: '#444' }}>Qty</th>
+                            <th style={{ padding: '12px', textAlign: 'right', color: '#444' }}>Unit Price</th>
+                            <th style={{ padding: '12px', textAlign: 'right', color: '#444' }}>Total</th>
                         </tr>
-                    )}
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        {/* Render Line Items from Invoice Record if available */}
+                        {lineItems.length > 0 ? (
+                            lineItems.map((item, index) => (
+                                <tr key={index} style={{ borderBottom: '1px solid #eee' }}>
+                                    <td style={{ padding: '12px', color: '#555' }}>{item.description}</td>
+                                    <td style={{ padding: '12px', textAlign: 'center', color: '#555' }}>{item.quantity}</td>
+                                    <td style={{ padding: '12px', textAlign: 'right', color: '#555' }}>₹{item.unit_price}</td>
+                                    <td style={{ padding: '12px', textAlign: 'right', color: '#333', fontWeight: '500' }}>₹{item.total}</td>
+                                </tr>
+                            ))
+                        ) : (
+                            // Fallback logic for old bookings matching previous UI
+                            <tr style={{ borderBottom: '1px solid #eee' }}>
+                                <td style={{ padding: '12px', color: '#555' }}>Legacy Booking (Details not itemized)</td>
+                                <td style={{ padding: '12px', textAlign: 'center', color: '#555' }}>1</td>
+                                <td style={{ padding: '12px', textAlign: 'right', color: '#555' }}>-</td>
+                                <td style={{ padding: '12px', textAlign: 'right', color: '#333' }}>₹{booking.total_price}</td>
+                            </tr>
+                        )}
+                    </tbody>
+                </table>
+            </div>
 
             {/* Total Section */}
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '20px' }}>
@@ -201,8 +203,39 @@ const BillView = () => {
             <style>{`
                 @media print {
                     .no-print { display: none !important; }
-                    .bill-container { box-shadow: none !important; margin: 0 !important; width: 100% !important; max-width: none !important; }
+                    .bill-container { box-shadow: none !important; margin: 0 !important; width: 100% !important; max-width: none !important; padding: 20px !important; }
                     body { background: white !important; }
+                }
+                @media (max-width: 768px) {
+                    .bill-container {
+                        width: 95% !important;
+                        margin: 10px auto !important;
+                        padding: 15px !important;
+                    }
+                    header {
+                        flex-direction: column;
+                        text-align: center;
+                        gap: 15px;
+                    }
+                    header > div { text-align: center !important; }
+                    
+                    /* Stack the Invoice Info section */
+                    .invoice-info-container {
+                        flex-direction: column;
+                        gap: 20px;
+                    }
+                    .invoice-info-container > div {
+                        text-align: left !important;
+                    }
+                    
+                    /* Table Scroll */
+                    .table-wrapper {
+                        overflow-x: auto;
+                    }
+                    th, td {
+                        padding: 8px !important;
+                        font-size: 0.9rem;
+                    }
                 }
             `}</style>
         </div>
