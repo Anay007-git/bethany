@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { SupabaseService } from '../../services/SupabaseService';
 import titleBarImg from '../../assets/title-bar.jpeg';
 import whatsappIcon from '../../assets/whatsapp.svg';
+import CRM from './CRM';
 import './AdminDashboard.css';
 
 const AdminDashboard = ({ onLogout }) => {
@@ -476,6 +477,12 @@ const AdminDashboard = ({ onLogout }) => {
                     >
                         ➕ <span>New Booking</span>
                     </button>
+                    <button
+                        className={`nav-item ${activeTab === 'marketing' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('marketing')}
+                    >
+                        📢 <span>Marketing</span>
+                    </button>
                 </nav>
 
                 <div className="sidebar-footer">
@@ -489,7 +496,7 @@ const AdminDashboard = ({ onLogout }) => {
             <main className="admin-main">
                 <header className="main-header">
                     <div className="page-title">
-                        <h1>{activeTab === 'dashboard' ? 'Overview' : activeTab === 'inventory' ? 'Room Inventory' : 'Create Booking'}</h1>
+                        <h1>{activeTab === 'dashboard' ? 'Overview' : activeTab === 'inventory' ? 'Room Inventory' : activeTab === 'marketing' ? 'Customer CRM' : 'Create Booking'}</h1>
                         <p>{new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
                     </div>
 
@@ -734,6 +741,8 @@ const AdminDashboard = ({ onLogout }) => {
                         )}
                     </>
                 )}
+
+                {activeTab === 'marketing' && <CRM allBookings={allBookings} />}
 
 
 
