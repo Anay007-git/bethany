@@ -278,13 +278,29 @@ const AdminDashboard = ({ onLogout }) => {
     // Metrics Logic
     const metrics = useMemo(() => {
         const confirmed = filteredBookings.filter(b => ['booked', 'confirmed'].includes(b.status.toLowerCase()));
+
+        // Calculate OTA revenue based on blocked dates and room prices
+        let otaRevenue = 0;
+        let otaNights = 0;
+        Object.entries(blockedDates).forEach(([roomId, dates]) => {
+            const room = rooms.find(r => r.id === roomId);
+            if (room) {
+                // Use average of low/high season price
+                const avgPrice = (room.price_low_season + room.price_high_season) / 2;
+                otaNights += dates.length;
+                otaRevenue += dates.length * avgPrice;
+            }
+        });
+
         return {
             revenue: confirmed.reduce((sum, b) => sum + (b.total_price || 0), 0),
             bookings: confirmed.length,
             totalRequests: filteredBookings.length,
-            pending: filteredBookings.filter(b => b.status === 'pending').length
+            pending: filteredBookings.filter(b => b.status === 'pending').length,
+            otaRevenue: Math.round(otaRevenue),
+            otaNights: otaNights
         };
-    }, [filteredBookings]);
+    }, [filteredBookings, blockedDates, rooms]);
 
     // Graph Logic (Same as before)
     const monthlyData = useMemo(() => {
@@ -385,6 +401,7 @@ const AdminDashboard = ({ onLogout }) => {
                     {/* KPI Cards */}
                     <div className="stats-grid">
                         <StatCard title="Confirmed Revenue" value={`₹${metrics.revenue.toLocaleString('en-IN')}`} icon="💰" color="#10b981" subtitle="In selected range" />
+                        <StatCard title="OTA Revenue" value={`₹${metrics.otaRevenue.toLocaleString('en-IN')}`} icon="🔗" color="#0891b2" subtitle={`${metrics.otaNights} nights synced`} />
                         <StatCard title="Confirmed Bookings" value={metrics.bookings} icon="✅" color="#3b82f6" subtitle="Validated stays" />
                         <StatCard title="Pending Review" value={metrics.pending} icon="⏳" color="#f59e0b" subtitle="Action needed" />
                         <StatCard title="Total Enquiries" value={metrics.totalRequests} icon="📊" color="#8b5cf6" subtitle="All requests" />
