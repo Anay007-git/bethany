@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { SupabaseService } from '../../services/SupabaseService';
 import titleBarImg from '../../assets/title-bar.jpeg';
+import whatsappIcon from '../../assets/whatsapp.svg';
 import './AdminDashboard.css';
 
 const AdminDashboard = ({ onLogout }) => {
@@ -678,7 +679,7 @@ const AdminDashboard = ({ onLogout }) => {
                                                                         window.open(`https://wa.me/${b.guests.phone}?text=${encodeURIComponent(text)}`, '_blank');
                                                                     }}
                                                                 >
-                                                                    💬 WA
+                                                                    <img src={whatsappIcon} alt="WhatsApp" style={{ width: '16px', height: '16px', verticalAlign: 'middle', marginRight: '5px' }} />
                                                                 </button>
                                                             )}
                                                         </div>
