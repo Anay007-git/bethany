@@ -1,5 +1,7 @@
 -- 4. INVOICES TABLE
 -- Stores immutable bill breakdown for auditability
+DROP TABLE IF EXISTS invoices CASCADE;
+
 create table invoices (
   id uuid primary key default uuid_generate_v4(),
   booking_id uuid references bookings(id),
