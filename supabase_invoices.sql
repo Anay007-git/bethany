@@ -7,8 +7,6 @@ create table invoices (
   issue_date date default CURRENT_DATE,
   due_date date,
   items jsonb not null, -- Array of { description, quantity, unit_price, total }
-  subtotal decimal(10,2) not null,
-  tax_amount decimal(10,2) default 0,
   total_amount decimal(10,2) not null,
   status text check (status in ('issued', 'paid', 'cancelled')) default 'issued',
   created_at timestamp with time zone default now()

@@ -69,7 +69,6 @@ export const SupabaseService = {
                     booking_id: bookingId,
                     invoice_number: invNum,
                     items: items, // JSONB Array
-                    subtotal: total, // Assuming inclusive tax for now
                     total_amount: total,
                     status: 'issued'
                 }]);
