@@ -60,28 +60,42 @@ const AdminDashboard = ({ onLogout }) => {
         return highSeason ? room.price_high_season : room.price_low_season;
     };
 
-    // Check availability against allBookings
+    // Check availability against allBookings AND external iCal blocked dates
     const isRoomAvailable = (roomId, startStr, endStr) => {
-        if (!roomId || !startStr || !endStr) return true; // Assume available if incomplete
+        if (!roomId || !startStr || !endStr) return true;
 
         const checkIn = new Date(startStr); checkIn.setHours(0, 0, 0, 0);
         const checkOut = new Date(endStr); checkOut.setHours(0, 0, 0, 0);
 
-        return !allBookings.some(b => {
-            // Only check  confirmed/booked/pending
+        // Check internal bookings
+        const hasInternalConflict = allBookings.some(b => {
             if (!['booked', 'confirmed', 'pending'].includes(b.status.toLowerCase())) return false;
-
-            // Check if room matches
-            const rIds = b.room_ids || []; // Array of {id, name}
+            const rIds = b.room_ids || [];
             const hasRoom = rIds.some(r => r.id === roomId);
             if (!hasRoom) return false;
-
-            // Check Overlap
             const bStart = new Date(b.check_in); bStart.setHours(0, 0, 0, 0);
             const bEnd = new Date(b.check_out); bEnd.setHours(0, 0, 0, 0);
-
             return checkIn < bEnd && checkOut > bStart;
         });
+
+        if (hasInternalConflict) return false;
+
+        // Check external iCal blocked dates (from localStorage)
+        try {
+            const icalData = localStorage.getItem(`ical_blocked_${roomId}`);
+            if (icalData) {
+                const blockedDates = JSON.parse(icalData);
+                for (const block of blockedDates) {
+                    const blockStart = new Date(block.start); blockStart.setHours(0, 0, 0, 0);
+                    const blockEnd = new Date(block.end); blockEnd.setHours(0, 0, 0, 0);
+                    if (checkIn < blockEnd && checkOut > blockStart) {
+                        return false; // Conflict with OTA booking
+                    }
+                }
+            }
+        } catch (e) { /* ignore parse errors */ }
+
+        return true;
     };
 
     // Auto-Calculate Price Effect
@@ -367,11 +381,14 @@ const AdminDashboard = ({ onLogout }) => {
 
             {activeTab === 'inventory' && (
                 <div className="card-panel">
-                    <h3>Room Inventory</h3>
+                    <h3>Room Inventory & OTA Sync</h3>
+                    <p style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '15px' }}>
+                        Paste iCal URLs from Goibibo, Booking.com, or Airbnb to sync external bookings.
+                    </p>
                     <div style={{ overflowX: 'auto' }}>
                         <table className="admin-table">
                             <thead>
-                                <tr><th>Room</th><th>Standard Price</th><th>High Season</th><th>Capacity</th><th>iCal Link</th><th>Actions</th></tr>
+                                <tr><th>Room</th><th>Std Price</th><th>High Season</th><th>Capacity</th><th>OTA Calendar URL</th><th>Actions</th></tr>
                             </thead>
                             <tbody>
                                 {rooms.map(r => (
@@ -381,15 +398,65 @@ const AdminDashboard = ({ onLogout }) => {
                                         <td>₹{r.price_high_season}</td>
                                         <td>{r.capacity}</td>
                                         <td>
-                                            <input type="text" placeholder="Paste OTA iCal URL" defaultValue={r.ical_import_url || ''} style={{ width: '200px', padding: '5px', borderRadius: '4px', border: '1px solid #ddd' }} />
+                                            <input
+                                                type="text"
+                                                id={`ical-${r.id}`}
+                                                placeholder="Paste OTA iCal URL"
+                                                defaultValue={r.ical_import_url || ''}
+                                                style={{ width: '250px', padding: '5px', borderRadius: '4px', border: '1px solid #ddd' }}
+                                            />
                                         </td>
-                                        <td>
-                                            <button className="btn-primary" style={{ padding: '5px 10px', fontSize: '0.8rem' }}>Update</button>
+                                        <td style={{ display: 'flex', gap: '5px' }}>
+                                            <button
+                                                className="btn-primary"
+                                                style={{ padding: '5px 10px', fontSize: '0.8rem' }}
+                                                onClick={async () => {
+                                                    const input = document.getElementById(`ical-${r.id}`);
+                                                    const url = input?.value || '';
+                                                    const result = await SupabaseService.updateRoom(r.id, { ical_import_url: url });
+                                                    if (result.success) {
+                                                        alert('iCal URL saved!');
+                                                        loadData();
+                                                    } else {
+                                                        alert('Save failed');
+                                                    }
+                                                }}
+                                            >
+                                                💾 Save
+                                            </button>
+                                            <button
+                                                className="btn-primary"
+                                                style={{ padding: '5px 10px', fontSize: '0.8rem', background: '#10b981' }}
+                                                onClick={async () => {
+                                                    const url = r.ical_import_url;
+                                                    if (!url) {
+                                                        alert('No iCal URL saved for this room. Save one first.');
+                                                        return;
+                                                    }
+                                                    alert('Syncing... Please wait.');
+                                                    const { fetchIcalDates } = await import('../../utils/icalParser');
+                                                    const result = await fetchIcalDates(url);
+                                                    if (result.success) {
+                                                        const blocked = result.dates.length;
+                                                        alert(`✅ Synced! Found ${blocked} blocked date(s) from OTA.`);
+                                                        // Store in localStorage for availability check
+                                                        const key = `ical_blocked_${r.id}`;
+                                                        localStorage.setItem(key, JSON.stringify(result.dates));
+                                                    } else {
+                                                        alert(`❌ Sync failed: ${result.error}`);
+                                                    }
+                                                }}
+                                            >
+                                                🔄 Sync
+                                            </button>
                                         </td>
                                     </tr>
                                 ))}
                             </tbody>
                         </table>
+                    </div>
+                    <div style={{ marginTop: '15px', padding: '10px', background: '#fef3c7', borderRadius: '6px', fontSize: '0.85rem' }}>
+                        <strong>💡 Tip:</strong> After syncing, external bookings will be checked when creating new bookings.
                     </div>
                 </div>
             )}
