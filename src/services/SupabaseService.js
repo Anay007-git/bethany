@@ -211,19 +211,29 @@ export const SupabaseService = {
     getBookingsByPhone: async (phone) => {
         try {
             // Normalize phone: remove spaces, dashes, etc.
-            const cleanPhone = phone.replace(/\D/g, '');
+            const cleanInput = phone.replace(/\D/g, '');
 
+            // STRATEGY: Fetch recent bookings and filter in JS. 
+            // This is necessary because the DB stores phone numbers in various formats (e.g., "+91 ...", "987-...", etc.)
+            // and standard SQL 'ilike' won't match a clean input against a formatted stored value easily.
             const { data, error } = await supabase
                 .from('bookings')
                 .select(`
                     *,
                     guests!inner(full_name, phone, email)
                 `)
-                .ilike('guests.phone', `%${cleanPhone}%`) // Loose matching
-                .order('created_at', { ascending: false });
+                .order('created_at', { ascending: false })
+                .limit(100); // Fetch last 100 bookings to filter
 
             if (error) throw error;
-            return { success: true, data };
+
+            // Client-side robust matching
+            const matches = data.filter(b => {
+                const dbPhone = (b.guests?.phone || '').replace(/\D/g, '');
+                return dbPhone.includes(cleanInput);
+            });
+
+            return { success: true, data: matches };
 
         } catch (error) {
             console.error('Fetch by Phone Error:', error);
