@@ -41,13 +41,29 @@ export const SupabaseService = {
 
             if (bookingError) throw bookingError;
 
-            // C. Create Invoice Record (Immutable Breakdown)
-            if (bookingData.invoiceItems) {
-                await this.createInvoice({
-                    bookingId: booking.id,
-                    items: bookingData.invoiceItems,
-                    total: bookingData.totalPrice
-                });
+            // C. Create Invoice Record (Immutable Breakdown) - INLINE to avoid 'this' binding issues
+            if (bookingData.invoiceItems && bookingData.invoiceItems.length > 0) {
+                try {
+                    const invNum = `INV-${Date.now().toString().slice(-6)}`;
+
+                    const { error: invoiceError } = await supabase
+                        .from('invoices')
+                        .insert([{
+                            booking_id: booking.id,
+                            invoice_number: invNum,
+                            items: bookingData.invoiceItems,
+                            total_amount: bookingData.totalPrice,
+                            status: 'issued'
+                        }]);
+
+                    if (invoiceError) {
+                        console.error('Invoice Creation Error:', invoiceError);
+                    } else {
+                        console.log('Invoice created successfully:', invNum);
+                    }
+                } catch (invErr) {
+                    console.error('Invoice Logic Error:', invErr);
+                }
             }
 
             return { success: true, booking, guest };
