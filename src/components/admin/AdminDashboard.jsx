@@ -346,6 +346,28 @@ const AdminDashboard = ({ onLogout }) => {
             }));
     }, [allBookings, blockedDates, rooms]);
 
+    // Calculate internal blocked dates from allBookings
+    const internalBlockedDates = useMemo(() => {
+        const blocked = {};
+        allBookings.forEach(b => {
+            if (['booked', 'confirmed', 'pending'].includes((b.status || '').toLowerCase())) {
+                const start = new Date(b.check_in);
+                const end = new Date(b.check_out);
+
+                for (let d = new Date(start); d < end; d.setDate(d.getDate() + 1)) {
+                    const dateStr = d.toISOString().split('T')[0];
+                    (b.room_ids || []).forEach(room => {
+                        if (!blocked[room.id]) blocked[room.id] = [];
+                        if (!blocked[room.id].some(item => item.start === dateStr)) {
+                            blocked[room.id].push({ start: dateStr, source: 'Internal', bookingId: b.id });
+                        }
+                    });
+                }
+            }
+        });
+        return blocked;
+    }, [allBookings]);
+
     // Cancellation Trends Logic
     const cancellationData = useMemo(() => {
         const monthMap = {};
@@ -594,117 +616,7 @@ const AdminDashboard = ({ onLogout }) => {
                     </>
                 )}
 
-                {activeTab === 'inventory' && (
-                    <div className="card-panel">
-                        <h3>Room Inventory & OTA Sync</h3>
-                        <p style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '15px' }}>
-                            Paste iCal URLs from Goibibo, Booking.com, or Airbnb to sync external bookings.
-                        </p>
-                        <div style={{ overflowX: 'auto' }}>
-                            <table className="admin-table">
-                                <thead>
-                                    <tr><th>Room</th><th>Std Price</th><th>High Season</th><th>Capacity</th><th>OTA Calendar URL</th><th>Actions</th></tr>
-                                </thead>
-                                <tbody>
-                                    {rooms.map(r => (
-                                        <React.Fragment key={r.id}>
-                                            <tr>
-                                                <td><strong>{r.name}</strong></td>
-                                                <td>₹{r.price_low_season}</td>
-                                                <td>₹{r.price_high_season}</td>
-                                                <td>{r.capacity}</td>
-                                                <td>
-                                                    <input
-                                                        type="text"
-                                                        id={`ical-${r.id}`}
-                                                        placeholder="Paste OTA iCal URL"
-                                                        defaultValue={r.ical_import_url || ''}
-                                                        style={{ width: '250px', padding: '5px', borderRadius: '4px', border: '1px solid #ddd' }}
-                                                    />
-                                                </td>
-                                                <td style={{ display: 'flex', gap: '5px' }}>
-                                                    <button
-                                                        className="btn-primary"
-                                                        style={{ padding: '5px 10px', fontSize: '0.8rem' }}
-                                                        onClick={async () => {
-                                                            const input = document.getElementById(`ical-${r.id}`);
-                                                            const url = input?.value || '';
-                                                            const result = await SupabaseService.updateRoom(r.id, { ical_import_url: url });
-                                                            if (result.success) {
-                                                                alert('iCal URL saved!');
-                                                                loadData();
-                                                            } else {
-                                                                alert('Save failed');
-                                                            }
-                                                        }}
-                                                    >
-                                                        💾 Save
-                                                    </button>
-                                                    <button
-                                                        className="btn-primary"
-                                                        style={{ padding: '5px 10px', fontSize: '0.8rem', background: '#10b981' }}
-                                                        onClick={async () => {
-                                                            const url = r.ical_import_url;
-                                                            if (!url) {
-                                                                alert('No iCal URL saved for this room. Save one first.');
-                                                                return;
-                                                            }
-                                                            alert('Syncing... Please wait.');
-                                                            const { fetchIcalDates } = await import('../../utils/icalParser');
-                                                            const result = await fetchIcalDates(url);
-                                                            if (result.success) {
-                                                                const blockedCount = result.dates.length;
-                                                                // Save to Supabase
-                                                                const saveResult = await SupabaseService.saveBlockedDates(r.id, result.dates);
-                                                                if (saveResult.success) {
-                                                                    setBlockedDates(prev => ({ ...prev, [r.id]: result.dates }));
-                                                                    alert(`✅ Synced! Saved ${blockedCount} blocked date(s) to database.`);
-                                                                } else {
-                                                                    alert(`⚠️ Synced ${blockedCount} dates but failed to save to database.`);
-                                                                }
-                                                            } else {
-                                                                alert(`❌ Sync failed: ${result.error}`);
-                                                            }
-                                                        }}
-                                                    >
-                                                        🔄 Sync
-                                                    </button>
-                                                    <button
-                                                        className="btn-primary"
-                                                        style={{ padding: '5px 10px', fontSize: '0.8rem', background: '#6366f1' }}
-                                                        onClick={() => {
-                                                            window.open(`/ical/${r.id}`, '_blank');
-                                                        }}
-                                                    >
-                                                        📥 Export
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                            {blockedDates[r.id] && blockedDates[r.id].length > 0 && (
-                                                <tr style={{ background: '#fef2f2' }}>
-                                                    <td colSpan="6" style={{ padding: '8px 15px' }}>
-                                                        <span style={{ fontSize: '0.85rem', color: '#991b1b' }}>
-                                                            <strong>🚫 OTA Blocked ({blockedDates[r.id].length}):</strong>{' '}
-                                                            {blockedDates[r.id].slice(0, 10).map((d, i) => (
-                                                                <span key={i} style={{ background: '#fee2e2', padding: '2px 6px', borderRadius: '4px', marginRight: '5px', fontSize: '0.8rem' }}>
-                                                                    {d.start}
-                                                                </span>
-                                                            ))}
-                                                            {blockedDates[r.id].length > 10 && <span>+{blockedDates[r.id].length - 10} more</span>}
-                                                        </span>
-                                                    </td>
-                                                </tr>
-                                            )}
-                                        </React.Fragment>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                        <div style={{ marginTop: '15px', padding: '10px', background: '#fef3c7', borderRadius: '6px', fontSize: '0.85rem' }}>
-                            <strong>💡 Tip:</strong> After syncing, external bookings will be checked when creating new bookings.
-                        </div>
-                    </div>
-                )}
+
 
 
 
@@ -793,23 +705,60 @@ const AdminDashboard = ({ onLogout }) => {
                                                     </button>
                                                 </td>
                                             </tr>
-                                            {blockedDates[r.id] && blockedDates[r.id].length > 0 && (
-                                                <tr style={{ background: '#f8fafc' }}>
-                                                    <td colSpan="6" style={{ padding: '12px 20px' }}>
-                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.85rem' }}>
-                                                            <span className="status-badge status-cancelled">🚫 OTA Blocked ({blockedDates[r.id].length})</span>
-                                                            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                                                                {blockedDates[r.id].slice(0, 8).map((d, i) => (
-                                                                    <span key={i} style={{ background: 'white', padding: '2px 8px', borderRadius: '4px', border: '1px solid #e2e8f0', color: '#64748b' }}>
-                                                                        {d.start}
-                                                                    </span>
-                                                                ))}
-                                                                {blockedDates[r.id].length > 8 && <span style={{ color: '#94a3b8' }}>+{blockedDates[r.id].length - 8} more</span>}
+                                            {(() => {
+                                                const otaDates = (blockedDates[r.id] || []).map(d => ({ ...d, source: 'OTA' }));
+                                                const internalDates = (internalBlockedDates[r.id] || []).map(d => ({ ...d, source: 'Web' }));
+
+                                                // Combine and sort dates
+                                                const allBlocked = [...otaDates, ...internalDates].sort((a, b) => new Date(a.start) - new Date(b.start));
+
+                                                if (allBlocked.length === 0) return null;
+
+                                                return (
+                                                    <tr style={{ background: '#f8fafc' }}>
+                                                        <td colSpan="6" style={{ padding: '12px 20px' }}>
+                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flexWrap: 'wrap' }}>
+                                                                <div style={{ display: 'flex', gap: '8px', fontSize: '0.85rem', fontWeight: '600' }}>
+                                                                    <span style={{ color: '#ef4444' }}>🚫 Blocked: {allBlocked.length} dates</span>
+                                                                    {internalDates.length > 0 && <span style={{ color: '#3b82f6' }}>(Web: {internalDates.length})</span>}
+                                                                    {otaDates.length > 0 && <span style={{ color: '#f59e0b' }}>(OTA: {otaDates.length})</span>}
+                                                                </div>
+
+                                                                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginLeft: '10px' }}>
+                                                                    {allBlocked.slice(0, 12).map((d, i) => (
+                                                                        <span key={i} style={{
+                                                                            background: d.source === 'OTA' ? '#fffbeb' : '#eff6ff',
+                                                                            border: `1px solid ${d.source === 'OTA' ? '#fcd34d' : '#bfdbfe'}`,
+                                                                            color: d.source === 'OTA' ? '#b45309' : '#1e40af',
+                                                                            padding: '2px 8px',
+                                                                            borderRadius: '4px',
+                                                                            fontSize: '0.8rem',
+                                                                            display: 'flex',
+                                                                            alignItems: 'center',
+                                                                            gap: '4px'
+                                                                        }}>
+                                                                            {d.start}
+                                                                            <span style={{ fontSize: '0.7em', opacity: 0.8 }}>{d.source === 'OTA' ? 'OTA' : 'WEB'}</span>
+                                                                        </span>
+                                                                    ))}
+                                                                    {allBlocked.length > 12 && (
+                                                                        <span style={{
+                                                                            background: '#f1f5f9',
+                                                                            padding: '2px 8px',
+                                                                            borderRadius: '4px',
+                                                                            color: '#64748b',
+                                                                            fontSize: '0.8rem',
+                                                                            border: '1px solid #e2e8f0'
+                                                                        }}>
+                                                                            +{allBlocked.length - 12} more
+                                                                        </span>
+                                                                    )}
+                                                                </div>
                                                             </div>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            )}
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })()}
                                         </React.Fragment>
                                     ))}
                                 </tbody>
