@@ -325,6 +325,96 @@ export const SupabaseService = {
         }
     },
 
+    // --- Dynamic Coupons ---
+
+    // 6. Valid Coupon (Public)
+    validateCoupon: async (code) => {
+        try {
+            const { data, error } = await supabase
+                .from('coupons')
+                .select('*')
+                .eq('code', code.toUpperCase())
+                .eq('is_active', true)
+                .single();
+
+            if (error) throw new Error('Invalid coupon code');
+
+            // Check Expiry
+            if (data.expiry_date && new Date(data.expiry_date) < new Date()) {
+                throw new Error('Coupon has expired');
+            }
+
+            // Check Usage Limit (if applicable)
+            if (data.usage_limit !== null && (data.usage_count || 0) >= data.usage_limit) {
+                throw new Error('Coupon usage limit reached');
+            }
+
+            return { success: true, coupon: data };
+        } catch (error) {
+            return { success: false, error: error.message };
+        }
+    },
+
+    // 7. Increment Usage (Internal)
+    incrementCouponUsage: async (code) => {
+        try {
+            const { data } = await supabase.from('coupons').select('usage_count').eq('code', code).single();
+            if (data) {
+                await supabase.from('coupons').update({ usage_count: (data.usage_count || 0) + 1 }).eq('code', code);
+            }
+        } catch (err) {
+            console.error('Failed to increment coupon usage', err);
+        }
+    },
+
+    // 8. Admin: Get All Coupons
+    getCoupons: async () => {
+        try {
+            const { data, error } = await supabase
+                .from('coupons')
+                .select('*')
+                .order('created_at', { ascending: false });
+
+            if (error) throw error;
+            return { success: true, data };
+        } catch (error) {
+            return { success: false, error };
+        }
+    },
+
+    // 9. Admin: Create Coupon
+    createCoupon: async (couponData) => {
+        try {
+            const { data, error } = await supabase.from('coupons').insert([couponData]).select();
+            if (error) throw error;
+            return { success: true, data };
+        } catch (error) {
+            return { success: false, error };
+        }
+    },
+
+    // 10. Admin: Update Coupon
+    updateCoupon: async (id, updates) => {
+        try {
+            const { data, error } = await supabase.from('coupons').update(updates).eq('id', id).select();
+            if (error) throw error;
+            return { success: true, data };
+        } catch (error) {
+            return { success: false, error };
+        }
+    },
+
+    // 11. Admin: Delete Coupon
+    deleteCoupon: async (id) => {
+        try {
+            const { error } = await supabase.from('coupons').delete().eq('id', id);
+            if (error) throw error;
+            return { success: true };
+        } catch (error) {
+            return { success: false, error };
+        }
+    },
+
     // 6. Get Booking by Phone (Bill Lookup)
     getBookingsByPhone: async (phone) => {
         try {

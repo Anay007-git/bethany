@@ -136,6 +136,8 @@ const BookingForm = ({ onToast }) => {
     const [couponCode, setCouponCode] = useState('');
     const [discount, setDiscount] = useState(0);
     const [isCouponApplied, setIsCouponApplied] = useState(false);
+    const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
+    const [couponDetails, setCouponDetails] = useState(null);
 
     // Calendar Reset Key (for uncontrolled component usage)
     const [calendarKey, setCalendarKey] = useState(0);
@@ -632,30 +634,60 @@ const BookingForm = ({ onToast }) => {
     const handleApplyCoupon = async () => {
         if (!couponCode) return;
 
-        if (couponCode.trim().toUpperCase() !== 'WELCOMEBACK5') {
-            onToast('Invalid Coupon Code', 'error');
-            return;
-        }
+        setIsApplyingCoupon(true);
+        // Reset
+        setDiscount(0);
+        setIsCouponApplied(false);
 
-        if (!formData.phone || formData.phone.length < 10) {
-            onToast('Please enter a valid phone number first.', 'error');
-            return;
-        }
+        // Check if it's the legacy coupon (optional: keep backward compatibility or migrate completely)
+        // We will migrate completely to DB check.
+        // But for "legacy" returning user logic, we can keep "WELCOMEBACK5" in DB with a special flag or just handle it here?
+        // Let's rely purely on DB for simplicity and consistency.
 
-        const isReturning = await SupabaseService.checkReturningCustomer(formData.phone);
-        if (isReturning) {
-            // Calculate 5% discount on Room + Meals
-            const currentTotal = roomPriceTotal + mealPriceTotal;
-            const discountAmount = Math.round(currentTotal * 0.05);
+        const res = await SupabaseService.validateCoupon(couponCode);
 
-            setDiscount(discountAmount);
+        await new Promise(r => setTimeout(r, 600)); // UX delay
+
+        if (res.success && res.coupon) {
+            const coupon = res.coupon;
+            console.log('Coupon Data:', coupon);
+            console.log('Prices:', { roomPriceTotal, mealPriceTotal });
+
+            // Check usage limit again just in case
+            if (coupon.usage_limit && coupon.usage_count >= coupon.usage_limit) {
+                onToast('Coupon usage limit reached', 'error');
+                setIsApplyingCoupon(false);
+                return;
+            }
+
+            let discountAmount = 0;
+            // Ensure type match is robust (trim and lowercase)
+            const type = (coupon.discount_type || '').toLowerCase().trim();
+
+            if (type === 'percentage') {
+                // Calculate percentage on (Room + Meals)
+                discountAmount = ((roomPriceTotal + mealPriceTotal) * coupon.discount_value) / 100;
+            } else {
+                discountAmount = coupon.discount_value;
+            }
+
+            console.log('Calculated Discount:', discountAmount);
+
+            // Cap at total price
+            const total = roomPriceTotal + mealPriceTotal;
+            if (discountAmount > total) discountAmount = total;
+
+            setDiscount(Math.round(discountAmount));
             setIsCouponApplied(true);
-            onToast('🎉 5% Loyalty Discount Applied!', 'success');
+            setCouponDetails(coupon); // Store details for UI
+            onToast(`🎉 Coupon Applied! Saved ₹${Math.round(discountAmount)}`, 'success');
         } else {
-            onToast('Coupon valid only for existing customers.', 'error');
+            onToast(res.error || 'Invalid Coupon Code', 'error');
             setDiscount(0);
             setIsCouponApplied(false);
+            setCouponDetails(null);
         }
+        setIsApplyingCoupon(false);
     };
 
     const handleSubmit = async (e) => {
@@ -833,6 +865,12 @@ const BookingForm = ({ onToast }) => {
                 totalPrice,
                 bookingId: bookingId
             });
+
+            // Increment Coupon Usage if applied
+            if (isCouponApplied && couponCode) {
+                await SupabaseService.incrementCouponUsage(couponCode.toUpperCase());
+            }
+
             setShowSuccessModal(true);
             setFormData({
                 name: '', email: '', phone: '', checkIn: '', checkOut: '',
@@ -1089,7 +1127,9 @@ const BookingForm = ({ onToast }) => {
                                     </div>
                                     {isCouponApplied && (
                                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px', color: '#10b981', fontSize: '0.9rem', fontWeight: '600' }}>
-                                            <span>Discount (5%):</span>
+                                            <span>
+                                                Discount ({couponDetails?.discount_type === 'percentage' ? `${couponDetails.discount_value}%` : 'Flat Off'}):
+                                            </span>
                                             <span>-₹{discount.toLocaleString('en-IN')}</span>
                                         </div>
                                     )}

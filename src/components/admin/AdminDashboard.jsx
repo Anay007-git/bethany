@@ -39,6 +39,11 @@ const AdminDashboard = ({ onLogout }) => {
     // State for OTA blocked dates per room
     const [blockedDates, setBlockedDates] = useState({});
 
+    // Coupon State
+    const [coupons, setCoupons] = useState([]);
+    const [couponForm, setCouponForm] = useState({ code: '', discount_type: 'percentage', discount_value: 0, usage_limit: '', expiry_date: '' });
+    const [editingCoupon, setEditingCoupon] = useState(null);
+
     useEffect(() => { loadData(); }, []);
 
     const loadData = async () => {
@@ -62,7 +67,47 @@ const AdminDashboard = ({ onLogout }) => {
             }
         }
 
+        // Load Coupons
+        const couponResult = await SupabaseService.getCoupons();
+        if (couponResult.success) setCoupons(couponResult.data);
+
         setLoading(false);
+    };
+
+    // --- Coupon Handlers ---
+    const handleCouponSubmit = async (e) => {
+        e.preventDefault();
+        const payload = {
+            code: couponForm.code.toUpperCase(),
+            discount_type: couponForm.discount_type,
+            discount_value: parseFloat(couponForm.discount_value),
+            usage_limit: couponForm.usage_limit ? parseInt(couponForm.usage_limit) : null,
+            expiry_date: couponForm.expiry_date || null,
+            is_active: true
+        };
+
+        let res;
+        if (editingCoupon) {
+            res = await SupabaseService.updateCoupon(editingCoupon.id, payload);
+        } else {
+            res = await SupabaseService.createCoupon(payload);
+        }
+
+        if (res.success) {
+            alert(editingCoupon ? 'Coupon Updated!' : 'Coupon Created!');
+            setEditingCoupon(null);
+            setCouponForm({ code: '', discount_type: 'percentage', discount_value: 0, usage_limit: '', expiry_date: '' });
+            loadData();
+        } else {
+            alert('Error: ' + (res.error.message || 'Operation failed'));
+        }
+    };
+
+    const handleDeleteCoupon = async (id) => {
+        if (window.confirm('Are you sure you want to delete this coupon?')) {
+            await SupabaseService.deleteCoupon(id);
+            loadData();
+        }
     };
 
     // --- Helpers for Offline Booking Logic ---
@@ -569,6 +614,12 @@ const AdminDashboard = ({ onLogout }) => {
                     >
                         📢 <span>Marketing</span>
                     </button>
+                    <button
+                        className={`nav-item ${activeTab === 'coupons' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('coupons')}
+                    >
+                        🎟️ <span>Coupons</span>
+                    </button>
                 </nav>
 
                 <div className="sidebar-footer">
@@ -582,7 +633,7 @@ const AdminDashboard = ({ onLogout }) => {
             <main className="admin-main">
                 <header className="main-header">
                     <div className="page-title">
-                        <h1>{activeTab === 'dashboard' ? 'Overview' : activeTab === 'inventory' ? 'Room Inventory' : activeTab === 'marketing' ? 'Customer CRM' : 'Create Booking'}</h1>
+                        <h1>{activeTab === 'dashboard' ? 'Overview' : activeTab === 'inventory' ? 'Room Inventory' : activeTab === 'marketing' ? 'Customer CRM' : activeTab === 'coupons' ? 'Coupon Management' : 'Create Booking'}</h1>
                         <p>{new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
                     </div>
 
@@ -833,6 +884,80 @@ const AdminDashboard = ({ onLogout }) => {
 
 
 
+
+                {activeTab === 'coupons' && (
+                    <div className="card-panel">
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                            <h3 style={{ margin: 0 }}>🎟️ Manage Coupons</h3>
+                            <button className="btn-secondary" onClick={() => loadData()}>🔄 Refresh</button>
+                        </div>
+
+                        {/* Coupon Form */}
+                        <div style={{ background: '#f8fafc', padding: '20px', borderRadius: '12px', marginBottom: '25px', border: '1px solid #e2e8f0' }}>
+                            <h4 style={{ marginTop: 0, marginBottom: '15px', color: '#334155' }}>{editingCoupon ? 'Edit Coupon' : 'Create New Coupon'}</h4>
+                            <form onSubmit={handleCouponSubmit} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '15px', alignItems: 'end' }}>
+                                <div>
+                                    <label className="form-label">Code</label>
+                                    <input type="text" value={couponForm.code} onChange={e => setCouponForm({ ...couponForm, code: e.target.value })} placeholder="e.g. SUMMER20" required className="form-input" style={{ textTransform: 'uppercase', fontWeight: 'bold' }} disabled={!!editingCoupon} />
+                                </div>
+                                <div>
+                                    <label className="form-label">Discount Type</label>
+                                    <select value={couponForm.discount_type} onChange={e => setCouponForm({ ...couponForm, discount_type: e.target.value })} className="form-input">
+                                        <option value="percentage">Percentage (%)</option>
+                                        <option value="fixed">Fixed Amount (₹)</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="form-label">Value</label>
+                                    <input type="number" value={couponForm.discount_value} onChange={e => setCouponForm({ ...couponForm, discount_value: e.target.value })} required className="form-input" min="0" />
+                                </div>
+                                <div>
+                                    <label className="form-label">Limit (Optional)</label>
+                                    <input type="number" value={couponForm.usage_limit || ''} onChange={e => setCouponForm({ ...couponForm, usage_limit: e.target.value })} placeholder="Max uses" className="form-input" min="0" />
+                                </div>
+                                <div>
+                                    <label className="form-label">Expiry (Optional)</label>
+                                    <input type="date" value={couponForm.expiry_date || ''} onChange={e => setCouponForm({ ...couponForm, expiry_date: e.target.value })} className="form-input" />
+                                </div>
+                                <div style={{ display: 'flex', gap: '10px' }}>
+                                    {editingCoupon && <button type="button" onClick={() => { setEditingCoupon(null); setCouponForm({ code: '', discount_type: 'percentage', discount_value: 0, usage_limit: '', expiry_date: '' }); }} className="btn-secondary">Cancel</button>}
+                                    <button type="submit" className="btn-primary" style={{ flex: 1 }}>{editingCoupon ? 'Update' : 'Create'}</button>
+                                </div>
+                            </form>
+                        </div>
+
+                        {/* Coupons Table */}
+                        <div className="table-container">
+                            <table className="admin-table">
+                                <thead>
+                                    <tr><th>Code</th><th>Discount</th><th>Limit</th><th>Usage</th><th>Expiry</th><th>Status</th><th>Actions</th></tr>
+                                </thead>
+                                <tbody>
+                                    {coupons.map(c => (
+                                        <tr key={c.id}>
+                                            <td><strong style={{ color: '#2563eb', background: '#eff6ff', padding: '2px 6px', borderRadius: '4px' }}>{c.code}</strong></td>
+                                            <td>{c.discount_type === 'percentage' ? `${c.discount_value}%` : `₹${c.discount_value}`}</td>
+                                            <td>{c.usage_limit || '∞'}</td>
+                                            <td>{c.usage_count}</td>
+                                            <td>{c.expiry_date ? new Date(c.expiry_date).toLocaleDateString() : 'No Expiry'}</td>
+                                            <td>
+                                                {c.is_active ?
+                                                    <span style={{ color: 'green', background: '#dcfce7', padding: '2px 8px', borderRadius: '12px', fontSize: '0.85rem' }}>Active</span> :
+                                                    <span style={{ color: 'red', background: '#fee2e2', padding: '2px 8px', borderRadius: '12px', fontSize: '0.85rem' }}>Inactive</span>
+                                                }
+                                            </td>
+                                            <td>
+                                                <button className="btn-secondary" style={{ marginRight: '8px', padding: '4px 8px' }} onClick={() => { setEditingCoupon(c); setCouponForm(c); }} title="Edit">✏️</button>
+                                                <button className="btn-secondary" style={{ color: '#ef4444', borderColor: '#ef4444', padding: '4px 8px' }} onClick={() => handleDeleteCoupon(c.id)} title="Delete">🗑️</button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    {coupons.length === 0 && <tr><td colSpan="7" style={{ textAlign: 'center', padding: '30px', color: '#94a3b8' }}>No coupons found. Create your first one above! ☝️</td></tr>}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                )}
 
                 {activeTab === 'inventory' && (
                     <div className="card-panel">
