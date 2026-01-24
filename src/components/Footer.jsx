@@ -34,6 +34,22 @@ const Footer = ({ onOpenPolicy }) => {
                         <li><a href="/#gallery" onClick={(e) => scrollToSection(e, 'gallery')}>Gallery</a></li>
                         <li><a href="/#booking" onClick={(e) => scrollToSection(e, 'booking')}>Book Now</a></li>
                         <li><a href="/contact">Contact</a></li>
+                        <li>
+                            <a href="/my-bill" style={{
+                                background: 'linear-gradient(45deg, #FFD700, #FFA500)',
+                                WebkitBackgroundClip: 'text',
+                                WebkitTextFillColor: 'transparent',
+                                fontWeight: 'bold',
+                                border: '1px solid #FFA500',
+                                padding: '4px 10px',
+                                borderRadius: '15px',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '5px'
+                            }}>
+                                🧾 My Bill
+                            </a>
+                        </li>
                     </ul>
 
                     <div className="footer-social">
