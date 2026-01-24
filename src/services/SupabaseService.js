@@ -4,7 +4,7 @@ export const SupabaseService = {
 
     // 1. Create a New Booking (Dual Write Support)
     // 1. Create a New Booking (Dual Write Support)
-    createBooking: async (bookingData) => {
+    async createBooking(bookingData) {
         try {
             // A. Create Guest Record
             const { data: guest, error: guestError } = await supabase
@@ -59,7 +59,7 @@ export const SupabaseService = {
     },
 
     // 1.5 Create Invoice
-    createInvoice: async ({ bookingId, items, total }) => {
+    async createInvoice({ bookingId, items, total }) {
         try {
             const invNum = `INV-${Date.now().toString().slice(-6)}`;
 
