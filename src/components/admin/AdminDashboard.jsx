@@ -706,404 +706,213 @@ const AdminDashboard = ({ onLogout }) => {
                     </div>
                 )}
 
+
+
+                {activeTab === 'inventory' && (
+                    <div className="card-panel">
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                            <h3>Room Inventory & OTA Sync</h3>
+                            <button onClick={loadData} className="btn-secondary">↻ Refresh</button>
+                        </div>
+                        <p style={{ fontSize: '0.9rem', color: '#64748b', marginBottom: '20px' }}>
+                            Manage room details and sync availability with external OTA platforms (Airbnb, Booking.com, Goibibo).
+                        </p>
+                        <div className="table-container">
+                            <table className="admin-table">
+                                <thead>
+                                    <tr><th>Room</th><th>Std Price</th><th>High Season</th><th>Capacity</th><th>OTA Calendar URL</th><th>Actions</th></tr>
+                                </thead>
+                                <tbody>
+                                    {rooms.map(r => (
+                                        <React.Fragment key={r.id}>
+                                            <tr>
+                                                <td><strong>{r.name}</strong></td>
+                                                <td>₹{r.price_low_season}</td>
+                                                <td>₹{r.price_high_season}</td>
+                                                <td>{r.capacity}</td>
+                                                <td>
+                                                    <input
+                                                        type="text"
+                                                        id={`ical-${r.id}`}
+                                                        placeholder="Paste iCal URL"
+                                                        defaultValue={r.ical_import_url || ''}
+                                                        className="form-input"
+                                                        style={{ width: '100%', padding: '8px', border: '1px solid #e2e8f0', borderRadius: '6px' }}
+                                                    />
+                                                </td>
+                                                <td style={{ display: 'flex', gap: '8px' }}>
+                                                    <button
+                                                        className="btn-secondary"
+                                                        style={{ padding: '6px 12px', fontSize: '0.8rem' }}
+                                                        onClick={async () => {
+                                                            const input = document.getElementById(`ical-${r.id}`);
+                                                            const url = input?.value || '';
+                                                            const result = await SupabaseService.updateRoom(r.id, { ical_import_url: url });
+                                                            if (result.success) {
+                                                                alert('iCal URL saved!');
+                                                                loadData();
+                                                            } else {
+                                                                alert('Save failed');
+                                                            }
+                                                        }}
+                                                    >
+                                                        💾
+                                                    </button>
+                                                    <button
+                                                        className="btn-primary"
+                                                        style={{ padding: '6px 12px', fontSize: '0.8rem' }}
+                                                        onClick={async () => {
+                                                            const url = r.ical_import_url;
+                                                            if (!url) return alert('No iCal URL saved for this room.');
+                                                            alert('Syncing... Please wait.');
+                                                            const { fetchIcalDates } = await import('../../utils/icalParser');
+                                                            const result = await fetchIcalDates(url);
+                                                            if (result.success) {
+                                                                const blockedCount = result.dates.length;
+                                                                const saveResult = await SupabaseService.saveBlockedDates(r.id, result.dates);
+                                                                if (saveResult.success) {
+                                                                    setBlockedDates(prev => ({ ...prev, [r.id]: result.dates }));
+                                                                    alert(`✅ Synced! Saved ${blockedCount} blocked date(s).`);
+                                                                } else {
+                                                                    alert(`⚠️ Synced ${blockedCount} dates but failed to save.`);
+                                                                }
+                                                            } else {
+                                                                alert(`❌ Sync failed: ${result.error}`);
+                                                            }
+                                                        }}
+                                                    >
+                                                        🔄
+                                                    </button>
+                                                    <button
+                                                        className="btn-primary"
+                                                        style={{ padding: '6px 12px', fontSize: '0.8rem', background: '#4f46e5' }}
+                                                        onClick={() => window.open(`/ical/${r.id}`, '_blank')}
+                                                        title="Download .ics file"
+                                                    >
+                                                        📥
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                            {blockedDates[r.id] && blockedDates[r.id].length > 0 && (
+                                                <tr style={{ background: '#f8fafc' }}>
+                                                    <td colSpan="6" style={{ padding: '12px 20px' }}>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.85rem' }}>
+                                                            <span className="status-badge status-cancelled">🚫 OTA Blocked ({blockedDates[r.id].length})</span>
+                                                            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                                                                {blockedDates[r.id].slice(0, 8).map((d, i) => (
+                                                                    <span key={i} style={{ background: 'white', padding: '2px 8px', borderRadius: '4px', border: '1px solid #e2e8f0', color: '#64748b' }}>
+                                                                        {d.start}
+                                                                    </span>
+                                                                ))}
+                                                                {blockedDates[r.id].length > 8 && <span style={{ color: '#94a3b8' }}>+{blockedDates[r.id].length - 8} more</span>}
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            )}
+                                        </React.Fragment>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                )}
+
                 {activeTab === 'offline' && (
-                    <div className="card-panel" style={{ maxWidth: '600px', margin: '0 auto' }}>
-                        <h3>Create Offline Booking</h3>
-                        <form onSubmit={handleOfflineSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-
-                            {/* Guest Details */}
-                            <div className="form-group">
-                                <label>Guest Name</label>
-                                <input type="text" value={offlineForm.name} onChange={e => setOfflineForm({ ...offlineForm, name: e.target.value })} required className="form-input" />
-                            </div>
-                            <div className="form-group">
-                                <label>Phone</label>
-                                <input type="text" value={offlineForm.phone} onChange={e => setOfflineForm({ ...offlineForm, phone: e.target.value })} required className="form-input" />
-                            </div>
-                            <div className="form-group">
-                                <label>
-                                    Number of Guests
-                                    {offlineForm.room && (() => {
-                                        const selectedRoom = rooms.find(r => r.id === offlineForm.room);
-                                        return selectedRoom ? <span style={{ fontSize: '0.85rem', color: '#64748b' }}> (Max: {selectedRoom.capacity})</span> : null;
-                                    })()}
-                                </label>
-                                <input
-                                    type="number"
-                                    min="1"
-                                    max={offlineForm.room ? (rooms.find(r => r.id === offlineForm.room)?.capacity || 10) : 10}
-                                    value={offlineForm.guests}
-                                    onChange={e => {
-                                        const val = parseInt(e.target.value) || 1;
-                                        const selectedRoom = rooms.find(r => r.id === offlineForm.room);
-                                        const maxCapacity = selectedRoom?.capacity || 10;
-                                        if (val > maxCapacity) {
-                                            alert(`This room can accommodate maximum ${maxCapacity} guests.`);
-                                            setOfflineForm({ ...offlineForm, guests: maxCapacity });
-                                        } else {
-                                            setOfflineForm({ ...offlineForm, guests: val });
-                                        }
-                                    }}
-                                    required
-                                    className="form-input"
-                                />
-                            </div>
-
-                            {/* Dates */}
-                            <div style={{ display: 'flex', gap: '10px' }}>
-                                <div className="form-group" style={{ flex: 1 }}>
-                                    <label>Check In</label>
-                                    <input type="date" value={offlineForm.checkIn} onChange={e => setOfflineForm({ ...offlineForm, checkIn: e.target.value })} required className="form-input" />
+                    <div className="card-panel" style={{ maxWidth: '800px', margin: '0 auto' }}>
+                        <h3>Create New Booking</h3>
+                        <form onSubmit={handleOfflineSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                                <div>
+                                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', fontSize: '0.9rem' }}>Guest Name</label>
+                                    <input type="text" value={offlineForm.name} onChange={e => setOfflineForm({ ...offlineForm, name: e.target.value })} required className="date-input" style={{ width: '100%' }} />
                                 </div>
-                                <div className="form-group" style={{ flex: 1 }}>
-                                    <label>Check Out</label>
-                                    <input type="date" value={offlineForm.checkOut} onChange={e => setOfflineForm({ ...offlineForm, checkOut: e.target.value })} required className="form-input" />
+                                <div>
+                                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', fontSize: '0.9rem' }}>Phone</label>
+                                    <input type="text" value={offlineForm.phone} onChange={e => setOfflineForm({ ...offlineForm, phone: e.target.value })} required className="date-input" style={{ width: '100%' }} />
                                 </div>
                             </div>
 
-                            {/* Room Selection & Availability Status */}
-                            <div className="form-group">
-                                <label>Room</label>
-                                <select value={offlineForm.room} onChange={e => setOfflineForm({ ...offlineForm, room: e.target.value })} required className="form-input">
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px' }}>
+                                <div>
+                                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', fontSize: '0.9rem' }}>Check In</label>
+                                    <input type="date" value={offlineForm.checkIn} onChange={e => setOfflineForm({ ...offlineForm, checkIn: e.target.value })} required className="date-input" style={{ width: '100%' }} />
+                                </div>
+                                <div>
+                                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', fontSize: '0.9rem' }}>Check Out</label>
+                                    <input type="date" value={offlineForm.checkOut} onChange={e => setOfflineForm({ ...offlineForm, checkOut: e.target.value })} required className="date-input" style={{ width: '100%' }} />
+                                </div>
+                                <div>
+                                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', fontSize: '0.9rem' }}>Guests</label>
+                                    <input type="number" min="1" value={offlineForm.guests} onChange={e => setOfflineForm({ ...offlineForm, guests: parseInt(e.target.value) || 1 })} required className="date-input" style={{ width: '100%' }} />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', fontSize: '0.9rem' }}>Room Selection</label>
+                                <select value={offlineForm.room} onChange={e => setOfflineForm({ ...offlineForm, room: e.target.value })} required className="date-input" style={{ width: '100%' }}>
                                     <option value="">Select Room</option>
-                                    {rooms.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+                                    {rooms.map(r => <option key={r.id} value={r.id}>{r.name} (Max: {r.capacity})</option>)}
                                 </select>
-                                {/* Availability Feedback */}
                                 {offlineForm.room && offlineForm.checkIn && offlineForm.checkOut && (
-                                    <div style={{
-                                        marginTop: '5px',
-                                        fontSize: '0.9rem',
-                                        fontWeight: 'bold',
-                                        color: isRoomAvailable(offlineForm.room, offlineForm.checkIn, offlineForm.checkOut) ? '#10b981' : '#ef4444'
-                                    }}>
-                                        {isRoomAvailable(offlineForm.room, offlineForm.checkIn, offlineForm.checkOut) ? '✅ Available' : '❌ Already Booked'}
+                                    <div style={{ marginTop: '8px', fontSize: '0.85rem', fontWeight: '600', color: isRoomAvailable(offlineForm.room, offlineForm.checkIn, offlineForm.checkOut) ? '#10b981' : '#ef4444' }}>
+                                        {isRoomAvailable(offlineForm.room, offlineForm.checkIn, offlineForm.checkOut) ? '✅ Room Available' : '❌ Room Already Booked'}
                                     </div>
                                 )}
                             </div>
 
-                            {/* MEAL SELECTION */}
-                            <div className="form-group" style={{ background: '#f8f9fa', padding: '15px', borderRadius: '8px' }}>
-                                <label style={{ marginBottom: '10px', display: 'block', fontWeight: 'bold' }}>Daily Meals (Per person count)</label>
-
-                                {/* Breakfast */}
-                                <div style={{ marginBottom: '10px' }}>
-                                    <div style={{ fontSize: '0.9rem', fontWeight: '600', marginBottom: '5px' }}>Breakfast (₹{MEAL_PRICES.breakfast})</div>
-                                    <div style={{ display: 'flex', gap: '10px' }}>
-                                        <input type="number" min="0" placeholder="Veg Qty" value={offlineForm.mealSelection.breakfast.veg || ''} onChange={(e) => handleMealChange('breakfast', 'veg', e.target.value)} style={{ flex: 1, padding: '5px' }} />
-                                        <input type="number" min="0" placeholder="Non-Veg Qty" value={offlineForm.mealSelection.breakfast.nonVeg || ''} onChange={(e) => handleMealChange('breakfast', 'nonVeg', e.target.value)} style={{ flex: 1, padding: '5px' }} />
+                            <div style={{ background: '#f8fafc', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                                <label style={{ display: 'block', marginBottom: '15px', fontWeight: '600', fontSize: '0.9rem' }}>Meal Plan (Daily Count)</label>
+                                {['breakfast', 'lunch', 'dinner'].map(type => (
+                                    <div key={type} style={{ display: 'flex', alignItems: 'center', marginBottom: '12px', gap: '15px' }}>
+                                        <div style={{ width: '100px', textTransform: 'capitalize', fontWeight: '500' }}>{type}</div>
+                                        <div style={{ flex: 1, display: 'flex', gap: '10px' }}>
+                                            <input type="number" placeholder="Veg" min="0" value={offlineForm.mealSelection[type].veg || ''} onChange={(e) => handleMealChange(type, 'veg', e.target.value)} className="date-input" style={{ width: '100%' }} />
+                                            <input type="number" placeholder="Non-Veg" min="0" value={offlineForm.mealSelection[type].nonVeg || ''} onChange={(e) => handleMealChange(type, 'nonVeg', e.target.value)} className="date-input" style={{ width: '100%' }} />
+                                        </div>
                                     </div>
-                                </div>
-
-                                {/* Lunch */}
-                                <div style={{ marginBottom: '10px' }}>
-                                    <div style={{ fontSize: '0.9rem', fontWeight: '600', marginBottom: '5px' }}>Lunch (₹{MEAL_PRICES.lunch})</div>
-                                    <div style={{ display: 'flex', gap: '10px' }}>
-                                        <input type="number" min="0" placeholder="Veg Qty" value={offlineForm.mealSelection.lunch.veg || ''} onChange={(e) => handleMealChange('lunch', 'veg', e.target.value)} style={{ flex: 1, padding: '5px' }} />
-                                        <input type="number" min="0" placeholder="Non-Veg Qty" value={offlineForm.mealSelection.lunch.nonVeg || ''} onChange={(e) => handleMealChange('lunch', 'nonVeg', e.target.value)} style={{ flex: 1, padding: '5px' }} />
-                                    </div>
-                                </div>
-
-                                {/* Dinner */}
-                                <div style={{ marginBottom: '10px' }}>
-                                    <div style={{ fontSize: '0.9rem', fontWeight: '600', marginBottom: '5px' }}>Dinner (₹{MEAL_PRICES.dinner})</div>
-                                    <div style={{ display: 'flex', gap: '10px' }}>
-                                        <input type="number" min="0" placeholder="Veg Qty" value={offlineForm.mealSelection.dinner.veg || ''} onChange={(e) => handleMealChange('dinner', 'veg', e.target.value)} style={{ flex: 1, padding: '5px' }} />
-                                        <input type="number" min="0" placeholder="Non-Veg Qty" value={offlineForm.mealSelection.dinner.nonVeg || ''} onChange={(e) => handleMealChange('dinner', 'nonVeg', e.target.value)} style={{ flex: 1, padding: '5px' }} />
-                                    </div>
-                                </div>
+                                ))}
                             </div>
 
-                            {/* Auto-Calculated Price */}
-                            <div className="form-group">
-                                <label>Total Price (Rooms + Meals) (₹) - <small>Auto-calculated</small></label>
-                                <input type="number" value={offlineForm.price} onChange={e => setOfflineForm({ ...offlineForm, price: e.target.value })} required className="form-input" />
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f1f5f9', padding: '20px', borderRadius: '12px' }}>
+                                <div>
+                                    <div style={{ fontSize: '0.9rem', color: '#64748b' }}>Total Estimated Price</div>
+                                    <div style={{ fontSize: '1.5rem', fontWeight: '700', color: '#1e293b' }}>₹{offlineForm.price.toLocaleString('en-IN')}</div>
+                                </div>
+                                <button type="submit" disabled={!isRoomAvailable(offlineForm.room, offlineForm.checkIn, offlineForm.checkOut)} className="btn-primary" style={{ padding: '12px 24px', fontSize: '1rem', opacity: isRoomAvailable(offlineForm.room, offlineForm.checkIn, offlineForm.checkOut) ? 1 : 0.5 }}>
+                                    Confirm Booking
+                                </button>
                             </div>
-
-                            <button
-                                type="submit"
-                                className="btn-primary"
-                                style={{ marginTop: '10px', opacity: isRoomAvailable(offlineForm.room, offlineForm.checkIn, offlineForm.checkOut) ? 1 : 0.5 }}
-                                disabled={!isRoomAvailable(offlineForm.room, offlineForm.checkIn, offlineForm.checkOut)}
-                            >
-                                Confirm Booking
-                            </button>
                         </form>
                     </div>
                 )}
-
-                {activeTab === 'dashboard' && (
-                    <div className="dashboard-layout">
-
-
-                        {/* Table */}
-                        <div className="card-panel">
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                                <h3 style={{ fontSize: '1.2rem', fontWeight: '700', margin: 0, color: '#1e293b' }}>Recent Bookings</h3>
-                                <button onClick={loadData} className="btn-refresh">↻ Refresh</button>
-                            </div>
-                            <div className="table-container">
-                                <table className="admin-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Date</th>
-                                            <th>Guest</th>
-                                            <th>Details</th>
-                                            <th>Rooms & Meals</th>
-                                            <th>Amount</th>
-                                            <th>Status</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {filteredBookings.length === 0 ? (
-                                            <tr><td colSpan="6" style={{ textAlign: 'center', padding: '30px', color: '#94a3b8' }}>No bookings found.</td></tr>
-                                        ) : (
-                                            filteredBookings.map(booking => (
-                                                <tr key={booking.id}>
-                                                    <td>
-                                                        <div style={{ fontWeight: '600', color: '#334155' }}>{new Date(booking.check_in).toLocaleDateString()}</div>
-                                                        <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>to {new Date(booking.check_out).toLocaleDateString()}</div>
-                                                    </td>
-                                                    <td>
-                                                        <div style={{ fontWeight: '600', color: '#1e293b' }}>{booking.guests?.full_name || 'N/A'}</div>
-                                                        <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{booking.guests?.phone}</div>
-                                                        <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{booking.guests?.email}</div>
-                                                    </td>
-                                                    <td>
-                                                        <div style={{ fontSize: '0.8rem', color: '#64748b' }}>Booked: {new Date(booking.created_at).toLocaleDateString()}</div>
-                                                    </td>
-                                                    <td>
-                                                        <div style={{ fontWeight: '500', color: '#334155' }}>{(booking.room_ids || []).map(r => r.name).join(', ')}</div>
-                                                        {booking.meal_preferences && <div style={{ fontSize: '0.75rem', color: '#ea580c', marginTop: '4px' }}>🍽️ {booking.meal_preferences}</div>}
-                                                    </td>
-                                                    <td>
-                                                        <div style={{ fontWeight: '700', color: '#059669' }}>₹{booking.total_price.toLocaleString('en-IN')}</div>
-                                                    </td>
-                                                    <td>
-                                                        <select
-                                                            value={booking.status}
-                                                            onChange={(e) => handleStatusChange(booking.id, e.target.value)}
-                                                            className="status-select"
-                                                            style={getStatusStyle(booking.status)}
-                                                        >
-                                                            <option value="pending">PENDING</option>
-                                                            <option value="booked">BOOKED</option>
-                                                            <option value="confirmed">CONFIRMED</option>
-                                                            <option value="cancelled">CANCELLED</option>
-                                                        </select>
-                                                    </td>
-                                                </tr>
-                                            ))
-                                        )}
-                                    </tbody>
-                                </table>
-                            </div>
-                )}
-
-                            {activeTab === 'inventory' && (
-                                <div className="card-panel">
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                                        <h3>Room Inventory & OTA Sync</h3>
-                                        <button onClick={loadData} className="btn-secondary">↻ Refresh</button>
-                                    </div>
-                                    <p style={{ fontSize: '0.9rem', color: '#64748b', marginBottom: '20px' }}>
-                                        Manage room details and sync availability with external OTA platforms (Airbnb, Booking.com, Goibibo).
-                                    </p>
-                                    <div className="table-container">
-                                        <table className="admin-table">
-                                            <thead>
-                                                <tr><th>Room</th><th>Std Price</th><th>High Season</th><th>Capacity</th><th>OTA Calendar URL</th><th>Actions</th></tr>
-                                            </thead>
-                                            <tbody>
-                                                {rooms.map(r => (
-                                                    <React.Fragment key={r.id}>
-                                                        <tr>
-                                                            <td><strong>{r.name}</strong></td>
-                                                            <td>₹{r.price_low_season}</td>
-                                                            <td>₹{r.price_high_season}</td>
-                                                            <td>{r.capacity}</td>
-                                                            <td>
-                                                                <input
-                                                                    type="text"
-                                                                    id={`ical-${r.id}`}
-                                                                    placeholder="Paste iCal URL"
-                                                                    defaultValue={r.ical_import_url || ''}
-                                                                    className="form-input"
-                                                                    style={{ width: '100%', padding: '8px', border: '1px solid #e2e8f0', borderRadius: '6px' }}
-                                                                />
-                                                            </td>
-                                                            <td style={{ display: 'flex', gap: '8px' }}>
-                                                                <button
-                                                                    className="btn-secondary"
-                                                                    style={{ padding: '6px 12px', fontSize: '0.8rem' }}
-                                                                    onClick={async () => {
-                                                                        const input = document.getElementById(`ical-${r.id}`);
-                                                                        const url = input?.value || '';
-                                                                        const result = await SupabaseService.updateRoom(r.id, { ical_import_url: url });
-                                                                        if (result.success) {
-                                                                            alert('iCal URL saved!');
-                                                                            loadData();
-                                                                        } else {
-                                                                            alert('Save failed');
-                                                                        }
-                                                                    }}
-                                                                >
-                                                                    💾
-                                                                </button>
-                                                                <button
-                                                                    className="btn-primary"
-                                                                    style={{ padding: '6px 12px', fontSize: '0.8rem' }}
-                                                                    onClick={async () => {
-                                                                        const url = r.ical_import_url;
-                                                                        if (!url) return alert('No iCal URL saved for this room.');
-                                                                        alert('Syncing... Please wait.');
-                                                                        const { fetchIcalDates } = await import('../../utils/icalParser');
-                                                                        const result = await fetchIcalDates(url);
-                                                                        if (result.success) {
-                                                                            const blockedCount = result.dates.length;
-                                                                            const saveResult = await SupabaseService.saveBlockedDates(r.id, result.dates);
-                                                                            if (saveResult.success) {
-                                                                                setBlockedDates(prev => ({ ...prev, [r.id]: result.dates }));
-                                                                                alert(`✅ Synced! Saved ${blockedCount} blocked date(s).`);
-                                                                            } else {
-                                                                                alert(`⚠️ Synced ${blockedCount} dates but failed to save.`);
-                                                                            }
-                                                                        } else {
-                                                                            alert(`❌ Sync failed: ${result.error}`);
-                                                                        }
-                                                                    }}
-                                                                >
-                                                                    🔄
-                                                                </button>
-                                                                <button
-                                                                    className="btn-primary"
-                                                                    style={{ padding: '6px 12px', fontSize: '0.8rem', background: '#4f46e5' }}
-                                                                    onClick={() => window.open(`/ical/${r.id}`, '_blank')}
-                                                                    title="Download .ics file"
-                                                                >
-                                                                    📥
-                                                                </button>
-                                                            </td>
-                                                        </tr>
-                                                        {blockedDates[r.id] && blockedDates[r.id].length > 0 && (
-                                                            <tr style={{ background: '#f8fafc' }}>
-                                                                <td colSpan="6" style={{ padding: '12px 20px' }}>
-                                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.85rem' }}>
-                                                                        <span className="status-badge status-cancelled">🚫 OTA Blocked ({blockedDates[r.id].length})</span>
-                                                                        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                                                                            {blockedDates[r.id].slice(0, 8).map((d, i) => (
-                                                                                <span key={i} style={{ background: 'white', padding: '2px 8px', borderRadius: '4px', border: '1px solid #e2e8f0', color: '#64748b' }}>
-                                                                                    {d.start}
-                                                                                </span>
-                                                                            ))}
-                                                                            {blockedDates[r.id].length > 8 && <span style={{ color: '#94a3b8' }}>+{blockedDates[r.id].length - 8} more</span>}
-                                                                        </div>
-                                                                    </div>
-                                                                </td>
-                                                            </tr>
-                                                        )}
-                                                    </React.Fragment>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            )}
-
-                            {activeTab === 'offline' && (
-                                <div className="card-panel" style={{ maxWidth: '800px', margin: '0 auto' }}>
-                                    <h3>Create New Booking</h3>
-                                    <form onSubmit={handleOfflineSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-                                            <div>
-                                                <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', fontSize: '0.9rem' }}>Guest Name</label>
-                                                <input type="text" value={offlineForm.name} onChange={e => setOfflineForm({ ...offlineForm, name: e.target.value })} required className="date-input" style={{ width: '100%' }} />
-                                            </div>
-                                            <div>
-                                                <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', fontSize: '0.9rem' }}>Phone</label>
-                                                <input type="text" value={offlineForm.phone} onChange={e => setOfflineForm({ ...offlineForm, phone: e.target.value })} required className="date-input" style={{ width: '100%' }} />
-                                            </div>
-                                        </div>
-
-                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px' }}>
-                                            <div>
-                                                <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', fontSize: '0.9rem' }}>Check In</label>
-                                                <input type="date" value={offlineForm.checkIn} onChange={e => setOfflineForm({ ...offlineForm, checkIn: e.target.value })} required className="date-input" style={{ width: '100%' }} />
-                                            </div>
-                                            <div>
-                                                <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', fontSize: '0.9rem' }}>Check Out</label>
-                                                <input type="date" value={offlineForm.checkOut} onChange={e => setOfflineForm({ ...offlineForm, checkOut: e.target.value })} required className="date-input" style={{ width: '100%' }} />
-                                            </div>
-                                            <div>
-                                                <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', fontSize: '0.9rem' }}>Guests</label>
-                                                <input type="number" min="1" value={offlineForm.guests} onChange={e => setOfflineForm({ ...offlineForm, guests: parseInt(e.target.value) || 1 })} required className="date-input" style={{ width: '100%' }} />
-                                            </div>
-                                        </div>
-
-                                        <div>
-                                            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', fontSize: '0.9rem' }}>Room Selection</label>
-                                            <select value={offlineForm.room} onChange={e => setOfflineForm({ ...offlineForm, room: e.target.value })} required className="date-input" style={{ width: '100%' }}>
-                                                <option value="">Select Room</option>
-                                                {rooms.map(r => <option key={r.id} value={r.id}>{r.name} (Max: {r.capacity})</option>)}
-                                            </select>
-                                            {offlineForm.room && offlineForm.checkIn && offlineForm.checkOut && (
-                                                <div style={{ marginTop: '8px', fontSize: '0.85rem', fontWeight: '600', color: isRoomAvailable(offlineForm.room, offlineForm.checkIn, offlineForm.checkOut) ? '#10b981' : '#ef4444' }}>
-                                                    {isRoomAvailable(offlineForm.room, offlineForm.checkIn, offlineForm.checkOut) ? '✅ Room Available' : '❌ Room Already Booked'}
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        <div style={{ background: '#f8fafc', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                                            <label style={{ display: 'block', marginBottom: '15px', fontWeight: '600', fontSize: '0.9rem' }}>Meal Plan (Daily Count)</label>
-                                            {['breakfast', 'lunch', 'dinner'].map(type => (
-                                                <div key={type} style={{ display: 'flex', alignItems: 'center', marginBottom: '12px', gap: '15px' }}>
-                                                    <div style={{ width: '100px', textTransform: 'capitalize', fontWeight: '500' }}>{type}</div>
-                                                    <div style={{ flex: 1, display: 'flex', gap: '10px' }}>
-                                                        <input type="number" placeholder="Veg" min="0" value={offlineForm.mealSelection[type].veg || ''} onChange={(e) => handleMealChange(type, 'veg', e.target.value)} className="date-input" style={{ width: '100%' }} />
-                                                        <input type="number" placeholder="Non-Veg" min="0" value={offlineForm.mealSelection[type].nonVeg || ''} onChange={(e) => handleMealChange(type, 'nonVeg', e.target.value)} className="date-input" style={{ width: '100%' }} />
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f1f5f9', padding: '20px', borderRadius: '12px' }}>
-                                            <div>
-                                                <div style={{ fontSize: '0.9rem', color: '#64748b' }}>Total Estimated Price</div>
-                                                <div style={{ fontSize: '1.5rem', fontWeight: '700', color: '#1e293b' }}>₹{offlineForm.price.toLocaleString('en-IN')}</div>
-                                            </div>
-                                            <button type="submit" disabled={!isRoomAvailable(offlineForm.room, offlineForm.checkIn, offlineForm.checkOut)} className="btn-primary" style={{ padding: '12px 24px', fontSize: '1rem', opacity: isRoomAvailable(offlineForm.room, offlineForm.checkIn, offlineForm.checkOut) ? 1 : 0.5 }}>
-                                                Confirm Booking
-                                            </button>
-                                        </div>
-                                    </form>
-                                </div>
-                            )}
-                        </main>
-                    </div>
-                );
+            </main>
+        </div>
+    );
 };
 
 // Utilities
 const getStatusStyle = (status) => {
     switch ((status || '').toLowerCase()) {
         case 'booked':
-                case 'confirmed': return {background: '#d1fae5', color: '#059669' }; // Green
-                case 'cancelled': return {background: '#fee2e2', color: '#dc2626' }; // Red
-                case 'pending': return {background: '#ffedd5', color: '#ea580c' }; // Orange
-                default: return {background: '#f1f5f9', color: '#64748b' }; // Gray
+        case 'confirmed': return { background: '#d1fae5', color: '#059669' }; // Green
+        case 'cancelled': return { background: '#fee2e2', color: '#dc2626' }; // Red
+        case 'pending': return { background: '#ffedd5', color: '#ea580c' }; // Orange
+        default: return { background: '#f1f5f9', color: '#64748b' }; // Gray
     }
 };
 
-                const StatCard = ({title, value, icon, color, subtitle}) => (
-                <div className="stat-card">
-                    <div className="stat-icon" style={{ background: `${color}15`, color: color }}>
-                        {icon}
-                    </div>
-                    <div className="stat-content">
-                        <h3>{title}</h3>
-                        <div className="value">{value}</div>
-                        <div className="subtitle">{subtitle}</div>
-                    </div>
-                </div>
-                );
+const StatCard = ({ title, value, icon, color, subtitle }) => (
+    <div className="stat-card">
+        <div className="stat-icon" style={{ background: `${color}15`, color: color }}>
+            {icon}
+        </div>
+        <div className="stat-content">
+            <h3>{title}</h3>
+            <div className="value">{value}</div>
+            <div className="subtitle">{subtitle}</div>
+        </div>
+    </div>
+);
 
-                export default AdminDashboard;
+export default AdminDashboard;
