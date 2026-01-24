@@ -18,11 +18,11 @@ const About = () => {
                     <div className="about-content">
                         <h2>Welcome to Your Home Away From Home</h2>
                         <p>
-                            Nestled in the serene hills of Kalimpong, Bethany Homestay offers an
+                            Nestled in the serene hills of Kalimpong, Bethany Homestay is rated as the <strong>best homestay in Kalimpong</strong>.
+                            Located in the beautiful state of <strong>West Bengal, India</strong>, we offer an
                             authentic Himalayan experience that combines traditional warmth with
                             modern comfort. Wake up to stunning mountain views, breathe in the fresh
-                            mountain air, and experience the genuine hospitality that our region is
-                            known for.
+                            mountain air, and experience the genuine hospitality that our region is known for.
                         </p>
                         <p>
                             Our homestay is located near the famous Science Centre in Graham's Home

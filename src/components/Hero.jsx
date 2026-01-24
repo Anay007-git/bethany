@@ -128,8 +128,8 @@ const Hero = () => {
                 </h1>
 
                 <p className="hero-subtitle hero-animate" style={{ fontSize: '1.1rem', marginBottom: '30px', opacity: 0.9, lineHeight: 1.6, maxWidth: '600px', margin: '0 auto 30px auto' }}>
-                    Experience the warmth of traditional hospitality in the heart of Kalimpong,
-                    surrounded by breathtaking mountain views.
+                    Welcome to the <strong>best homestay in Kalimpong</strong>. Nestled in the hills of <strong>West Bengal, India</strong>,
+                    we offer breathtaking mountain views and authentic Himalayan hospitality.
                 </p>
 
                 <div className="hero-location hero-animate" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '30px', opacity: 0.8 }}>
