@@ -573,6 +573,104 @@ const AdminDashboard = ({ onLogout }) => {
                             </div>
                         </div>
 
+                        {/* Recent Bookings Table */}
+                        <div className="card-panel" style={{ marginTop: '20px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+                                <h3>Last 30 Days Bookings</h3>
+                                <span style={{ fontSize: '0.9rem', color: '#64748b' }}>
+                                    Showing {filteredBookings.length} bookings
+                                </span>
+                            </div>
+
+                            <div className="table-container">
+                                <table className="admin-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Guest</th>
+                                            <th>Room</th>
+                                            <th>Dates</th>
+                                            <th>Amount</th>
+                                            <th>Status</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {filteredBookings.length === 0 ? (
+                                            <tr>
+                                                <td colSpan="6" style={{ textAlign: 'center', padding: '30px', color: '#94a3b8' }}>
+                                                    No bookings found for the selected range.
+                                                </td>
+                                            </tr>
+                                        ) : (
+                                            filteredBookings.map(b => (
+                                                <tr key={b.id}>
+                                                    <td>
+                                                        <div style={{ fontWeight: '600', color: '#1e293b' }}>{b.guests?.full_name || 'Unknown'}</div>
+                                                        <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{b.guests?.phone}</div>
+                                                    </td>
+                                                    <td>
+                                                        <div style={{ fontSize: '0.9rem' }}>
+                                                            {(b.room_ids || []).map(r => r.name).join(', ') || 'N/A'}
+                                                        </div>
+                                                    </td>
+                                                    <td>
+                                                        <div style={{ fontSize: '0.85rem' }}>
+                                                            {new Date(b.check_in).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} →
+                                                            {new Date(b.check_out).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                                                        </div>
+                                                    </td>
+                                                    <td style={{ fontWeight: '600' }}>₹{b.total_price?.toLocaleString('en-IN')}</td>
+                                                    <td>
+                                                        <select
+                                                            value={b.status.toLowerCase()}
+                                                            onChange={(e) => handleStatusChange(b.id, e.target.value)}
+                                                            className={`status-badge status-${b.status.toLowerCase()}`}
+                                                            style={{
+                                                                border: 'none',
+                                                                outline: 'none',
+                                                                cursor: b.status === 'cancelled' ? 'not-allowed' : 'pointer',
+                                                                appearance: 'none',
+                                                                paddingRight: '10px'
+                                                            }}
+                                                            disabled={b.status.toLowerCase() === 'cancelled'}
+                                                        >
+                                                            <option value="pending">Pending</option>
+                                                            <option value="confirmed">Confirmed</option>
+                                                            <option value="booked">Booked</option>
+                                                            <option value="cancelled">Cancelled</option>
+                                                        </select>
+                                                    </td>
+                                                    <td>
+                                                        <div style={{ display: 'flex', gap: '8px' }}>
+                                                            <button
+                                                                className="btn-secondary"
+                                                                style={{ padding: '4px 8px', fontSize: '0.75rem' }}
+                                                                onClick={() => window.open(`/bill/${b.id}`, '_blank')}
+                                                            >
+                                                                📄 Bill
+                                                            </button>
+                                                            {b.guests?.phone && (
+                                                                <button
+                                                                    className="btn-secondary"
+                                                                    style={{ padding: '4px 8px', fontSize: '0.75rem', color: '#10b981', borderColor: '#10b981' }}
+                                                                    onClick={() => {
+                                                                        const text = `Namaste ${b.guests.full_name}, thank you for choosing Bethany Homestay. Here is your invoice: ${window.location.origin}/bill/${b.id}`;
+                                                                        window.open(`https://wa.me/${b.guests.phone}?text=${encodeURIComponent(text)}`, '_blank');
+                                                                    }}
+                                                                >
+                                                                    💬 WA
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
                         {/* OTA Synced Bookings Section */}
                         {Object.keys(blockedDates).length > 0 && (
                             <div className="card-panel" style={{ marginTop: '20px' }}>
