@@ -487,46 +487,55 @@ const BookingForm = ({ onToast }) => {
         }
     };
 
-    // Check room availability
+    // Check room availability (includes OTA blocked dates)
     const getRoomStatus = (roomId) => {
         if (!formData.checkIn || !formData.checkOut) return 'available';
-        if (existingBookings.length === 0) return 'available';
 
         const checkIn = new Date(formData.checkIn);
         const checkOut = new Date(formData.checkOut);
+        checkIn.setHours(0, 0, 0, 0);
+        checkOut.setHours(0, 0, 0, 0);
+
         const room = rooms.find(r => r.id === roomId);
         if (!room) return 'available';
 
+        // Check OTA blocked dates from localStorage (iCal sync)
+        try {
+            const icalData = localStorage.getItem(`ical_blocked_${roomId}`);
+            if (icalData) {
+                const blockedDates = JSON.parse(icalData);
+                for (const block of blockedDates) {
+                    const blockStart = new Date(block.start);
+                    const blockEnd = new Date(block.end);
+                    blockStart.setHours(0, 0, 0, 0);
+                    blockEnd.setHours(0, 0, 0, 0);
+
+                    if (checkIn < blockEnd && checkOut > blockStart) {
+                        return 'booked'; // Blocked by OTA
+                    }
+                }
+            }
+        } catch (e) { /* ignore parse errors */ }
+
+        // Check existing DB bookings
         for (const booking of existingBookings) {
-            // Handle multi-room bookings from sheet (e.g. "Jordan, Sion")
             const bookingRooms = (booking.roomType || '').split(',').map(s => s.trim().toLowerCase());
             const currentRoomName = room.name.trim().toLowerCase();
 
-            // Check if THIS room is in the booked list
             const isRoomBooked = bookingRooms.some(bookedRoom =>
                 bookedRoom === currentRoomName || bookedRoom.includes(currentRoomName) || currentRoomName.includes(bookedRoom)
             );
 
-            // DEBUG: Trace logic for Carmel if checking
-            if (roomId === 'carmel' && isRoomBooked) {
-                console.log(`Checking Carmel overlap. Ref: ${checkIn.toDateString()} - ${checkOut.toDateString()} vs Booking: ${new Date(booking.checkIn).toDateString()} - ${new Date(booking.checkOut).toDateString()}`);
-            }
-
             if (isRoomBooked) {
                 const bookingCheckIn = new Date(booking.checkIn);
                 const bookingCheckOut = new Date(booking.checkOut);
-
-                // Normalize dates to midnight for strict comparison
                 bookingCheckIn.setHours(0, 0, 0, 0);
                 bookingCheckOut.setHours(0, 0, 0, 0);
-                const userCheckIn = new Date(checkIn); userCheckIn.setHours(0, 0, 0, 0);
-                const userCheckOut = new Date(checkOut); userCheckOut.setHours(0, 0, 0, 0);
 
-                const hasOverlap = userCheckIn < bookingCheckOut && userCheckOut > bookingCheckIn;
+                const hasOverlap = checkIn < bookingCheckOut && checkOut > bookingCheckIn;
 
                 if (hasOverlap) {
                     const status = (booking.status || '').toLowerCase();
-                    console.log(`Overlap Found! Status: ${status}`);
                     if (status === 'booked' || status === 'confirmed') return 'booked';
                     else if (status === 'pending') return 'partial';
                 }
