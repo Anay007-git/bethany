@@ -422,479 +422,688 @@ const AdminDashboard = ({ onLogout }) => {
     if (loading) return <div className="loading-state">Loading Analytics...</div>;
 
     return (
-        <div className="admin-container">
-            {/* Header */}
-            <div className="admin-header">
-                <div className="admin-title">
-                    <h1>Bethany Admin</h1>
+        <div className="admin-layout">
+            {/* Sidebar Navigation */}
+            <aside className="admin-sidebar">
+                <div className="sidebar-header">
+                    <div className="sidebar-brand">Bethany<span>Admin</span></div>
                 </div>
 
-                <div className="admin-tabs" style={{ display: 'flex', gap: '20px' }}>
-                    <button className={`tab-btn ${activeTab === 'dashboard' ? 'active' : ''}`} onClick={() => setActiveTab('dashboard')}>Dashboard</button>
-                    <button className={`tab-btn ${activeTab === 'inventory' ? 'active' : ''}`} onClick={() => setActiveTab('inventory')}>Inventory & Rooms</button>
-                    <button className={`tab-btn ${activeTab === 'offline' ? 'active' : ''}`} onClick={() => setActiveTab('offline')}>+ New Booking</button>
+                <nav className="sidebar-nav">
+                    <button
+                        className={`nav-item ${activeTab === 'dashboard' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('dashboard')}
+                    >
+                        📊 <span>Dashboard</span>
+                    </button>
+                    <button
+                        className={`nav-item ${activeTab === 'inventory' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('inventory')}
+                    >
+                        🏨 <span>Inventory & OTA</span>
+                    </button>
+                    <button
+                        className={`nav-item ${activeTab === 'offline' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('offline')}
+                    >
+                        ➕ <span>New Booking</span>
+                    </button>
+                </nav>
+
+                <div className="sidebar-footer">
+                    <button onClick={onLogout} className="btn-danger" style={{ width: '100%', justifyContent: 'center' }}>
+                        🚪 Logout
+                    </button>
                 </div>
+            </aside>
 
-                <div className="admin-controls">
-                    <button onClick={onLogout} className="btn-logout">Logout</button>
-                </div>
-            </div>
-
-            {activeTab === 'dashboard' && (
-                <>
-                    <div className="admin-controls" style={{ justifyContent: 'flex-end', marginBottom: '20px' }}>
-                        <span style={{ fontSize: '0.9rem', color: '#64748b', fontWeight: '500' }}>Filter:</span>
-                        <input type="date" value={dateRange.start} onChange={e => setDateRange(p => ({ ...p, start: e.target.value }))} className="date-input" />
-                        <span style={{ color: '#cbd5e1' }}>—</span>
-                        <input type="date" value={dateRange.end} onChange={e => setDateRange(p => ({ ...p, end: e.target.value }))} className="date-input" />
-                        <button onClick={exportCSV} className="btn-primary"><span>📥</span> Export CSV</button>
+            {/* Main Content Area */}
+            <main className="admin-main">
+                <header className="main-header">
+                    <div className="page-title">
+                        <h1>{activeTab === 'dashboard' ? 'Overview' : activeTab === 'inventory' ? 'Room Inventory' : 'Create Booking'}</h1>
+                        <p>{new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
                     </div>
 
-                    {/* KPI Cards */}
-                    <div className="stats-grid">
-                        <StatCard title="Confirmed Revenue" value={`₹${metrics.revenue.toLocaleString('en-IN')}`} icon="💰" color="#10b981" subtitle="In selected range" />
-                        <StatCard title="OTA Revenue" value={`₹${metrics.otaRevenue.toLocaleString('en-IN')}`} icon="🔗" color="#0891b2" subtitle={`${metrics.otaNights} nights synced`} />
-                        <StatCard title="Confirmed Bookings" value={metrics.bookings} icon="✅" color="#3b82f6" subtitle="Validated stays" />
-                        <StatCard title="Pending Review" value={metrics.pending} icon="⏳" color="#f59e0b" subtitle="Action needed" />
-                        <StatCard title="Total Enquiries" value={metrics.totalRequests} icon="📊" color="#8b5cf6" subtitle="All requests" />
-                    </div>
-
-                    {/* Revenue Trends Chart */}
-                    <div className="card-panel" style={{ marginTop: '20px' }}>
-                        <h3>📈 Revenue Trends (Direct vs OTA)</h3>
-                        <div style={{ display: 'flex', alignItems: 'flex-end', height: '250px', gap: '20px', padding: '20px 0', overflowX: 'auto' }}>
-                            {monthlyData.map((data, i) => {
-                                const maxVal = Math.max(...monthlyData.map(d => d.total)) || 1;
-                                const directHeight = (data.direct / maxVal) * 200;
-                                const otaHeight = (data.ota / maxVal) * 200;
-
-                                return (
-                                    <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: '60px' }}>
-                                        <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', height: '200px', width: '40px', background: '#f1f5f9', borderRadius: '4px', overflow: 'hidden', position: 'relative' }}>
-                                            {/* OTA Portion */}
-                                            <div style={{ height: `${otaHeight}px`, background: '#0891b2', width: '100%', transition: 'height 0.3s' }} title={`OTA: ₹${data.ota}`}></div>
-                                            {/* Direct Portion */}
-                                            <div style={{ height: `${directHeight}px`, background: '#10b981', width: '100%', transition: 'height 0.3s' }} title={`Direct: ₹${data.direct}`}></div>
-                                        </div>
-                                        <span style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '10px' }}>{data.label}</span>
-                                        <span style={{ fontSize: '0.7rem', fontWeight: 'bold' }}>₹{(data.total / 1000).toFixed(1)}k</span>
-                                    </div>
-                                );
-                            })}
-                            {monthlyData.length === 0 && <div style={{ color: '#94a3b8', margin: 'auto' }}>No revenue data available</div>}
-                        </div>
-                        <div style={{ display: 'flex', gap: '15px', justifyContent: 'center', marginTop: '10px', fontSize: '0.8rem' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}><div style={{ width: '10px', height: '10px', background: '#10b981', borderRadius: '2px' }}></div> Direct</div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}><div style={{ width: '10px', height: '10px', background: '#0891b2', borderRadius: '2px' }}></div> OTA (Est.)</div>
-                        </div>
-                    </div>
-
-                    {/* Cancellation Trends Chart */}
-                    <div className="card-panel" style={{ marginTop: '20px' }}>
-                        <h3>📉 Booking Trends (Confirmed vs Cancelled)</h3>
-                        <div style={{ display: 'flex', alignItems: 'flex-end', height: '250px', gap: '20px', padding: '20px 0', overflowX: 'auto' }}>
-                            {cancellationData.map((data, i) => {
-                                const total = data.confirmed + data.cancelled;
-                                const maxVal = Math.max(...cancellationData.map(d => d.confirmed + d.cancelled)) || 1;
-                                const confirmedHeight = (data.confirmed / maxVal) * 200;
-                                const cancelledHeight = (data.cancelled / maxVal) * 200;
-
-                                return (
-                                    <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: '60px' }}>
-                                        <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', height: '200px', width: '40px', background: '#f1f5f9', borderRadius: '4px', overflow: 'hidden', position: 'relative' }}>
-                                            {/* Cancelled Portion (Top red) */}
-                                            <div style={{ height: `${cancelledHeight}px`, background: '#ef4444', width: '100%', transition: 'height 0.3s' }} title={`Cancelled: ${data.cancelled}`}></div>
-                                            {/* Confirmed Portion (Bottom blue) */}
-                                            <div style={{ height: `${confirmedHeight}px`, background: '#3b82f6', width: '100%', transition: 'height 0.3s' }} title={`Confirmed: ${data.confirmed}`}></div>
-                                        </div>
-                                        <span style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '10px' }}>{data.label}</span>
-                                        <span style={{ fontSize: '0.7rem', fontWeight: 'bold' }}>{total}</span>
-                                    </div>
-                                );
-                            })}
-                            {cancellationData.length === 0 && <div style={{ color: '#94a3b8', margin: 'auto' }}>No booking data available</div>}
-                        </div>
-                        <div style={{ display: 'flex', gap: '15px', justifyContent: 'center', marginTop: '10px', fontSize: '0.8rem' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}><div style={{ width: '10px', height: '10px', background: '#3b82f6', borderRadius: '2px' }}></div> Confirmed</div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}><div style={{ width: '10px', height: '10px', background: '#ef4444', borderRadius: '2px' }}></div> Cancelled</div>
-                        </div>
-                    </div>
-
-                    {/* OTA Synced Bookings Section */}
-                    {Object.keys(blockedDates).length > 0 && (
-                        <div className="card-panel" style={{ marginTop: '20px' }}>
-                            <h3>🔗 OTA Synced Bookings</h3>
-                            <p style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '15px' }}>
-                                Blocked dates imported from external platforms (Goibibo, Booking.com, Airbnb)
-                            </p>
-                            <div style={{ overflowX: 'auto' }}>
-                                <table className="admin-table">
-                                    <thead>
-                                        <tr><th>Room</th><th>Blocked Date</th><th>Source</th></tr>
-                                    </thead>
-                                    <tbody>
-                                        {Object.entries(blockedDates).flatMap(([roomId, dates]) => {
-                                            const room = rooms.find(r => r.id === roomId);
-                                            const roomName = room?.name || roomId;
-                                            return dates.slice(0, 20).map((d, i) => (
-                                                <tr key={`${roomId}-${i}`}>
-                                                    <td><strong>{roomName}</strong></td>
-                                                    <td>{d.start}</td>
-                                                    <td><span style={{
-                                                        background: '#dbeafe',
-                                                        color: '#1e40af',
-                                                        padding: '2px 8px',
-                                                        borderRadius: '4px',
-                                                        fontSize: '0.8rem'
-                                                    }}>OTA Import</span></td>
-                                                </tr>
-                                            ));
-                                        })}
-                                    </tbody>
-                                </table>
+                    {activeTab === 'dashboard' && (
+                        <div className="header-actions">
+                            <div className="filter-bar">
+                                <input type="date" value={dateRange.start} onChange={e => setDateRange(p => ({ ...p, start: e.target.value }))} className="date-input" />
+                                <span style={{ color: '#cbd5e1' }}>→</span>
+                                <input type="date" value={dateRange.end} onChange={e => setDateRange(p => ({ ...p, end: e.target.value }))} className="date-input" />
                             </div>
-                            {Object.values(blockedDates).flat().length > 20 && (
-                                <p style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '10px' }}>
-                                    Showing first 20 entries. View all in Inventory tab.
-                                </p>
-                            )}
+                            <button onClick={exportCSV} className="btn-primary"><span>📥</span> Export CSV</button>
                         </div>
                     )}
-                </>
-            )}
 
-            {activeTab === 'inventory' && (
-                <div className="card-panel">
-                    <h3>Room Inventory & OTA Sync</h3>
-                    <p style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '15px' }}>
-                        Paste iCal URLs from Goibibo, Booking.com, or Airbnb to sync external bookings.
-                    </p>
-                    <div style={{ overflowX: 'auto' }}>
-                        <table className="admin-table">
-                            <thead>
-                                <tr><th>Room</th><th>Std Price</th><th>High Season</th><th>Capacity</th><th>OTA Calendar URL</th><th>Actions</th></tr>
-                            </thead>
-                            <tbody>
-                                {rooms.map(r => (
-                                    <React.Fragment key={r.id}>
-                                        <tr>
-                                            <td><strong>{r.name}</strong></td>
-                                            <td>₹{r.price_low_season}</td>
-                                            <td>₹{r.price_high_season}</td>
-                                            <td>{r.capacity}</td>
-                                            <td>
-                                                <input
-                                                    type="text"
-                                                    id={`ical-${r.id}`}
-                                                    placeholder="Paste OTA iCal URL"
-                                                    defaultValue={r.ical_import_url || ''}
-                                                    style={{ width: '250px', padding: '5px', borderRadius: '4px', border: '1px solid #ddd' }}
-                                                />
-                                            </td>
-                                            <td style={{ display: 'flex', gap: '5px' }}>
-                                                <button
-                                                    className="btn-primary"
-                                                    style={{ padding: '5px 10px', fontSize: '0.8rem' }}
-                                                    onClick={async () => {
-                                                        const input = document.getElementById(`ical-${r.id}`);
-                                                        const url = input?.value || '';
-                                                        const result = await SupabaseService.updateRoom(r.id, { ical_import_url: url });
-                                                        if (result.success) {
-                                                            alert('iCal URL saved!');
-                                                            loadData();
-                                                        } else {
-                                                            alert('Save failed');
-                                                        }
-                                                    }}
-                                                >
-                                                    💾 Save
-                                                </button>
-                                                <button
-                                                    className="btn-primary"
-                                                    style={{ padding: '5px 10px', fontSize: '0.8rem', background: '#10b981' }}
-                                                    onClick={async () => {
-                                                        const url = r.ical_import_url;
-                                                        if (!url) {
-                                                            alert('No iCal URL saved for this room. Save one first.');
-                                                            return;
-                                                        }
-                                                        alert('Syncing... Please wait.');
-                                                        const { fetchIcalDates } = await import('../../utils/icalParser');
-                                                        const result = await fetchIcalDates(url);
-                                                        if (result.success) {
-                                                            const blockedCount = result.dates.length;
-                                                            // Save to Supabase
-                                                            const saveResult = await SupabaseService.saveBlockedDates(r.id, result.dates);
-                                                            if (saveResult.success) {
-                                                                setBlockedDates(prev => ({ ...prev, [r.id]: result.dates }));
-                                                                alert(`✅ Synced! Saved ${blockedCount} blocked date(s) to database.`);
-                                                            } else {
-                                                                alert(`⚠️ Synced ${blockedCount} dates but failed to save to database.`);
-                                                            }
-                                                        } else {
-                                                            alert(`❌ Sync failed: ${result.error}`);
-                                                        }
-                                                    }}
-                                                >
-                                                    🔄 Sync
-                                                </button>
-                                                <button
-                                                    className="btn-primary"
-                                                    style={{ padding: '5px 10px', fontSize: '0.8rem', background: '#6366f1' }}
-                                                    onClick={() => {
-                                                        window.open(`/ical/${r.id}`, '_blank');
-                                                    }}
-                                                >
-                                                    📥 Export
-                                                </button>
-                                            </td>
-                                        </tr>
-                                        {blockedDates[r.id] && blockedDates[r.id].length > 0 && (
-                                            <tr style={{ background: '#fef2f2' }}>
-                                                <td colSpan="6" style={{ padding: '8px 15px' }}>
-                                                    <span style={{ fontSize: '0.85rem', color: '#991b1b' }}>
-                                                        <strong>🚫 OTA Blocked ({blockedDates[r.id].length}):</strong>{' '}
-                                                        {blockedDates[r.id].slice(0, 10).map((d, i) => (
-                                                            <span key={i} style={{ background: '#fee2e2', padding: '2px 6px', borderRadius: '4px', marginRight: '5px', fontSize: '0.8rem' }}>
-                                                                {d.start}
-                                                            </span>
-                                                        ))}
-                                                        {blockedDates[r.id].length > 10 && <span>+{blockedDates[r.id].length - 10} more</span>}
-                                                    </span>
-                                                </td>
-                                            </tr>
-                                        )}
-                                    </React.Fragment>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                    <div style={{ marginTop: '15px', padding: '10px', background: '#fef3c7', borderRadius: '6px', fontSize: '0.85rem' }}>
-                        <strong>💡 Tip:</strong> After syncing, external bookings will be checked when creating new bookings.
-                    </div>
-                </div>
-            )}
+                    {/* Mobile Logout (visible via CSS media query if needed, or keeping it simples for now) */}
+                </header>
 
-            {activeTab === 'offline' && (
-                <div className="card-panel" style={{ maxWidth: '600px', margin: '0 auto' }}>
-                    <h3>Create Offline Booking</h3>
-                    <form onSubmit={handleOfflineSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-
-                        {/* Guest Details */}
-                        <div className="form-group">
-                            <label>Guest Name</label>
-                            <input type="text" value={offlineForm.name} onChange={e => setOfflineForm({ ...offlineForm, name: e.target.value })} required className="form-input" />
-                        </div>
-                        <div className="form-group">
-                            <label>Phone</label>
-                            <input type="text" value={offlineForm.phone} onChange={e => setOfflineForm({ ...offlineForm, phone: e.target.value })} required className="form-input" />
-                        </div>
-                        <div className="form-group">
-                            <label>
-                                Number of Guests
-                                {offlineForm.room && (() => {
-                                    const selectedRoom = rooms.find(r => r.id === offlineForm.room);
-                                    return selectedRoom ? <span style={{ fontSize: '0.85rem', color: '#64748b' }}> (Max: {selectedRoom.capacity})</span> : null;
-                                })()}
-                            </label>
-                            <input
-                                type="number"
-                                min="1"
-                                max={offlineForm.room ? (rooms.find(r => r.id === offlineForm.room)?.capacity || 10) : 10}
-                                value={offlineForm.guests}
-                                onChange={e => {
-                                    const val = parseInt(e.target.value) || 1;
-                                    const selectedRoom = rooms.find(r => r.id === offlineForm.room);
-                                    const maxCapacity = selectedRoom?.capacity || 10;
-                                    if (val > maxCapacity) {
-                                        alert(`This room can accommodate maximum ${maxCapacity} guests.`);
-                                        setOfflineForm({ ...offlineForm, guests: maxCapacity });
-                                    } else {
-                                        setOfflineForm({ ...offlineForm, guests: val });
-                                    }
-                                }}
-                                required
-                                className="form-input"
-                            />
+                {activeTab === 'dashboard' && (
+                    <>
+                        {/* KPI Cards */}
+                        <div className="stats-grid">
+                            <StatCard title="Confirmed Revenue" value={`₹${metrics.revenue.toLocaleString('en-IN')}`} icon="💰" color="#10b981" subtitle="In selected range" />
+                            <StatCard title="OTA Revenue" value={`₹${metrics.otaRevenue.toLocaleString('en-IN')}`} icon="🔗" color="#0891b2" subtitle={`${metrics.otaNights} nights synced`} />
+                            <StatCard title="Confirmed Bookings" value={metrics.bookings} icon="✅" color="#3b82f6" subtitle="Validated stays" />
+                            <StatCard title="Pending Review" value={metrics.pending} icon="⏳" color="#f59e0b" subtitle="Action needed" />
+                            <StatCard title="Total Enquiries" value={metrics.totalRequests} icon="📊" color="#8b5cf6" subtitle="All requests" />
                         </div>
 
-                        {/* Dates */}
-                        <div style={{ display: 'flex', gap: '10px' }}>
-                            <div className="form-group" style={{ flex: 1 }}>
-                                <label>Check In</label>
-                                <input type="date" value={offlineForm.checkIn} onChange={e => setOfflineForm({ ...offlineForm, checkIn: e.target.value })} required className="form-input" />
+                        {/* Revenue Trends Chart */}
+                        <div className="card-panel" style={{ marginTop: '20px' }}>
+                            <h3>📈 Revenue Trends (Direct vs OTA)</h3>
+                            <div style={{ display: 'flex', alignItems: 'flex-end', height: '250px', gap: '20px', padding: '20px 0', overflowX: 'auto' }}>
+                                {monthlyData.map((data, i) => {
+                                    const maxVal = Math.max(...monthlyData.map(d => d.total)) || 1;
+                                    const directHeight = (data.direct / maxVal) * 200;
+                                    const otaHeight = (data.ota / maxVal) * 200;
+
+                                    return (
+                                        <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: '60px' }}>
+                                            <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', height: '200px', width: '40px', background: '#f1f5f9', borderRadius: '4px', overflow: 'hidden', position: 'relative' }}>
+                                                {/* OTA Portion */}
+                                                <div style={{ height: `${otaHeight}px`, background: '#0891b2', width: '100%', transition: 'height 0.3s' }} title={`OTA: ₹${data.ota}`}></div>
+                                                {/* Direct Portion */}
+                                                <div style={{ height: `${directHeight}px`, background: '#10b981', width: '100%', transition: 'height 0.3s' }} title={`Direct: ₹${data.direct}`}></div>
+                                            </div>
+                                            <span style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '10px' }}>{data.label}</span>
+                                            <span style={{ fontSize: '0.7rem', fontWeight: 'bold' }}>₹{(data.total / 1000).toFixed(1)}k</span>
+                                        </div>
+                                    );
+                                })}
+                                {monthlyData.length === 0 && <div style={{ color: '#94a3b8', margin: 'auto' }}>No revenue data available</div>}
                             </div>
-                            <div className="form-group" style={{ flex: 1 }}>
-                                <label>Check Out</label>
-                                <input type="date" value={offlineForm.checkOut} onChange={e => setOfflineForm({ ...offlineForm, checkOut: e.target.value })} required className="form-input" />
+                            <div style={{ display: 'flex', gap: '15px', justifyContent: 'center', marginTop: '10px', fontSize: '0.8rem' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}><div style={{ width: '10px', height: '10px', background: '#10b981', borderRadius: '2px' }}></div> Direct</div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}><div style={{ width: '10px', height: '10px', background: '#0891b2', borderRadius: '2px' }}></div> OTA (Est.)</div>
                             </div>
                         </div>
 
-                        {/* Room Selection & Availability Status */}
-                        <div className="form-group">
-                            <label>Room</label>
-                            <select value={offlineForm.room} onChange={e => setOfflineForm({ ...offlineForm, room: e.target.value })} required className="form-input">
-                                <option value="">Select Room</option>
-                                {rooms.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
-                            </select>
-                            {/* Availability Feedback */}
-                            {offlineForm.room && offlineForm.checkIn && offlineForm.checkOut && (
-                                <div style={{
-                                    marginTop: '5px',
-                                    fontSize: '0.9rem',
-                                    fontWeight: 'bold',
-                                    color: isRoomAvailable(offlineForm.room, offlineForm.checkIn, offlineForm.checkOut) ? '#10b981' : '#ef4444'
-                                }}>
-                                    {isRoomAvailable(offlineForm.room, offlineForm.checkIn, offlineForm.checkOut) ? '✅ Available' : '❌ Already Booked'}
+                        {/* Cancellation Trends Chart */}
+                        <div className="card-panel" style={{ marginTop: '20px' }}>
+                            <h3>📉 Booking Trends (Confirmed vs Cancelled)</h3>
+                            <div style={{ display: 'flex', alignItems: 'flex-end', height: '250px', gap: '20px', padding: '20px 0', overflowX: 'auto' }}>
+                                {cancellationData.map((data, i) => {
+                                    const total = data.confirmed + data.cancelled;
+                                    const maxVal = Math.max(...cancellationData.map(d => d.confirmed + d.cancelled)) || 1;
+                                    const confirmedHeight = (data.confirmed / maxVal) * 200;
+                                    const cancelledHeight = (data.cancelled / maxVal) * 200;
+
+                                    return (
+                                        <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: '60px' }}>
+                                            <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', height: '200px', width: '40px', background: '#f1f5f9', borderRadius: '4px', overflow: 'hidden', position: 'relative' }}>
+                                                {/* Cancelled Portion (Top red) */}
+                                                <div style={{ height: `${cancelledHeight}px`, background: '#ef4444', width: '100%', transition: 'height 0.3s' }} title={`Cancelled: ${data.cancelled}`}></div>
+                                                {/* Confirmed Portion (Bottom blue) */}
+                                                <div style={{ height: `${confirmedHeight}px`, background: '#3b82f6', width: '100%', transition: 'height 0.3s' }} title={`Confirmed: ${data.confirmed}`}></div>
+                                            </div>
+                                            <span style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '10px' }}>{data.label}</span>
+                                            <span style={{ fontSize: '0.7rem', fontWeight: 'bold' }}>{total}</span>
+                                        </div>
+                                    );
+                                })}
+                                {cancellationData.length === 0 && <div style={{ color: '#94a3b8', margin: 'auto' }}>No booking data available</div>}
+                            </div>
+                            <div style={{ display: 'flex', gap: '15px', justifyContent: 'center', marginTop: '10px', fontSize: '0.8rem' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}><div style={{ width: '10px', height: '10px', background: '#3b82f6', borderRadius: '2px' }}></div> Confirmed</div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}><div style={{ width: '10px', height: '10px', background: '#ef4444', borderRadius: '2px' }}></div> Cancelled</div>
+                            </div>
+                        </div>
+
+                        {/* OTA Synced Bookings Section */}
+                        {Object.keys(blockedDates).length > 0 && (
+                            <div className="card-panel" style={{ marginTop: '20px' }}>
+                                <h3>🔗 OTA Synced Bookings</h3>
+                                <p style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '15px' }}>
+                                    Blocked dates imported from external platforms (Goibibo, Booking.com, Airbnb)
+                                </p>
+                                <div style={{ overflowX: 'auto' }}>
+                                    <table className="admin-table">
+                                        <thead>
+                                            <tr><th>Room</th><th>Blocked Date</th><th>Source</th></tr>
+                                        </thead>
+                                        <tbody>
+                                            {Object.entries(blockedDates).flatMap(([roomId, dates]) => {
+                                                const room = rooms.find(r => r.id === roomId);
+                                                const roomName = room?.name || roomId;
+                                                return dates.slice(0, 20).map((d, i) => (
+                                                    <tr key={`${roomId}-${i}`}>
+                                                        <td><strong>{roomName}</strong></td>
+                                                        <td>{d.start}</td>
+                                                        <td><span style={{
+                                                            background: '#dbeafe',
+                                                            color: '#1e40af',
+                                                            padding: '2px 8px',
+                                                            borderRadius: '4px',
+                                                            fontSize: '0.8rem'
+                                                        }}>OTA Import</span></td>
+                                                    </tr>
+                                                ));
+                                            })}
+                                        </tbody>
+                                    </table>
                                 </div>
-                            )}
-                        </div>
-
-                        {/* MEAL SELECTION */}
-                        <div className="form-group" style={{ background: '#f8f9fa', padding: '15px', borderRadius: '8px' }}>
-                            <label style={{ marginBottom: '10px', display: 'block', fontWeight: 'bold' }}>Daily Meals (Per person count)</label>
-
-                            {/* Breakfast */}
-                            <div style={{ marginBottom: '10px' }}>
-                                <div style={{ fontSize: '0.9rem', fontWeight: '600', marginBottom: '5px' }}>Breakfast (₹{MEAL_PRICES.breakfast})</div>
-                                <div style={{ display: 'flex', gap: '10px' }}>
-                                    <input type="number" min="0" placeholder="Veg Qty" value={offlineForm.mealSelection.breakfast.veg || ''} onChange={(e) => handleMealChange('breakfast', 'veg', e.target.value)} style={{ flex: 1, padding: '5px' }} />
-                                    <input type="number" min="0" placeholder="Non-Veg Qty" value={offlineForm.mealSelection.breakfast.nonVeg || ''} onChange={(e) => handleMealChange('breakfast', 'nonVeg', e.target.value)} style={{ flex: 1, padding: '5px' }} />
-                                </div>
+                                {Object.values(blockedDates).flat().length > 20 && (
+                                    <p style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '10px' }}>
+                                        Showing first 20 entries. View all in Inventory tab.
+                                    </p>
+                                )}
                             </div>
+                        )}
+                    </>
+                )}
 
-                            {/* Lunch */}
-                            <div style={{ marginBottom: '10px' }}>
-                                <div style={{ fontSize: '0.9rem', fontWeight: '600', marginBottom: '5px' }}>Lunch (₹{MEAL_PRICES.lunch})</div>
-                                <div style={{ display: 'flex', gap: '10px' }}>
-                                    <input type="number" min="0" placeholder="Veg Qty" value={offlineForm.mealSelection.lunch.veg || ''} onChange={(e) => handleMealChange('lunch', 'veg', e.target.value)} style={{ flex: 1, padding: '5px' }} />
-                                    <input type="number" min="0" placeholder="Non-Veg Qty" value={offlineForm.mealSelection.lunch.nonVeg || ''} onChange={(e) => handleMealChange('lunch', 'nonVeg', e.target.value)} style={{ flex: 1, padding: '5px' }} />
-                                </div>
-                            </div>
-
-                            {/* Dinner */}
-                            <div style={{ marginBottom: '10px' }}>
-                                <div style={{ fontSize: '0.9rem', fontWeight: '600', marginBottom: '5px' }}>Dinner (₹{MEAL_PRICES.dinner})</div>
-                                <div style={{ display: 'flex', gap: '10px' }}>
-                                    <input type="number" min="0" placeholder="Veg Qty" value={offlineForm.mealSelection.dinner.veg || ''} onChange={(e) => handleMealChange('dinner', 'veg', e.target.value)} style={{ flex: 1, padding: '5px' }} />
-                                    <input type="number" min="0" placeholder="Non-Veg Qty" value={offlineForm.mealSelection.dinner.nonVeg || ''} onChange={(e) => handleMealChange('dinner', 'nonVeg', e.target.value)} style={{ flex: 1, padding: '5px' }} />
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Auto-Calculated Price */}
-                        <div className="form-group">
-                            <label>Total Price (Rooms + Meals) (₹) - <small>Auto-calculated</small></label>
-                            <input type="number" value={offlineForm.price} onChange={e => setOfflineForm({ ...offlineForm, price: e.target.value })} required className="form-input" />
-                        </div>
-
-                        <button
-                            type="submit"
-                            className="btn-primary"
-                            style={{ marginTop: '10px', opacity: isRoomAvailable(offlineForm.room, offlineForm.checkIn, offlineForm.checkOut) ? 1 : 0.5 }}
-                            disabled={!isRoomAvailable(offlineForm.room, offlineForm.checkIn, offlineForm.checkOut)}
-                        >
-                            Confirm Booking
-                        </button>
-                    </form>
-                </div>
-            )}
-
-            {activeTab === 'dashboard' && (
-                <div className="dashboard-layout">
-
-
-                    {/* Table */}
+                {activeTab === 'inventory' && (
                     <div className="card-panel">
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                            <h3 style={{ fontSize: '1.2rem', fontWeight: '700', margin: 0, color: '#1e293b' }}>Recent Bookings</h3>
-                            <button onClick={loadData} className="btn-refresh">↻ Refresh</button>
-                        </div>
-                        <div className="table-container">
+                        <h3>Room Inventory & OTA Sync</h3>
+                        <p style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '15px' }}>
+                            Paste iCal URLs from Goibibo, Booking.com, or Airbnb to sync external bookings.
+                        </p>
+                        <div style={{ overflowX: 'auto' }}>
                             <table className="admin-table">
                                 <thead>
-                                    <tr>
-                                        <th>Date</th>
-                                        <th>Guest</th>
-                                        <th>Details</th>
-                                        <th>Rooms & Meals</th>
-                                        <th>Amount</th>
-                                        <th>Status</th>
-                                    </tr>
+                                    <tr><th>Room</th><th>Std Price</th><th>High Season</th><th>Capacity</th><th>OTA Calendar URL</th><th>Actions</th></tr>
                                 </thead>
                                 <tbody>
-                                    {filteredBookings.length === 0 ? (
-                                        <tr><td colSpan="6" style={{ textAlign: 'center', padding: '30px', color: '#94a3b8' }}>No bookings found.</td></tr>
-                                    ) : (
-                                        filteredBookings.map(booking => (
-                                            <tr key={booking.id}>
+                                    {rooms.map(r => (
+                                        <React.Fragment key={r.id}>
+                                            <tr>
+                                                <td><strong>{r.name}</strong></td>
+                                                <td>₹{r.price_low_season}</td>
+                                                <td>₹{r.price_high_season}</td>
+                                                <td>{r.capacity}</td>
                                                 <td>
-                                                    <div style={{ fontWeight: '600', color: '#334155' }}>{new Date(booking.check_in).toLocaleDateString()}</div>
-                                                    <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>to {new Date(booking.check_out).toLocaleDateString()}</div>
+                                                    <input
+                                                        type="text"
+                                                        id={`ical-${r.id}`}
+                                                        placeholder="Paste OTA iCal URL"
+                                                        defaultValue={r.ical_import_url || ''}
+                                                        style={{ width: '250px', padding: '5px', borderRadius: '4px', border: '1px solid #ddd' }}
+                                                    />
                                                 </td>
-                                                <td>
-                                                    <div style={{ fontWeight: '600', color: '#1e293b' }}>{booking.guests?.full_name || 'N/A'}</div>
-                                                    <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{booking.guests?.phone}</div>
-                                                    <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{booking.guests?.email}</div>
-                                                </td>
-                                                <td>
-                                                    <div style={{ fontSize: '0.8rem', color: '#64748b' }}>Booked: {new Date(booking.created_at).toLocaleDateString()}</div>
-                                                </td>
-                                                <td>
-                                                    <div style={{ fontWeight: '500', color: '#334155' }}>{(booking.room_ids || []).map(r => r.name).join(', ')}</div>
-                                                    {booking.meal_preferences && <div style={{ fontSize: '0.75rem', color: '#ea580c', marginTop: '4px' }}>🍽️ {booking.meal_preferences}</div>}
-                                                </td>
-                                                <td>
-                                                    <div style={{ fontWeight: '700', color: '#059669' }}>₹{booking.total_price.toLocaleString('en-IN')}</div>
-                                                </td>
-                                                <td>
-                                                    <select
-                                                        value={booking.status}
-                                                        onChange={(e) => handleStatusChange(booking.id, e.target.value)}
-                                                        className="status-select"
-                                                        style={getStatusStyle(booking.status)}
+                                                <td style={{ display: 'flex', gap: '5px' }}>
+                                                    <button
+                                                        className="btn-primary"
+                                                        style={{ padding: '5px 10px', fontSize: '0.8rem' }}
+                                                        onClick={async () => {
+                                                            const input = document.getElementById(`ical-${r.id}`);
+                                                            const url = input?.value || '';
+                                                            const result = await SupabaseService.updateRoom(r.id, { ical_import_url: url });
+                                                            if (result.success) {
+                                                                alert('iCal URL saved!');
+                                                                loadData();
+                                                            } else {
+                                                                alert('Save failed');
+                                                            }
+                                                        }}
                                                     >
-                                                        <option value="pending">PENDING</option>
-                                                        <option value="booked">BOOKED</option>
-                                                        <option value="confirmed">CONFIRMED</option>
-                                                        <option value="cancelled">CANCELLED</option>
-                                                    </select>
+                                                        💾 Save
+                                                    </button>
+                                                    <button
+                                                        className="btn-primary"
+                                                        style={{ padding: '5px 10px', fontSize: '0.8rem', background: '#10b981' }}
+                                                        onClick={async () => {
+                                                            const url = r.ical_import_url;
+                                                            if (!url) {
+                                                                alert('No iCal URL saved for this room. Save one first.');
+                                                                return;
+                                                            }
+                                                            alert('Syncing... Please wait.');
+                                                            const { fetchIcalDates } = await import('../../utils/icalParser');
+                                                            const result = await fetchIcalDates(url);
+                                                            if (result.success) {
+                                                                const blockedCount = result.dates.length;
+                                                                // Save to Supabase
+                                                                const saveResult = await SupabaseService.saveBlockedDates(r.id, result.dates);
+                                                                if (saveResult.success) {
+                                                                    setBlockedDates(prev => ({ ...prev, [r.id]: result.dates }));
+                                                                    alert(`✅ Synced! Saved ${blockedCount} blocked date(s) to database.`);
+                                                                } else {
+                                                                    alert(`⚠️ Synced ${blockedCount} dates but failed to save to database.`);
+                                                                }
+                                                            } else {
+                                                                alert(`❌ Sync failed: ${result.error}`);
+                                                            }
+                                                        }}
+                                                    >
+                                                        🔄 Sync
+                                                    </button>
+                                                    <button
+                                                        className="btn-primary"
+                                                        style={{ padding: '5px 10px', fontSize: '0.8rem', background: '#6366f1' }}
+                                                        onClick={() => {
+                                                            window.open(`/ical/${r.id}`, '_blank');
+                                                        }}
+                                                    >
+                                                        📥 Export
+                                                    </button>
                                                 </td>
                                             </tr>
-                                        ))
-                                    )}
+                                            {blockedDates[r.id] && blockedDates[r.id].length > 0 && (
+                                                <tr style={{ background: '#fef2f2' }}>
+                                                    <td colSpan="6" style={{ padding: '8px 15px' }}>
+                                                        <span style={{ fontSize: '0.85rem', color: '#991b1b' }}>
+                                                            <strong>🚫 OTA Blocked ({blockedDates[r.id].length}):</strong>{' '}
+                                                            {blockedDates[r.id].slice(0, 10).map((d, i) => (
+                                                                <span key={i} style={{ background: '#fee2e2', padding: '2px 6px', borderRadius: '4px', marginRight: '5px', fontSize: '0.8rem' }}>
+                                                                    {d.start}
+                                                                </span>
+                                                            ))}
+                                                            {blockedDates[r.id].length > 10 && <span>+{blockedDates[r.id].length - 10} more</span>}
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            )}
+                                        </React.Fragment>
+                                    ))}
                                 </tbody>
                             </table>
                         </div>
+                        <div style={{ marginTop: '15px', padding: '10px', background: '#fef3c7', borderRadius: '6px', fontSize: '0.85rem' }}>
+                            <strong>💡 Tip:</strong> After syncing, external bookings will be checked when creating new bookings.
+                        </div>
                     </div>
-                </div>
-            )}
-        </div>
-    );
+                )}
+
+                {activeTab === 'offline' && (
+                    <div className="card-panel" style={{ maxWidth: '600px', margin: '0 auto' }}>
+                        <h3>Create Offline Booking</h3>
+                        <form onSubmit={handleOfflineSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+
+                            {/* Guest Details */}
+                            <div className="form-group">
+                                <label>Guest Name</label>
+                                <input type="text" value={offlineForm.name} onChange={e => setOfflineForm({ ...offlineForm, name: e.target.value })} required className="form-input" />
+                            </div>
+                            <div className="form-group">
+                                <label>Phone</label>
+                                <input type="text" value={offlineForm.phone} onChange={e => setOfflineForm({ ...offlineForm, phone: e.target.value })} required className="form-input" />
+                            </div>
+                            <div className="form-group">
+                                <label>
+                                    Number of Guests
+                                    {offlineForm.room && (() => {
+                                        const selectedRoom = rooms.find(r => r.id === offlineForm.room);
+                                        return selectedRoom ? <span style={{ fontSize: '0.85rem', color: '#64748b' }}> (Max: {selectedRoom.capacity})</span> : null;
+                                    })()}
+                                </label>
+                                <input
+                                    type="number"
+                                    min="1"
+                                    max={offlineForm.room ? (rooms.find(r => r.id === offlineForm.room)?.capacity || 10) : 10}
+                                    value={offlineForm.guests}
+                                    onChange={e => {
+                                        const val = parseInt(e.target.value) || 1;
+                                        const selectedRoom = rooms.find(r => r.id === offlineForm.room);
+                                        const maxCapacity = selectedRoom?.capacity || 10;
+                                        if (val > maxCapacity) {
+                                            alert(`This room can accommodate maximum ${maxCapacity} guests.`);
+                                            setOfflineForm({ ...offlineForm, guests: maxCapacity });
+                                        } else {
+                                            setOfflineForm({ ...offlineForm, guests: val });
+                                        }
+                                    }}
+                                    required
+                                    className="form-input"
+                                />
+                            </div>
+
+                            {/* Dates */}
+                            <div style={{ display: 'flex', gap: '10px' }}>
+                                <div className="form-group" style={{ flex: 1 }}>
+                                    <label>Check In</label>
+                                    <input type="date" value={offlineForm.checkIn} onChange={e => setOfflineForm({ ...offlineForm, checkIn: e.target.value })} required className="form-input" />
+                                </div>
+                                <div className="form-group" style={{ flex: 1 }}>
+                                    <label>Check Out</label>
+                                    <input type="date" value={offlineForm.checkOut} onChange={e => setOfflineForm({ ...offlineForm, checkOut: e.target.value })} required className="form-input" />
+                                </div>
+                            </div>
+
+                            {/* Room Selection & Availability Status */}
+                            <div className="form-group">
+                                <label>Room</label>
+                                <select value={offlineForm.room} onChange={e => setOfflineForm({ ...offlineForm, room: e.target.value })} required className="form-input">
+                                    <option value="">Select Room</option>
+                                    {rooms.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+                                </select>
+                                {/* Availability Feedback */}
+                                {offlineForm.room && offlineForm.checkIn && offlineForm.checkOut && (
+                                    <div style={{
+                                        marginTop: '5px',
+                                        fontSize: '0.9rem',
+                                        fontWeight: 'bold',
+                                        color: isRoomAvailable(offlineForm.room, offlineForm.checkIn, offlineForm.checkOut) ? '#10b981' : '#ef4444'
+                                    }}>
+                                        {isRoomAvailable(offlineForm.room, offlineForm.checkIn, offlineForm.checkOut) ? '✅ Available' : '❌ Already Booked'}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* MEAL SELECTION */}
+                            <div className="form-group" style={{ background: '#f8f9fa', padding: '15px', borderRadius: '8px' }}>
+                                <label style={{ marginBottom: '10px', display: 'block', fontWeight: 'bold' }}>Daily Meals (Per person count)</label>
+
+                                {/* Breakfast */}
+                                <div style={{ marginBottom: '10px' }}>
+                                    <div style={{ fontSize: '0.9rem', fontWeight: '600', marginBottom: '5px' }}>Breakfast (₹{MEAL_PRICES.breakfast})</div>
+                                    <div style={{ display: 'flex', gap: '10px' }}>
+                                        <input type="number" min="0" placeholder="Veg Qty" value={offlineForm.mealSelection.breakfast.veg || ''} onChange={(e) => handleMealChange('breakfast', 'veg', e.target.value)} style={{ flex: 1, padding: '5px' }} />
+                                        <input type="number" min="0" placeholder="Non-Veg Qty" value={offlineForm.mealSelection.breakfast.nonVeg || ''} onChange={(e) => handleMealChange('breakfast', 'nonVeg', e.target.value)} style={{ flex: 1, padding: '5px' }} />
+                                    </div>
+                                </div>
+
+                                {/* Lunch */}
+                                <div style={{ marginBottom: '10px' }}>
+                                    <div style={{ fontSize: '0.9rem', fontWeight: '600', marginBottom: '5px' }}>Lunch (₹{MEAL_PRICES.lunch})</div>
+                                    <div style={{ display: 'flex', gap: '10px' }}>
+                                        <input type="number" min="0" placeholder="Veg Qty" value={offlineForm.mealSelection.lunch.veg || ''} onChange={(e) => handleMealChange('lunch', 'veg', e.target.value)} style={{ flex: 1, padding: '5px' }} />
+                                        <input type="number" min="0" placeholder="Non-Veg Qty" value={offlineForm.mealSelection.lunch.nonVeg || ''} onChange={(e) => handleMealChange('lunch', 'nonVeg', e.target.value)} style={{ flex: 1, padding: '5px' }} />
+                                    </div>
+                                </div>
+
+                                {/* Dinner */}
+                                <div style={{ marginBottom: '10px' }}>
+                                    <div style={{ fontSize: '0.9rem', fontWeight: '600', marginBottom: '5px' }}>Dinner (₹{MEAL_PRICES.dinner})</div>
+                                    <div style={{ display: 'flex', gap: '10px' }}>
+                                        <input type="number" min="0" placeholder="Veg Qty" value={offlineForm.mealSelection.dinner.veg || ''} onChange={(e) => handleMealChange('dinner', 'veg', e.target.value)} style={{ flex: 1, padding: '5px' }} />
+                                        <input type="number" min="0" placeholder="Non-Veg Qty" value={offlineForm.mealSelection.dinner.nonVeg || ''} onChange={(e) => handleMealChange('dinner', 'nonVeg', e.target.value)} style={{ flex: 1, padding: '5px' }} />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Auto-Calculated Price */}
+                            <div className="form-group">
+                                <label>Total Price (Rooms + Meals) (₹) - <small>Auto-calculated</small></label>
+                                <input type="number" value={offlineForm.price} onChange={e => setOfflineForm({ ...offlineForm, price: e.target.value })} required className="form-input" />
+                            </div>
+
+                            <button
+                                type="submit"
+                                className="btn-primary"
+                                style={{ marginTop: '10px', opacity: isRoomAvailable(offlineForm.room, offlineForm.checkIn, offlineForm.checkOut) ? 1 : 0.5 }}
+                                disabled={!isRoomAvailable(offlineForm.room, offlineForm.checkIn, offlineForm.checkOut)}
+                            >
+                                Confirm Booking
+                            </button>
+                        </form>
+                    </div>
+                )}
+
+                {activeTab === 'dashboard' && (
+                    <div className="dashboard-layout">
+
+
+                        {/* Table */}
+                        <div className="card-panel">
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                                <h3 style={{ fontSize: '1.2rem', fontWeight: '700', margin: 0, color: '#1e293b' }}>Recent Bookings</h3>
+                                <button onClick={loadData} className="btn-refresh">↻ Refresh</button>
+                            </div>
+                            <div className="table-container">
+                                <table className="admin-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Date</th>
+                                            <th>Guest</th>
+                                            <th>Details</th>
+                                            <th>Rooms & Meals</th>
+                                            <th>Amount</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {filteredBookings.length === 0 ? (
+                                            <tr><td colSpan="6" style={{ textAlign: 'center', padding: '30px', color: '#94a3b8' }}>No bookings found.</td></tr>
+                                        ) : (
+                                            filteredBookings.map(booking => (
+                                                <tr key={booking.id}>
+                                                    <td>
+                                                        <div style={{ fontWeight: '600', color: '#334155' }}>{new Date(booking.check_in).toLocaleDateString()}</div>
+                                                        <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>to {new Date(booking.check_out).toLocaleDateString()}</div>
+                                                    </td>
+                                                    <td>
+                                                        <div style={{ fontWeight: '600', color: '#1e293b' }}>{booking.guests?.full_name || 'N/A'}</div>
+                                                        <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{booking.guests?.phone}</div>
+                                                        <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{booking.guests?.email}</div>
+                                                    </td>
+                                                    <td>
+                                                        <div style={{ fontSize: '0.8rem', color: '#64748b' }}>Booked: {new Date(booking.created_at).toLocaleDateString()}</div>
+                                                    </td>
+                                                    <td>
+                                                        <div style={{ fontWeight: '500', color: '#334155' }}>{(booking.room_ids || []).map(r => r.name).join(', ')}</div>
+                                                        {booking.meal_preferences && <div style={{ fontSize: '0.75rem', color: '#ea580c', marginTop: '4px' }}>🍽️ {booking.meal_preferences}</div>}
+                                                    </td>
+                                                    <td>
+                                                        <div style={{ fontWeight: '700', color: '#059669' }}>₹{booking.total_price.toLocaleString('en-IN')}</div>
+                                                    </td>
+                                                    <td>
+                                                        <select
+                                                            value={booking.status}
+                                                            onChange={(e) => handleStatusChange(booking.id, e.target.value)}
+                                                            className="status-select"
+                                                            style={getStatusStyle(booking.status)}
+                                                        >
+                                                            <option value="pending">PENDING</option>
+                                                            <option value="booked">BOOKED</option>
+                                                            <option value="confirmed">CONFIRMED</option>
+                                                            <option value="cancelled">CANCELLED</option>
+                                                        </select>
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                )}
+
+                            {activeTab === 'inventory' && (
+                                <div className="card-panel">
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                                        <h3>Room Inventory & OTA Sync</h3>
+                                        <button onClick={loadData} className="btn-secondary">↻ Refresh</button>
+                                    </div>
+                                    <p style={{ fontSize: '0.9rem', color: '#64748b', marginBottom: '20px' }}>
+                                        Manage room details and sync availability with external OTA platforms (Airbnb, Booking.com, Goibibo).
+                                    </p>
+                                    <div className="table-container">
+                                        <table className="admin-table">
+                                            <thead>
+                                                <tr><th>Room</th><th>Std Price</th><th>High Season</th><th>Capacity</th><th>OTA Calendar URL</th><th>Actions</th></tr>
+                                            </thead>
+                                            <tbody>
+                                                {rooms.map(r => (
+                                                    <React.Fragment key={r.id}>
+                                                        <tr>
+                                                            <td><strong>{r.name}</strong></td>
+                                                            <td>₹{r.price_low_season}</td>
+                                                            <td>₹{r.price_high_season}</td>
+                                                            <td>{r.capacity}</td>
+                                                            <td>
+                                                                <input
+                                                                    type="text"
+                                                                    id={`ical-${r.id}`}
+                                                                    placeholder="Paste iCal URL"
+                                                                    defaultValue={r.ical_import_url || ''}
+                                                                    className="form-input"
+                                                                    style={{ width: '100%', padding: '8px', border: '1px solid #e2e8f0', borderRadius: '6px' }}
+                                                                />
+                                                            </td>
+                                                            <td style={{ display: 'flex', gap: '8px' }}>
+                                                                <button
+                                                                    className="btn-secondary"
+                                                                    style={{ padding: '6px 12px', fontSize: '0.8rem' }}
+                                                                    onClick={async () => {
+                                                                        const input = document.getElementById(`ical-${r.id}`);
+                                                                        const url = input?.value || '';
+                                                                        const result = await SupabaseService.updateRoom(r.id, { ical_import_url: url });
+                                                                        if (result.success) {
+                                                                            alert('iCal URL saved!');
+                                                                            loadData();
+                                                                        } else {
+                                                                            alert('Save failed');
+                                                                        }
+                                                                    }}
+                                                                >
+                                                                    💾
+                                                                </button>
+                                                                <button
+                                                                    className="btn-primary"
+                                                                    style={{ padding: '6px 12px', fontSize: '0.8rem' }}
+                                                                    onClick={async () => {
+                                                                        const url = r.ical_import_url;
+                                                                        if (!url) return alert('No iCal URL saved for this room.');
+                                                                        alert('Syncing... Please wait.');
+                                                                        const { fetchIcalDates } = await import('../../utils/icalParser');
+                                                                        const result = await fetchIcalDates(url);
+                                                                        if (result.success) {
+                                                                            const blockedCount = result.dates.length;
+                                                                            const saveResult = await SupabaseService.saveBlockedDates(r.id, result.dates);
+                                                                            if (saveResult.success) {
+                                                                                setBlockedDates(prev => ({ ...prev, [r.id]: result.dates }));
+                                                                                alert(`✅ Synced! Saved ${blockedCount} blocked date(s).`);
+                                                                            } else {
+                                                                                alert(`⚠️ Synced ${blockedCount} dates but failed to save.`);
+                                                                            }
+                                                                        } else {
+                                                                            alert(`❌ Sync failed: ${result.error}`);
+                                                                        }
+                                                                    }}
+                                                                >
+                                                                    🔄
+                                                                </button>
+                                                                <button
+                                                                    className="btn-primary"
+                                                                    style={{ padding: '6px 12px', fontSize: '0.8rem', background: '#4f46e5' }}
+                                                                    onClick={() => window.open(`/ical/${r.id}`, '_blank')}
+                                                                    title="Download .ics file"
+                                                                >
+                                                                    📥
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+                                                        {blockedDates[r.id] && blockedDates[r.id].length > 0 && (
+                                                            <tr style={{ background: '#f8fafc' }}>
+                                                                <td colSpan="6" style={{ padding: '12px 20px' }}>
+                                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.85rem' }}>
+                                                                        <span className="status-badge status-cancelled">🚫 OTA Blocked ({blockedDates[r.id].length})</span>
+                                                                        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                                                                            {blockedDates[r.id].slice(0, 8).map((d, i) => (
+                                                                                <span key={i} style={{ background: 'white', padding: '2px 8px', borderRadius: '4px', border: '1px solid #e2e8f0', color: '#64748b' }}>
+                                                                                    {d.start}
+                                                                                </span>
+                                                                            ))}
+                                                                            {blockedDates[r.id].length > 8 && <span style={{ color: '#94a3b8' }}>+{blockedDates[r.id].length - 8} more</span>}
+                                                                        </div>
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                        )}
+                                                    </React.Fragment>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            )}
+
+                            {activeTab === 'offline' && (
+                                <div className="card-panel" style={{ maxWidth: '800px', margin: '0 auto' }}>
+                                    <h3>Create New Booking</h3>
+                                    <form onSubmit={handleOfflineSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                                            <div>
+                                                <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', fontSize: '0.9rem' }}>Guest Name</label>
+                                                <input type="text" value={offlineForm.name} onChange={e => setOfflineForm({ ...offlineForm, name: e.target.value })} required className="date-input" style={{ width: '100%' }} />
+                                            </div>
+                                            <div>
+                                                <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', fontSize: '0.9rem' }}>Phone</label>
+                                                <input type="text" value={offlineForm.phone} onChange={e => setOfflineForm({ ...offlineForm, phone: e.target.value })} required className="date-input" style={{ width: '100%' }} />
+                                            </div>
+                                        </div>
+
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px' }}>
+                                            <div>
+                                                <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', fontSize: '0.9rem' }}>Check In</label>
+                                                <input type="date" value={offlineForm.checkIn} onChange={e => setOfflineForm({ ...offlineForm, checkIn: e.target.value })} required className="date-input" style={{ width: '100%' }} />
+                                            </div>
+                                            <div>
+                                                <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', fontSize: '0.9rem' }}>Check Out</label>
+                                                <input type="date" value={offlineForm.checkOut} onChange={e => setOfflineForm({ ...offlineForm, checkOut: e.target.value })} required className="date-input" style={{ width: '100%' }} />
+                                            </div>
+                                            <div>
+                                                <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', fontSize: '0.9rem' }}>Guests</label>
+                                                <input type="number" min="1" value={offlineForm.guests} onChange={e => setOfflineForm({ ...offlineForm, guests: parseInt(e.target.value) || 1 })} required className="date-input" style={{ width: '100%' }} />
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', fontSize: '0.9rem' }}>Room Selection</label>
+                                            <select value={offlineForm.room} onChange={e => setOfflineForm({ ...offlineForm, room: e.target.value })} required className="date-input" style={{ width: '100%' }}>
+                                                <option value="">Select Room</option>
+                                                {rooms.map(r => <option key={r.id} value={r.id}>{r.name} (Max: {r.capacity})</option>)}
+                                            </select>
+                                            {offlineForm.room && offlineForm.checkIn && offlineForm.checkOut && (
+                                                <div style={{ marginTop: '8px', fontSize: '0.85rem', fontWeight: '600', color: isRoomAvailable(offlineForm.room, offlineForm.checkIn, offlineForm.checkOut) ? '#10b981' : '#ef4444' }}>
+                                                    {isRoomAvailable(offlineForm.room, offlineForm.checkIn, offlineForm.checkOut) ? '✅ Room Available' : '❌ Room Already Booked'}
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <div style={{ background: '#f8fafc', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                                            <label style={{ display: 'block', marginBottom: '15px', fontWeight: '600', fontSize: '0.9rem' }}>Meal Plan (Daily Count)</label>
+                                            {['breakfast', 'lunch', 'dinner'].map(type => (
+                                                <div key={type} style={{ display: 'flex', alignItems: 'center', marginBottom: '12px', gap: '15px' }}>
+                                                    <div style={{ width: '100px', textTransform: 'capitalize', fontWeight: '500' }}>{type}</div>
+                                                    <div style={{ flex: 1, display: 'flex', gap: '10px' }}>
+                                                        <input type="number" placeholder="Veg" min="0" value={offlineForm.mealSelection[type].veg || ''} onChange={(e) => handleMealChange(type, 'veg', e.target.value)} className="date-input" style={{ width: '100%' }} />
+                                                        <input type="number" placeholder="Non-Veg" min="0" value={offlineForm.mealSelection[type].nonVeg || ''} onChange={(e) => handleMealChange(type, 'nonVeg', e.target.value)} className="date-input" style={{ width: '100%' }} />
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f1f5f9', padding: '20px', borderRadius: '12px' }}>
+                                            <div>
+                                                <div style={{ fontSize: '0.9rem', color: '#64748b' }}>Total Estimated Price</div>
+                                                <div style={{ fontSize: '1.5rem', fontWeight: '700', color: '#1e293b' }}>₹{offlineForm.price.toLocaleString('en-IN')}</div>
+                                            </div>
+                                            <button type="submit" disabled={!isRoomAvailable(offlineForm.room, offlineForm.checkIn, offlineForm.checkOut)} className="btn-primary" style={{ padding: '12px 24px', fontSize: '1rem', opacity: isRoomAvailable(offlineForm.room, offlineForm.checkIn, offlineForm.checkOut) ? 1 : 0.5 }}>
+                                                Confirm Booking
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+                            )}
+                        </main>
+                    </div>
+                );
 };
 
 // Utilities
 const getStatusStyle = (status) => {
     switch ((status || '').toLowerCase()) {
         case 'booked':
-        case 'confirmed': return { background: '#d1fae5', color: '#059669' }; // Green
-        case 'cancelled': return { background: '#fee2e2', color: '#dc2626' }; // Red
-        case 'pending': return { background: '#ffedd5', color: '#ea580c' }; // Orange
-        default: return { background: '#f1f5f9', color: '#64748b' }; // Gray
+                case 'confirmed': return {background: '#d1fae5', color: '#059669' }; // Green
+                case 'cancelled': return {background: '#fee2e2', color: '#dc2626' }; // Red
+                case 'pending': return {background: '#ffedd5', color: '#ea580c' }; // Orange
+                default: return {background: '#f1f5f9', color: '#64748b' }; // Gray
     }
 };
 
-const StatCard = ({ title, value, icon, color, subtitle }) => (
-    <div className="stat-card">
-        <div className="stat-icon" style={{ background: `${color}15`, color: color }}>
-            {icon}
-        </div>
-        <div className="stat-content">
-            <h3>{title}</h3>
-            <div className="value">{value}</div>
-            <div className="subtitle">{subtitle}</div>
-        </div>
-    </div>
-);
+                const StatCard = ({title, value, icon, color, subtitle}) => (
+                <div className="stat-card">
+                    <div className="stat-icon" style={{ background: `${color}15`, color: color }}>
+                        {icon}
+                    </div>
+                    <div className="stat-content">
+                        <h3>{title}</h3>
+                        <div className="value">{value}</div>
+                        <div className="subtitle">{subtitle}</div>
+                    </div>
+                </div>
+                );
 
-export default AdminDashboard;
+                export default AdminDashboard;
