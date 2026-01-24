@@ -132,6 +132,11 @@ const BookingForm = ({ onToast }) => {
     const [showRoomPicker, setShowRoomPicker] = useState(false);
     const [showMealPicker, setShowMealPicker] = useState(false);
 
+    // Coupon State
+    const [couponCode, setCouponCode] = useState('');
+    const [discount, setDiscount] = useState(0);
+    const [isCouponApplied, setIsCouponApplied] = useState(false);
+
     // Calendar Reset Key (for uncontrolled component usage)
     const [calendarKey, setCalendarKey] = useState(0);
 
@@ -579,6 +584,14 @@ const BookingForm = ({ onToast }) => {
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
 
+        // Reset coupon if phone changes to prevent abuse
+        if (name === 'phone' && isCouponApplied) {
+            setIsCouponApplied(false);
+            setDiscount(0);
+            setCouponCode('');
+            onToast('Phone number changed. Please re-apply coupon.', 'info');
+        }
+
         if (name.startsWith('meal_')) {
             // format: meal_breakfast_veg
             const parts = name.split('_'); // ['meal', 'breakfast', 'veg']
@@ -613,6 +626,35 @@ const BookingForm = ({ onToast }) => {
                 ...prev,
                 [name]: type === 'checkbox' ? checked : value
             }));
+        }
+    };
+
+    const handleApplyCoupon = async () => {
+        if (!couponCode) return;
+
+        if (couponCode.trim().toUpperCase() !== 'WELCOMEBACK5') {
+            onToast('Invalid Coupon Code', 'error');
+            return;
+        }
+
+        if (!formData.phone || formData.phone.length < 10) {
+            onToast('Please enter a valid phone number first.', 'error');
+            return;
+        }
+
+        const isReturning = await SupabaseService.checkReturningCustomer(formData.phone);
+        if (isReturning) {
+            // Calculate 5% discount on Room + Meals
+            const currentTotal = roomPriceTotal + mealPriceTotal;
+            const discountAmount = Math.round(currentTotal * 0.05);
+
+            setDiscount(discountAmount);
+            setIsCouponApplied(true);
+            onToast('🎉 5% Loyalty Discount Applied!', 'success');
+        } else {
+            onToast('Coupon valid only for existing customers.', 'error');
+            setDiscount(0);
+            setIsCouponApplied(false);
         }
     };
 
@@ -724,21 +766,32 @@ const BookingForm = ({ onToast }) => {
                 }
             });
 
+            // 3. Discount Line Item
+            if (isCouponApplied && discount > 0) {
+                invoiceItems.push({
+                    description: 'Loyalty Discount (5%)',
+                    quantity: 1,
+                    unit_price: -discount,
+                    total: -discount
+                });
+            }
+
             // 2. Format Data for Google Sheets
+            const finalTotal = totalPrice - discount; // Use discounted total
+
             const formDataObj = new FormData();
             formDataObj.append('checkIn', formData.checkIn);
             formDataObj.append('checkOut', formData.checkOut);
             formDataObj.append('guests', formData.guests);
-            formDataObj.append('roomType', selectedRoomNames); // Fixed key to match Apps Script
+            formDataObj.append('roomType', selectedRoomNames);
             formDataObj.append('name', formData.name);
             formDataObj.append('email', formData.email);
             formDataObj.append('phone', formData.phone);
-            formDataObj.append('message', finalMessage); // Use finalMessage here
-            formDataObj.append('totalPrice', totalPrice);
+            formDataObj.append('message', finalMessage);
+            formDataObj.append('totalPrice', finalTotal); // Send Discounted Price
             formDataObj.append('meals', mealDetails);
-            formDataObj.append('pricePerNight', Math.round(roomPriceTotal / numberOfNights)); // Avg Room price
+            formDataObj.append('pricePerNight', Math.round(roomPriceTotal / numberOfNights));
             formDataObj.append('numberOfNights', numberOfNights);
-            // 3. SEQUENTIAL EXECUTION: Supabase First (to get ID), then Google Sheets
 
             // Step A: Create in Supabase
             const supabaseResult = await SupabaseService.createBooking({
@@ -749,10 +802,10 @@ const BookingForm = ({ onToast }) => {
                 checkIn: formData.checkIn,
                 checkOut: formData.checkOut,
                 guests: formData.guests,
-                totalPrice: totalPrice,
+                totalPrice: finalTotal, // Send Discounted Price
                 meals: mealDetails,
                 message: finalMessage,
-                invoiceItems: invoiceItems // <--- Pass Detailed Breakdown
+                invoiceItems: invoiceItems
             });
 
             if (!supabaseResult.success) {
@@ -993,6 +1046,40 @@ const BookingForm = ({ onToast }) => {
                                 <span style={{ fontSize: '0.9rem', color: '#d35400' }}>{showMealPicker ? '▲' : '▶'}</span>
                             </div>
 
+                            {/* Coupon Input */}
+                            {totalPrice > 0 && (
+                                <div className="coupon-section" style={{ marginBottom: '15px', padding: '10px', background: isCouponApplied ? '#f0fdf4' : '#f0f9ff', borderRadius: '8px', border: isCouponApplied ? '1px solid #bbf7d0' : '1px solid #bae6fd' }}>
+                                    {!isCouponApplied ? (
+                                        <div style={{ display: 'flex', gap: '8px' }}>
+                                            <input
+                                                type="text"
+                                                placeholder="Coupon Code"
+                                                value={couponCode}
+                                                onChange={(e) => setCouponCode(e.target.value)}
+                                                style={{ flex: 1, padding: '8px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '0.9rem' }}
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={handleApplyCoupon}
+                                                style={{ background: '#0ea5e9', color: 'white', border: 'none', padding: '8px 12px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
+                                            >
+                                                Apply
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#15803d', fontSize: '0.9rem' }}>
+                                            <span>✅ <strong>{couponCode}</strong> applied!</span>
+                                            <button
+                                                onClick={() => { setIsCouponApplied(false); setDiscount(0); setCouponCode(''); }}
+                                                style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '0.8rem', textDecoration: 'underline' }}
+                                            >
+                                                Remove
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
                             {/* Totals */}
                             {totalPrice > 0 && (
                                 <div className="totals-display" style={{ paddingTop: '15px', borderTop: '2px solid #eee', marginBottom: '20px' }}>
@@ -1000,9 +1087,15 @@ const BookingForm = ({ onToast }) => {
                                         <span>Duration:</span>
                                         <span>{numberOfNights} Nights</span>
                                     </div>
+                                    {isCouponApplied && (
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px', color: '#10b981', fontSize: '0.9rem', fontWeight: '600' }}>
+                                            <span>Discount (5%):</span>
+                                            <span>-₹{discount.toLocaleString('en-IN')}</span>
+                                        </div>
+                                    )}
                                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.3rem', fontWeight: '800', color: '#2c3e50', marginTop: '5px' }}>
                                         <span>Total:</span>
-                                        <span>₹{totalPrice.toLocaleString('en-IN')}</span>
+                                        <span>₹{(totalPrice - discount).toLocaleString('en-IN')}</span>
                                     </div>
                                 </div>
                             )}

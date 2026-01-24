@@ -332,6 +332,22 @@ export const SupabaseService = {
         }
     },
 
+    // 6.5 Check Returning Customer (Loyalty)
+    checkReturningCustomer: async (phone) => {
+        try {
+            // Use existing lookup
+            const { success, data } = await SupabaseService.getBookingsByPhone(phone);
+            if (!success || !data || data.length === 0) return false;
+
+            // Check for at least one completed/valid stay
+            const validStatuses = ['confirmed', 'booked', 'checked_out', 'completed'];
+            return data.some(b => validStatuses.includes((b.status || '').toLowerCase()));
+        } catch (error) {
+            console.error('Loyalty Check Error:', error);
+            return false;
+        }
+    },
+
     // 7. Get Single Booking by ID (Bill View)
     getBookingById: async (bookingId) => {
         try {
