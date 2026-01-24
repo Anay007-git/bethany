@@ -676,61 +676,61 @@ const AdminDashboard = ({ onLogout }) => {
                         {/* Revenue Trends Chart */}
                         <div className="card-panel" style={{ marginTop: '20px' }}>
                             <h3>📈 Revenue Trends (Direct vs OTA)</h3>
-                            <div style={{ display: 'flex', alignItems: 'flex-end', height: '250px', gap: '20px', padding: '20px 0', overflowX: 'auto' }}>
+                            <div style={{ display: 'flex', alignItems: 'flex-end', height: '400px', gap: '40px', padding: '30px 0', overflowX: 'auto', justifyContent: monthlyData.length > 8 ? 'flex-start' : 'center' }}>
                                 {monthlyData.map((data, i) => {
                                     const maxVal = Math.max(...monthlyData.map(d => d.total)) || 1;
-                                    const directHeight = (data.direct / maxVal) * 200;
-                                    const otaHeight = (data.ota / maxVal) * 200;
+                                    const directHeight = (data.direct / maxVal) * 320;
+                                    const otaHeight = (data.ota / maxVal) * 320;
 
                                     return (
-                                        <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: '60px' }}>
-                                            <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', height: '200px', width: '40px', background: '#f1f5f9', borderRadius: '4px', overflow: 'hidden', position: 'relative' }}>
+                                        <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: '80px' }}>
+                                            <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', height: '320px', width: '60px', background: '#f1f5f9', borderRadius: '8px', overflow: 'hidden', position: 'relative' }}>
                                                 {/* OTA Portion */}
                                                 <div style={{ height: `${otaHeight}px`, background: '#0891b2', width: '100%', transition: 'height 0.3s' }} title={`OTA: ₹${data.ota}`}></div>
                                                 {/* Direct Portion */}
                                                 <div style={{ height: `${directHeight}px`, background: '#10b981', width: '100%', transition: 'height 0.3s' }} title={`Direct: ₹${data.direct}`}></div>
                                             </div>
-                                            <span style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '10px' }}>{data.label}</span>
-                                            <span style={{ fontSize: '0.7rem', fontWeight: 'bold' }}>₹{(data.total / 1000).toFixed(1)}k</span>
+                                            <span style={{ fontSize: '0.9rem', color: '#64748b', marginTop: '12px', fontWeight: '500' }}>{data.label}</span>
+                                            <span style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#334155' }}>₹{(data.total / 1000).toFixed(1)}k</span>
                                         </div>
                                     );
                                 })}
-                                {monthlyData.length === 0 && <div style={{ color: '#94a3b8', margin: 'auto' }}>No revenue data available</div>}
+                                {monthlyData.length === 0 && <div style={{ color: '#94a3b8', margin: 'auto', fontSize: '1.1rem' }}>No revenue data available</div>}
                             </div>
-                            <div style={{ display: 'flex', gap: '15px', justifyContent: 'center', marginTop: '10px', fontSize: '0.8rem' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}><div style={{ width: '10px', height: '10px', background: '#10b981', borderRadius: '2px' }}></div> Direct</div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}><div style={{ width: '10px', height: '10px', background: '#0891b2', borderRadius: '2px' }}></div> OTA (Est.)</div>
+                            <div style={{ display: 'flex', gap: '25px', justifyContent: 'center', marginTop: '15px', fontSize: '0.9rem' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><div style={{ width: '14px', height: '14px', background: '#10b981', borderRadius: '4px' }}></div> Direct</div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><div style={{ width: '14px', height: '14px', background: '#0891b2', borderRadius: '4px' }}></div> OTA (Est.)</div>
                             </div>
                         </div>
 
                         {/* Cancellation Trends Chart */}
                         <div className="card-panel" style={{ marginTop: '20px' }}>
                             <h3>📉 Booking Trends (Confirmed vs Cancelled)</h3>
-                            <div style={{ display: 'flex', alignItems: 'flex-end', height: '250px', gap: '20px', padding: '20px 0', overflowX: 'auto' }}>
+                            <div style={{ display: 'flex', alignItems: 'flex-end', height: '400px', gap: '40px', padding: '30px 0', overflowX: 'auto', justifyContent: cancellationData.length > 8 ? 'flex-start' : 'center' }}>
                                 {cancellationData.map((data, i) => {
                                     const total = data.confirmed + data.cancelled;
                                     const maxVal = Math.max(...cancellationData.map(d => d.confirmed + d.cancelled)) || 1;
-                                    const confirmedHeight = (data.confirmed / maxVal) * 200;
-                                    const cancelledHeight = (data.cancelled / maxVal) * 200;
+                                    const confirmedHeight = (data.confirmed / maxVal) * 320;
+                                    const cancelledHeight = (data.cancelled / maxVal) * 320;
 
                                     return (
-                                        <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: '60px' }}>
-                                            <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', height: '200px', width: '40px', background: '#f1f5f9', borderRadius: '4px', overflow: 'hidden', position: 'relative' }}>
+                                        <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: '80px' }}>
+                                            <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', height: '320px', width: '60px', background: '#f1f5f9', borderRadius: '8px', overflow: 'hidden', position: 'relative' }}>
                                                 {/* Cancelled Portion (Top red) */}
                                                 <div style={{ height: `${cancelledHeight}px`, background: '#ef4444', width: '100%', transition: 'height 0.3s' }} title={`Cancelled: ${data.cancelled}`}></div>
                                                 {/* Confirmed Portion (Bottom blue) */}
                                                 <div style={{ height: `${confirmedHeight}px`, background: '#3b82f6', width: '100%', transition: 'height 0.3s' }} title={`Confirmed: ${data.confirmed}`}></div>
                                             </div>
-                                            <span style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '10px' }}>{data.label}</span>
-                                            <span style={{ fontSize: '0.7rem', fontWeight: 'bold' }}>{total}</span>
+                                            <span style={{ fontSize: '0.9rem', color: '#64748b', marginTop: '12px', fontWeight: '500' }}>{data.label}</span>
+                                            <span style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#334155' }}>{total} Bookings</span>
                                         </div>
                                     );
                                 })}
-                                {cancellationData.length === 0 && <div style={{ color: '#94a3b8', margin: 'auto' }}>No booking data available</div>}
+                                {cancellationData.length === 0 && <div style={{ color: '#94a3b8', margin: 'auto', fontSize: '1.1rem' }}>No booking data available</div>}
                             </div>
-                            <div style={{ display: 'flex', gap: '15px', justifyContent: 'center', marginTop: '10px', fontSize: '0.8rem' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}><div style={{ width: '10px', height: '10px', background: '#3b82f6', borderRadius: '2px' }}></div> Confirmed</div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}><div style={{ width: '10px', height: '10px', background: '#ef4444', borderRadius: '2px' }}></div> Cancelled</div>
+                            <div style={{ display: 'flex', gap: '25px', justifyContent: 'center', marginTop: '15px', fontSize: '0.9rem' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><div style={{ width: '14px', height: '14px', background: '#3b82f6', borderRadius: '4px' }}></div> Confirmed</div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><div style={{ width: '14px', height: '14px', background: '#ef4444', borderRadius: '4px' }}></div> Cancelled</div>
                             </div>
                         </div>
 
