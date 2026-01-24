@@ -205,5 +205,49 @@ export const SupabaseService = {
             console.error('Invoice Upload Error:', error);
             return { success: false, error };
         }
+    },
+
+    // 6. Get Booking by Phone (Bill Lookup)
+    getBookingsByPhone: async (phone) => {
+        try {
+            // Normalize phone: remove spaces, dashes, etc.
+            const cleanPhone = phone.replace(/\D/g, '');
+
+            const { data, error } = await supabase
+                .from('bookings')
+                .select(`
+                    *,
+                    guests!inner(full_name, phone, email)
+                `)
+                .ilike('guests.phone', `%${cleanPhone}%`) // Loose matching
+                .order('created_at', { ascending: false });
+
+            if (error) throw error;
+            return { success: true, data };
+
+        } catch (error) {
+            console.error('Fetch by Phone Error:', error);
+            return { success: false, error };
+        }
+    },
+
+    // 7. Get Single Booking by ID (Bill View)
+    getBookingById: async (bookingId) => {
+        try {
+            const { data, error } = await supabase
+                .from('bookings')
+                .select(`
+                    *,
+                    guests (full_name, phone, email)
+                `)
+                .eq('id', bookingId)
+                .single();
+
+            if (error) throw error;
+            return { success: true, data };
+        } catch (error) {
+            console.error('Fetch Booking Error:', error);
+            return { success: false, error };
+        }
     }
 };

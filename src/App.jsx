@@ -5,6 +5,8 @@ import PrivacyPolicy from './pages/PrivacyPolicy';
 import RefundPolicy from './pages/RefundPolicy';
 import ContactPage from './pages/ContactPage';
 import AdminLogin from './components/admin/AdminLogin';
+import BillSearch from './components/bill/BillSearch';
+import BillView from './components/bill/BillView';
 import './index.css';
 
 function App() {
@@ -17,6 +19,8 @@ function App() {
         <Route path="/refund-policy" element={<RefundPolicy />} />
         <Route path="/contact" element={<ContactPage />} />
         <Route path="/admin" element={<AdminLogin />} />
+        <Route path="/my-bill" element={<BillSearch />} />
+        <Route path="/bill/:bookingId" element={<BillView />} />
       </Routes>
     </Router>
   );

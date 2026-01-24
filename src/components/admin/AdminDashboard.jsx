@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
 import { SupabaseService } from '../../services/SupabaseService';
-import jsPDF from 'jspdf';
 import titleBarImg from '../../assets/title-bar.jpeg';
 import './AdminDashboard.css';
 
@@ -170,127 +169,19 @@ const AdminDashboard = ({ onLogout }) => {
 
         const result = await SupabaseService.createBooking(bookingData);
         if (result.success) {
-
-            // --- GENERATE INVOICE PDF ---
-            try {
-                const doc = new jsPDF();
-                const invNum = `INV-${Date.now().toString().slice(-6)}`;
-                const billDate = new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
-
-                // Load Logo
-                const img = new Image();
-                img.src = titleBarImg;
-                await new Promise((resolve) => {
-                    if (img.complete) resolve();
-                    else img.onload = resolve;
-                    img.onerror = resolve; // Continue even if image fails
-                });
-
-                // --- HEADER ---
-                // Logo (Top Left)
-                try {
-                    doc.addImage(img, 'JPEG', 15, 15, 50, 25); // x, y, w, h
-                } catch (e) { console.warn("Logo add failed", e); }
-
-                // Company Details (Right aligned to logo)
-                doc.setFontSize(20);
-                doc.setTextColor(40, 167, 69);
-                doc.setFont("helvetica", "bold");
-                doc.text("NAMASTE HILLS", 195, 25, { align: "right" });
-
-                doc.setFontSize(10);
-                doc.setTextColor(0, 0, 0);
-                doc.setFont("helvetica", "normal");
-                doc.text("Bethany Homestay", 195, 32, { align: "right" });
-                doc.setFontSize(9);
-                doc.text("Dr. Graham's Homes, Block 'B'", 195, 37, { align: "right" });
-                doc.text("Kalimpong-I, Thapatar Para", 195, 41, { align: "right" });
-                doc.text("P.O Topkhana, P.S Kalimpong", 195, 45, { align: "right" });
-                doc.text("PIN - 734316", 195, 49, { align: "right" });
-
-                // Invoice Meta (Below Logo)
-                doc.line(15, 52, 195, 52); // Divider
-
-                doc.setFontSize(10);
-                doc.text(`Invoice #: ${invNum}`, 15, 60);
-                doc.text(`Date: ${billDate}`, 195, 60, { align: "right" });
-
-                // --- BILL TO ---
-                doc.setFont("helvetica", "bold");
-                doc.text("Bill To:", 15, 70);
-                doc.setFont("helvetica", "normal");
-                doc.text(offlineForm.name, 15, 76);
-                doc.text(`Phone: ${offlineForm.phone}`, 15, 81);
-
-                // --- BOOKING DETAILS TABLE ---
-                let y = 95;
-
-                // Table Header
-                doc.setFillColor(240, 240, 240);
-                doc.rect(15, y, 180, 10, 'F');
-                doc.setFont("helvetica", "bold");
-                doc.text("Description", 20, y + 7);
-                doc.text("Details", 100, y + 7);
-
-                y += 18;
-                doc.setFont("helvetica", "normal");
-
-                // Rows
-                const row = (label, value) => {
-                    doc.text(label, 20, y);
-                    doc.text(String(value), 100, y);
-                    y += 8;
-                };
-
-                row("Room", selectedRoomObj.name);
-                row("Check In", offlineForm.checkIn);
-                row("Check Out", offlineForm.checkOut);
-                row("Guests", offlineForm.guests);
-
-                if (mealString) {
-                    const splitMeals = doc.splitTextToSize(mealString, 90);
-                    doc.text("Meals", 20, y);
-                    doc.text(splitMeals, 100, y);
-                    y += (splitMeals.length * 6) + 4;
-                }
-
-                doc.line(15, y, 195, y); // Bottom divider
-                y += 10;
-
-                // --- TOTAL ---
-                doc.setFontSize(14);
-                doc.setFont("helvetica", "bold");
-                doc.text(`Total Amount:`, 140, y);
-                doc.setTextColor(40, 167, 69);
-                doc.text(`INR ${offlineForm.price}`, 195, y, { align: "right" });
-                doc.setTextColor(0, 0, 0);
-
-                // Footer
-                doc.setFontSize(9);
-                doc.setFont("helvetica", "italic");
-                doc.text("Thank you for choosing Namaste Hills Bethany Homestay!", 105, 280, { align: "center" });
-
-                // Create Blob
-                const pdfBlob = doc.output('blob');
-                const fileName = `invoice_${invNum}.pdf`;
-
-                // Upload
-                const uploadRes = await SupabaseService.uploadInvoice(pdfBlob, fileName);
-
-                if (uploadRes.success) {
-                    const waLink = `https://wa.me/${offlineForm.phone}?text=${encodeURIComponent(`Namaste ${offlineForm.name}, \n\nCheck out your invoice from Bethany Homestay: ${uploadRes.publicUrl} \n\nThank you!`)}`;
-                    window.open(waLink, '_blank');
-                } else {
-                    console.error("Invoice Upload Failed", uploadRes.error);
-                    alert("Booking saved, but Invoice Upload failed.");
-                }
-
-            } catch (err) {
-                console.error("PDF Generation Error", err);
-                alert("Booking saved, but PDF generation failed.");
-            }
-
             alert('Offline Booking Created Successfully!');
+
+            // --- GENERATE HTML BILL LINK ---
+            // Construct Link
+            const baseUrl = window.location.origin;
+            const billUrl = `${baseUrl}/bill/${result.booking.id}`;
+
+            // Create WhatsApp Link
+            const waLink = `https://wa.me/${offlineForm.phone}?text=${encodeURIComponent(`Namaste ${offlineForm.name}, \n\nCheck out your invoice from Bethany Homestay: ${billUrl} \n\nThank you!`)}`;
+
+            // Open WhatsApp
+            window.open(waLink, '_blank');
+
             setOfflineForm({
                 name: '', phone: '', email: 'offline@bethany.com',
                 checkIn: '', checkOut: '', room: '', guests: 1, price: 0,
