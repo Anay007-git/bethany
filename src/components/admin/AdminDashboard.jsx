@@ -13,6 +13,7 @@ const AdminDashboard = ({ onLogout }) => {
         start: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
         end: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().split('T')[0]
     });
+    const [statusFilter, setStatusFilter] = useState('all');
 
     // Offline Booking Form State
     const [offlineForm, setOfflineForm] = useState({
@@ -277,9 +278,13 @@ const AdminDashboard = ({ onLogout }) => {
             // Simple null check
             const start = dateRange.start || '2000-01-01';
             const end = dateRange.end || '2099-12-31';
-            return checkIn >= start && checkIn <= end;
+            const dateMatch = checkIn >= start && checkIn <= end;
+
+            if (statusFilter !== 'all' && (b.status || '').toLowerCase() !== statusFilter) return false;
+
+            return dateMatch;
         });
-    }, [allBookings, dateRange]);
+    }, [allBookings, dateRange, statusFilter]);
 
     // Metrics Logic
     const metrics = useMemo(() => {
@@ -493,6 +498,17 @@ const AdminDashboard = ({ onLogout }) => {
                                 <input type="date" value={dateRange.start} onChange={e => setDateRange(p => ({ ...p, start: e.target.value }))} className="date-input" />
                                 <span style={{ color: '#cbd5e1' }}>→</span>
                                 <input type="date" value={dateRange.end} onChange={e => setDateRange(p => ({ ...p, end: e.target.value }))} className="date-input" />
+                                <select
+                                    value={statusFilter}
+                                    onChange={(e) => setStatusFilter(e.target.value)}
+                                    style={{ padding: '8px', borderRadius: '6px', border: '1px solid #cbd5e1', color: '#475569', marginLeft: '10px' }}
+                                >
+                                    <option value="all">All Status</option>
+                                    <option value="pending">Pending</option>
+                                    <option value="confirmed">Confirmed</option>
+                                    <option value="booked">Booked</option>
+                                    <option value="cancelled">Cancelled</option>
+                                </select>
                             </div>
                             <button onClick={exportCSV} className="btn-primary"><span>📥</span> Export CSV</button>
                         </div>
@@ -587,6 +603,7 @@ const AdminDashboard = ({ onLogout }) => {
                                     <thead>
                                         <tr>
                                             <th>Guest</th>
+                                            <th>Email</th>
                                             <th>Room</th>
                                             <th>Dates</th>
                                             <th>Amount</th>
@@ -597,7 +614,7 @@ const AdminDashboard = ({ onLogout }) => {
                                     <tbody>
                                         {filteredBookings.length === 0 ? (
                                             <tr>
-                                                <td colSpan="6" style={{ textAlign: 'center', padding: '30px', color: '#94a3b8' }}>
+                                                <td colSpan="7" style={{ textAlign: 'center', padding: '30px', color: '#94a3b8' }}>
                                                     No bookings found for the selected range.
                                                 </td>
                                             </tr>
@@ -607,6 +624,9 @@ const AdminDashboard = ({ onLogout }) => {
                                                     <td>
                                                         <div style={{ fontWeight: '600', color: '#1e293b' }}>{b.guests?.full_name || 'Unknown'}</div>
                                                         <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{b.guests?.phone}</div>
+                                                    </td>
+                                                    <td>
+                                                        <div style={{ fontSize: '0.85rem', color: '#64748b' }}>{b.guests?.email || '-'}</div>
                                                     </td>
                                                     <td>
                                                         <div style={{ fontSize: '0.9rem' }}>
