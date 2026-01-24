@@ -11,6 +11,12 @@ const AdminDashboard = ({ onLogout }) => {
     const [allBookings, setAllBookings] = useState([]);
     const [loading, setLoading] = useState(true);
 
+    // Room Editing State
+    const [editingRoom, setEditingRoom] = useState(null);
+    const [editForm, setEditForm] = useState({});
+    const [newImageUrl, setNewImageUrl] = useState('');
+    const [uploadingImg, setUploadingImg] = useState(false);
+
     const [dateRange, setDateRange] = useState({
         start: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
         end: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().split('T')[0]
@@ -163,8 +169,88 @@ const AdminDashboard = ({ onLogout }) => {
 
         if (!window.confirm(`Change status to ${newStatus.toUpperCase()}?`)) return;
         const result = await SupabaseService.updateBookingStatus(bookingId, newStatus);
-        if (result.success) loadData();
-        else alert('Update failed');
+        if (result.success) {
+            loadData();
+        } else {
+            alert('Failed to update status');
+        }
+    };
+
+    // --- Room Editing Handlers ---
+
+    const handleEditClick = (room) => {
+        setEditingRoom(room);
+        setEditForm({
+            ...room,
+            features: Array.isArray(room.features) ? room.features.join(', ') : (room.features || ''),
+            images: room.images || []
+        });
+        setNewImageUrl('');
+    };
+
+    const handleEditChange = (e) => {
+        const { name, value } = e.target;
+        setEditForm(prev => ({ ...prev, [name]: value }));
+    };
+
+    const handleImageUpload = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        setUploadingImg(true);
+        const result = await SupabaseService.uploadRoomImage(file);
+        setUploadingImg(false);
+
+        if (result.success) {
+            setEditForm(prev => ({
+                ...prev,
+                images: [...prev.images, result.publicUrl]
+            }));
+        } else {
+            alert('Image upload failed. Bucket "room-images" might not exist.');
+        }
+    };
+
+    const handleAddImageURL = () => {
+        if (!newImageUrl) return;
+        setEditForm(prev => ({
+            ...prev,
+            images: [...prev.images, newImageUrl]
+        }));
+        setNewImageUrl('');
+    };
+
+    const handleRemoveImage = (index) => {
+        setEditForm(prev => ({
+            ...prev,
+            images: prev.images.filter((_, i) => i !== index)
+        }));
+    };
+
+    const handleSaveRoom = async () => {
+        if (!editingRoom) return;
+
+        // Prepare updates
+        const updates = {
+            name: editForm.name,
+            price_low_season: parseInt(editForm.price_low_season) || 0,
+            price_high_season: parseInt(editForm.price_high_season) || 0,
+            capacity: parseInt(editForm.capacity) || 0,
+            description: editForm.description,
+            // Convert features string back to array
+            features: editForm.features.split(',').map(f => f.trim()).filter(f => f),
+            images: editForm.images,
+            ical_import_url: editForm.ical_import_url
+        };
+
+        const result = await SupabaseService.updateRoom(editingRoom.id, updates);
+        if (result.success) {
+            alert('Room updated successfully!');
+            setEditingRoom(null);
+            loadData();
+        } else {
+            alert('Failed to update room');
+        }
     };
 
     const handleOfflineSubmit = async (e) => {
@@ -784,6 +870,14 @@ const AdminDashboard = ({ onLogout }) => {
                                                     <button
                                                         className="btn-secondary"
                                                         style={{ padding: '6px 12px', fontSize: '0.8rem' }}
+                                                        onClick={() => handleEditClick(r)}
+                                                        title="Edit Room Details"
+                                                    >
+                                                        ✏️ Edit
+                                                    </button>
+                                                    <button
+                                                        className="btn-secondary"
+                                                        style={{ padding: '6px 12px', fontSize: '0.8rem' }}
                                                         onClick={async () => {
                                                             const input = document.getElementById(`ical-${r.id}`);
                                                             const url = input?.value || '';
@@ -795,6 +889,7 @@ const AdminDashboard = ({ onLogout }) => {
                                                                 alert('Save failed');
                                                             }
                                                         }}
+                                                        title="Save iCal URL"
                                                     >
                                                         💾
                                                     </button>
@@ -805,11 +900,14 @@ const AdminDashboard = ({ onLogout }) => {
                                                             const url = r.ical_import_url;
                                                             if (!url) return alert('No iCal URL saved for this room.');
                                                             alert('Syncing... Please wait.');
+                                                            // Dynamically import to avoid load issues if unused
                                                             const { fetchIcalDates } = await import('../../utils/icalParser');
                                                             const result = await fetchIcalDates(url);
+
                                                             if (result.success) {
                                                                 const blockedCount = result.dates.length;
                                                                 const saveResult = await SupabaseService.saveBlockedDates(r.id, result.dates);
+
                                                                 if (saveResult.success) {
                                                                     setBlockedDates(prev => ({ ...prev, [r.id]: result.dates }));
                                                                     alert(`✅ Synced! Saved ${blockedCount} blocked date(s).`);
@@ -820,6 +918,7 @@ const AdminDashboard = ({ onLogout }) => {
                                                                 alert(`❌ Sync failed: ${result.error}`);
                                                             }
                                                         }}
+                                                        title="Sync with OTA"
                                                     >
                                                         🔄
                                                     </button>
@@ -892,9 +991,136 @@ const AdminDashboard = ({ onLogout }) => {
                                 </tbody>
                             </table>
                         </div>
+
+                        {/* Edit Room Modal */}
+                        {editingRoom && (
+                            <div className="modal-overlay" onClick={() => setEditingRoom(null)}>
+                                <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '700px', width: '90%', maxHeight: '90vh', overflowY: 'auto', padding: '30px', borderRadius: '16px', position: 'relative' }}>
+
+                                    {/* Header */}
+                                    <div className="modal-header" style={{ marginBottom: '25px', paddingBottom: '15px', borderBottom: '1px solid #eee', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <h3 style={{ margin: 0, color: '#1e293b', fontSize: '1.5rem' }}>Edit Room: <span style={{ color: '#3b82f6' }}>{editingRoom.name}</span></h3>
+                                        <button
+                                            onClick={() => setEditingRoom(null)}
+                                            className="close-btn"
+                                            style={{ background: 'none', border: 'none', fontSize: '2rem', cursor: 'pointer', color: '#64748b', transition: 'color 0.2s', padding: '0', lineHeight: 1 }}
+                                            onMouseOver={e => e.currentTarget.style.color = '#ef4444'}
+                                            onMouseOut={e => e.currentTarget.style.color = '#64748b'}
+                                        >
+                                            &times;
+                                        </button>
+                                    </div>
+
+                                    <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+
+                                        {/* Basic Info Grid */}
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                                            <div>
+                                                <label className="form-label" style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#475569', fontSize: '0.9rem' }}>Room Name</label>
+                                                <input type="text" name="name" value={editForm.name || ''} onChange={handleEditChange} className="form-input" style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '1rem' }} />
+                                            </div>
+                                            <div>
+                                                <label className="form-label" style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#475569', fontSize: '0.9rem' }}>Capacity (Adults)</label>
+                                                <input type="number" name="capacity" value={editForm.capacity || 0} onChange={handleEditChange} className="form-input" style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '1rem' }} />
+                                            </div>
+                                            <div>
+                                                <label className="form-label" style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#475569', fontSize: '0.9rem' }}>Std Price (₹)</label>
+                                                <input type="number" name="price_low_season" value={editForm.price_low_season || 0} onChange={handleEditChange} className="form-input" style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '1rem' }} />
+                                            </div>
+                                            <div>
+                                                <label className="form-label" style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#475569', fontSize: '0.9rem' }}>High Season Price (₹)</label>
+                                                <input type="number" name="price_high_season" value={editForm.price_high_season || 0} onChange={handleEditChange} className="form-input" style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '1rem' }} />
+                                            </div>
+                                        </div>
+
+                                        {/* Text Areas */}
+                                        <div>
+                                            <label className="form-label" style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#475569', fontSize: '0.9rem' }}>Description</label>
+                                            <textarea name="description" value={editForm.description || ''} onChange={handleEditChange} className="form-input" rows="4" style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.95rem', fontFamily: 'inherit' }} />
+                                        </div>
+                                        <div>
+                                            <label className="form-label" style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#475569', fontSize: '0.9rem' }}>Features <span style={{ fontWeight: '400', fontSize: '0.8rem', color: '#94a3b8' }}>(comma separated)</span></label>
+                                            <textarea name="features" value={editForm.features || ''} onChange={handleEditChange} className="form-input" rows="2" placeholder="e.g. Wi-Fi, Balcony, Mountain View" style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.95rem', fontFamily: 'inherit' }} />
+                                        </div>
+
+                                        {/* Images Section */}
+                                        <div style={{ background: '#f8fafc', padding: '15px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                                            <label className="form-label" style={{ display: 'block', marginBottom: '12px', fontWeight: '600', color: '#1e293b', fontSize: '1rem' }}>🖼️ Gallery Images</label>
+
+                                            {/* Image Grid */}
+                                            {editForm.images && editForm.images.length > 0 ? (
+                                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginBottom: '15px' }}>
+                                                    {editForm.images.map((img, idx) => (
+                                                        <div key={idx} style={{ position: 'relative', width: '100px', height: '100px', boxShadow: '0 2px 5px rgba(0,0,0,0.1)', borderRadius: '8px', overflow: 'hidden' }}>
+                                                            <img src={img} alt="Room" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                            <button
+                                                                onClick={() => handleRemoveImage(idx)}
+                                                                title="Remove Image"
+                                                                style={{ position: 'absolute', top: '4px', right: '4px', background: 'rgba(239, 68, 68, 0.9)', color: 'white', border: 'none', borderRadius: '50%', width: '22px', height: '22px', cursor: 'pointer', fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'transform 0.2s' }}
+                                                                onMouseOver={e => e.currentTarget.style.transform = 'scale(1.1)'}
+                                                                onMouseOut={e => e.currentTarget.style.transform = 'scale(1)'}
+                                                            >
+                                                                &times;
+                                                            </button>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                <div style={{ marginBottom: '15px', fontSize: '0.9rem', color: '#94a3b8', fontStyle: 'italic' }}>No images added yet.</div>
+                                            )}
+
+                                            {/* Upload Controls */}
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                                <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
+                                                    <label style={{
+                                                        background: '#fff', border: '1px solid #cbd5e1', padding: '8px 16px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.9rem', fontWeight: '500', color: '#475569', display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.2s'
+                                                    }}>
+                                                        <span>📁 Upload New</span>
+                                                        <input type="file" accept="image/*" onChange={handleImageUpload} style={{ display: 'none' }} disabled={uploadingImg} />
+                                                    </label>
+                                                    {uploadingImg && <span style={{ fontSize: '0.85rem', color: '#3b82f6', fontWeight: '500' }}>⏳ Uploading...</span>}
+                                                </div>
+
+                                                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                                                    <span style={{ fontSize: '0.9rem', color: '#64748b' }}>OR</span>
+                                                    <input
+                                                        type="text"
+                                                        placeholder="Paste direct image URL"
+                                                        value={newImageUrl}
+                                                        onChange={(e) => setNewImageUrl(e.target.value)}
+                                                        className="form-input"
+                                                        style={{ flex: 1, padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.9rem' }}
+                                                    />
+                                                    <button
+                                                        onClick={handleAddImageURL}
+                                                        className="btn-secondary"
+                                                        disabled={!newImageUrl}
+                                                        style={{ padding: '8px 16px', background: newImageUrl ? '#3b82f6' : '#e2e8f0', color: newImageUrl ? 'white' : '#94a3b8', border: 'none', borderRadius: '6px', cursor: newImageUrl ? 'pointer' : 'default' }}
+                                                    >
+                                                        Add URL
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* iCal URL */}
+                                        <div style={{ marginTop: '5px' }}>
+                                            <label className="form-label" style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#475569', fontSize: '0.9rem' }}>OTA iCal Sync URL</label>
+                                            <input type="text" name="ical_import_url" value={editForm.ical_import_url || ''} onChange={handleEditChange} className="form-input" placeholder="https://airbnb.com/calendar/..." style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.9rem', color: '#334155' }} />
+                                            <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '4px' }}>Link your Airbnb/Booking.com calendar here for auto-sync.</div>
+                                        </div>
+
+                                        <div className="modal-footer" style={{ marginTop: '10px', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                                            <button onClick={() => setEditingRoom(null)} style={{ background: '#f1f5f9', color: '#475569', border: 'none', padding: '12px 25px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', fontSize: '1rem' }}>Cancel</button>
+                                            <button onClick={handleSaveRoom} className="btn-primary" style={{ background: '#3b82f6', color: 'white', border: 'none', padding: '12px 35px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', fontSize: '1rem', boxShadow: '0 4px 6px -1px rgba(59, 130, 246, 0.4)' }}>Save Changes</button>
+                                        </div>
+
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 )}
-
                 {activeTab === 'offline' && (
                     <div className="card-panel" style={{ maxWidth: '800px', margin: '0 auto' }}>
                         <h3>Create New Booking</h3>
@@ -962,9 +1188,10 @@ const AdminDashboard = ({ onLogout }) => {
                             </div>
                         </form>
                     </div>
-                )}
-            </main>
-        </div>
+                )
+                }
+            </main >
+        </div >
     );
 };
 

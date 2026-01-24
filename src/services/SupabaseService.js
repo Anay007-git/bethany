@@ -122,6 +122,27 @@ export const SupabaseService = {
         return { success: true, data };
     },
 
+    // Upload Room Image
+    uploadRoomImage: async (file) => {
+        try {
+            const fileName = `${Date.now()}_${file.name.replace(/\s/g, '_')}`;
+            const { data, error } = await supabase.storage
+                .from('room-images')
+                .upload(fileName, file);
+
+            if (error) throw error;
+
+            const { data: { publicUrl } } = supabase.storage
+                .from('room-images')
+                .getPublicUrl(fileName);
+
+            return { success: true, publicUrl };
+        } catch (error) {
+            console.error('Error uploading image:', error);
+            return { success: false, error };
+        }
+    },
+
     // Save OTA blocked dates to Supabase
     saveBlockedDates: async (roomId, dates) => {
         try {
@@ -248,23 +269,27 @@ export const SupabaseService = {
             if (error) throw error;
 
             // 3. Update Google Sheet (Fire and Forget)
+            // 3. Update Google Sheet (Fire and Forget)
             if (booking && booking.guests && booking.guests.email) {
                 const GOOGLE_SHEETS_URL = 'https://script.google.com/macros/s/AKfycbwCh7e84B44r49_S84abs7DfNyu6V8IV6umuQUNYH6qRmtGDIVKzXWR4EXD8yFrLFNksw/exec';
 
                 // Format date as YYYY-MM-DD
                 const dateStr = booking.check_in;
 
-                const sheetParams = new URLSearchParams({
-                    action: 'updateStatus',
-                    bookingId: bookingId, // <--- CRITICAL FIX: Send ID for matching
-                    email: booking.guests.email,
-                    checkIn: dateStr,
-                    status: newStatus
-                });
+                // Use FormData to send in Body (like BookingForm)
+                const formData = new FormData();
+                formData.append('action', 'updateStatus');
+                formData.append('bookingId', bookingId);
+                formData.append('email', booking.guests.email);
+                formData.append('checkIn', dateStr);
+                formData.append('status', newStatus);
 
                 // Use no-cors to avoid browser blocking the request (opaque response is fine)
-                fetch(`${GOOGLE_SHEETS_URL}?${sheetParams.toString()}`, { method: 'POST', mode: 'no-cors' })
-                    .catch(err => console.error('Sheet Sync Error:', err));
+                fetch(GOOGLE_SHEETS_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    body: formData
+                }).catch(err => console.error('Sheet Sync Error:', err));
             }
 
             return { success: true, data };
