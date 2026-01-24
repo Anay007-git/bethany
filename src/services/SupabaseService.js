@@ -43,7 +43,7 @@ export const SupabaseService = {
 
             // C. Create Invoice Record (Immutable Breakdown)
             if (bookingData.invoiceItems) {
-                await SupabaseService.createInvoice({
+                await this.createInvoice({
                     bookingId: booking.id,
                     items: bookingData.invoiceItems,
                     total: bookingData.totalPrice
@@ -259,10 +259,13 @@ export const SupabaseService = {
 
             if (error) throw error;
 
-            // Client-side robust matching
+            // Client-side robust matching: Check last 10 digits
             const matches = data.filter(b => {
                 const dbPhone = (b.guests?.phone || '').replace(/\D/g, '');
-                return dbPhone.includes(cleanInput);
+                // Check if last 10 digits match
+                const dbLast10 = dbPhone.slice(-10);
+                const inputLast10 = cleanInput.slice(-10);
+                return dbLast10 === inputLast10 && dbLast10.length >= 10;
             });
 
             return { success: true, data: matches };
