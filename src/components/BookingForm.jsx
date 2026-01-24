@@ -630,7 +630,7 @@ const BookingForm = ({ onToast }) => {
             let finalMessage = formData.message;
 
             const selectedMeals = [];
-            const ms = formData.mealSelection;
+            const msRef = formData.mealSelection;
 
             const formatMeal = (name, data, timeRange) => {
                 const parts = [];
@@ -643,9 +643,9 @@ const BookingForm = ({ onToast }) => {
                 return null;
             };
 
-            const b = formatMeal('Breakfast', ms.breakfast, '7:30-9:30 AM');
-            const l = formatMeal('Lunch', ms.lunch, '12-2 PM');
-            const d = formatMeal('Dinner', ms.dinner, '8-10 PM');
+            const b = formatMeal('Breakfast', msRef.breakfast, '7:30-9:30 AM');
+            const l = formatMeal('Lunch', msRef.lunch, '12-2 PM');
+            const d = formatMeal('Dinner', msRef.dinner, '8-10 PM');
 
             if (b) selectedMeals.push(b);
             if (l) selectedMeals.push(l);
@@ -658,6 +658,52 @@ const BookingForm = ({ onToast }) => {
             // Variables for new structure
             const selectedRoomNames = roomNames; // Already defined as roomNames
             const mealDetails = selectedMeals.length > 0 ? selectedMeals.join(' | ') : 'None';
+
+            // --- INVOICE GENERATION LOGIC ---
+            const invoiceItems = [];
+
+            // 1. Line Items for Rooms (Aggregate for simplicity or daily split?)
+            // We'll do a simple aggregate: "Room Name (X Night)"
+            // BUT since prices vary daily, we'll list the average or just "Accommodation Charges"
+            // Let's do distinct line items per Room Type
+            formData.selectedRooms.forEach(room => {
+                let thisRoomTotal = 0;
+                for (let i = 0; i < numberOfNights; i++) {
+                    let d = new Date(formData.checkIn);
+                    d.setDate(d.getDate() + i);
+                    thisRoomTotal += getSeasonalRoomPrice(d, room.id);
+                }
+                invoiceItems.push({
+                    description: `${room.name} (${numberOfNights} Nights)`,
+                    quantity: 1,
+                    unit_price: thisRoomTotal,
+                    total: thisRoomTotal
+                });
+            });
+
+            // 2. Line Items for Meals
+            // Calculate total Meal quantities
+            const ms = formData.mealSelection;
+            const mealTypes = [
+                { id: 'breakfast', label: 'Breakfast', price: MEAL_PRICES.breakfast },
+                { id: 'lunch', label: 'Lunch', price: MEAL_PRICES.lunch },
+                { id: 'dinner', label: 'Dinner', price: MEAL_PRICES.dinner }
+            ];
+
+            mealTypes.forEach(mt => {
+                const count = (ms[mt.id].veg || 0) + (ms[mt.id].nonVeg || 0);
+                if (count > 0) {
+                    // Total Plates = count * nights
+                    const totalPlates = count * numberOfNights;
+                    const totalCost = totalPlates * mt.price;
+                    invoiceItems.push({
+                        description: `${mt.label} Charges (${count} plates/day)`,
+                        quantity: totalPlates,
+                        unit_price: mt.price,
+                        total: totalCost
+                    });
+                }
+            });
 
             // 2. Format Data for Google Sheets
             const formDataObj = new FormData();
@@ -686,7 +732,8 @@ const BookingForm = ({ onToast }) => {
                 guests: formData.guests,
                 totalPrice: totalPrice,
                 meals: mealDetails,
-                message: finalMessage
+                message: finalMessage,
+                invoiceItems: invoiceItems // <--- Pass Detailed Breakdown
             });
 
             if (!supabaseResult.success) {

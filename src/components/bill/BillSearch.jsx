@@ -94,7 +94,7 @@ const BillSearch = () => {
                         style={{ width: '100%', justifyContent: 'center' }}
                         disabled={loading}
                     >
-                        {loading ? 'Searching...' : 'Find Bill'}
+                        {loading ? 'Processing...' : 'Find Bill'}
                     </button>
                 </form>
 

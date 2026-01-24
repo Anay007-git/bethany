@@ -41,11 +41,44 @@ export const SupabaseService = {
 
             if (bookingError) throw bookingError;
 
+            // C. Create Invoice Record (Immutable Breakdown)
+            if (bookingData.invoiceItems) {
+                await SupabaseService.createInvoice({
+                    bookingId: booking.id,
+                    items: bookingData.invoiceItems,
+                    total: bookingData.totalPrice
+                });
+            }
+
             return { success: true, booking, guest };
 
         } catch (error) {
             console.error('Supabase Booking Error:', error);
             return { success: false, error };
+        }
+    },
+
+    // 1.5 Create Invoice
+    createInvoice: async ({ bookingId, items, total }) => {
+        try {
+            const invNum = `INV-${Date.now().toString().slice(-6)}`;
+
+            const { error } = await supabase
+                .from('invoices')
+                .insert([{
+                    booking_id: bookingId,
+                    invoice_number: invNum,
+                    items: items, // JSONB Array
+                    subtotal: total, // Assuming inclusive tax for now
+                    total_amount: total,
+                    status: 'issued'
+                }]);
+
+            if (error) {
+                console.error('Invoice Creation Error:', error);
+            }
+        } catch (err) {
+            console.error('Invoice Logic Error:', err);
         }
     },
 
@@ -248,7 +281,8 @@ export const SupabaseService = {
                 .from('bookings')
                 .select(`
                     *,
-                    guests (full_name, phone, email)
+                    guests (full_name, phone, email),
+                    invoices (*)
                 `)
                 .eq('id', bookingId)
                 .single();
