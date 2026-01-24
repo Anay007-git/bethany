@@ -102,6 +102,9 @@ const BookingForm = ({ onToast }) => {
     const [rooms, setRooms] = useState([]);
     const [loadingRooms, setLoadingRooms] = useState(true);
 
+    // State for OTA blocked dates from Supabase
+    const [otaBlockedDates, setOtaBlockedDates] = useState({});
+
     const [formData, setFormData] = useState({
         name: '',
         email: '',
@@ -169,11 +172,9 @@ const BookingForm = ({ onToast }) => {
 
             const dbRooms = await SupabaseService.getRooms();
             if (dbRooms && dbRooms.length > 0) {
-                // Map DB structure if significantly different, but currently it aligns
-                // Just ensuring features/images are arrays
                 const formattedRooms = dbRooms.map(r => ({
                     ...r,
-                    price: r.price_low_season, // Default to low season for display base price
+                    price: r.price_low_season,
                     beds: r.capacity,
                     features: r.features || [],
                     images: r.images || []
@@ -182,6 +183,18 @@ const BookingForm = ({ onToast }) => {
             } else {
                 setRooms(defaultRooms);
             }
+
+            // Fetch OTA blocked dates from Supabase
+            const blockedResult = await SupabaseService.getBlockedDates();
+            if (blockedResult.success && blockedResult.data) {
+                const blocked = {};
+                blockedResult.data.forEach(row => {
+                    if (!blocked[row.room_id]) blocked[row.room_id] = [];
+                    blocked[row.room_id].push({ start: row.blocked_date });
+                });
+                setOtaBlockedDates(blocked);
+            }
+
             setLoadingRooms(false);
         };
         loadRooms();
@@ -499,23 +512,20 @@ const BookingForm = ({ onToast }) => {
         const room = rooms.find(r => r.id === roomId);
         if (!room) return 'available';
 
-        // Check OTA blocked dates from localStorage (iCal sync)
-        try {
-            const icalData = localStorage.getItem(`ical_blocked_${roomId}`);
-            if (icalData) {
-                const blockedDates = JSON.parse(icalData);
-                for (const block of blockedDates) {
-                    const blockStart = new Date(block.start);
-                    const blockEnd = new Date(block.end);
-                    blockStart.setHours(0, 0, 0, 0);
-                    blockEnd.setHours(0, 0, 0, 0);
+        // Check OTA blocked dates from Supabase (via state)
+        const roomBlockedDates = otaBlockedDates[roomId] || [];
+        for (const block of roomBlockedDates) {
+            const blockStart = new Date(block.start);
+            blockStart.setHours(0, 0, 0, 0);
+            // For single-day blocks, end date is same as start + 1 day
+            const blockEnd = new Date(block.start);
+            blockEnd.setDate(blockEnd.getDate() + 1);
+            blockEnd.setHours(0, 0, 0, 0);
 
-                    if (checkIn < blockEnd && checkOut > blockStart) {
-                        return 'booked'; // Blocked by OTA
-                    }
-                }
+            if (checkIn < blockEnd && checkOut > blockStart) {
+                return 'booked'; // Blocked by OTA
             }
-        } catch (e) { /* ignore parse errors */ }
+        }
 
         // Check existing DB bookings
         for (const booking of existingBookings) {

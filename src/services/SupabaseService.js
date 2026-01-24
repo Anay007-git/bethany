@@ -122,6 +122,56 @@ export const SupabaseService = {
         return { success: true, data };
     },
 
+    // Save OTA blocked dates to Supabase
+    saveBlockedDates: async (roomId, dates) => {
+        try {
+            // First, delete existing blocked dates for this room
+            await supabase
+                .from('ota_blocked_dates')
+                .delete()
+                .eq('room_id', roomId);
+
+            // Insert new blocked dates
+            if (dates && dates.length > 0) {
+                const records = dates.map(d => ({
+                    room_id: roomId,
+                    blocked_date: d.start,
+                    source: 'ical'
+                }));
+
+                const { error } = await supabase
+                    .from('ota_blocked_dates')
+                    .insert(records);
+
+                if (error) throw error;
+            }
+
+            return { success: true };
+        } catch (error) {
+            console.error('Error saving blocked dates:', error);
+            return { success: false, error };
+        }
+    },
+
+    // Get OTA blocked dates from Supabase
+    getBlockedDates: async (roomId = null) => {
+        try {
+            let query = supabase.from('ota_blocked_dates').select('*');
+
+            if (roomId) {
+                query = query.eq('room_id', roomId);
+            }
+
+            const { data, error } = await query;
+            if (error) throw error;
+
+            return { success: true, data: data || [] };
+        } catch (error) {
+            console.error('Error fetching blocked dates:', error);
+            return { success: false, data: [] };
+        }
+    },
+
     // 2. Admin: Get Dashboard Stats
     getDashboardStats: async () => {
         try {

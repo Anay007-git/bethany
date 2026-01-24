@@ -40,15 +40,17 @@ const AdminDashboard = ({ onLogout }) => {
         const roomsData = await SupabaseService.getRooms();
         if (roomsData) {
             setRooms(roomsData);
-            // Load blocked dates from localStorage for each room
-            const blocked = {};
-            roomsData.forEach(room => {
-                try {
-                    const data = localStorage.getItem(`ical_blocked_${room.id}`);
-                    if (data) blocked[room.id] = JSON.parse(data);
-                } catch (e) { /* ignore */ }
-            });
-            setBlockedDates(blocked);
+
+            // Load blocked dates from Supabase
+            const blockedResult = await SupabaseService.getBlockedDates();
+            if (blockedResult.success && blockedResult.data) {
+                const blocked = {};
+                blockedResult.data.forEach(row => {
+                    if (!blocked[row.room_id]) blocked[row.room_id] = [];
+                    blocked[row.room_id].push({ start: row.blocked_date });
+                });
+                setBlockedDates(blocked);
+            }
         }
 
         setLoading(false);
@@ -94,20 +96,17 @@ const AdminDashboard = ({ onLogout }) => {
 
         if (hasInternalConflict) return false;
 
-        // Check external iCal blocked dates (from localStorage)
-        try {
-            const icalData = localStorage.getItem(`ical_blocked_${roomId}`);
-            if (icalData) {
-                const blockedDates = JSON.parse(icalData);
-                for (const block of blockedDates) {
-                    const blockStart = new Date(block.start); blockStart.setHours(0, 0, 0, 0);
-                    const blockEnd = new Date(block.end); blockEnd.setHours(0, 0, 0, 0);
-                    if (checkIn < blockEnd && checkOut > blockStart) {
-                        return false; // Conflict with OTA booking
-                    }
-                }
+        // Check external iCal blocked dates (from Supabase state)
+        const roomBlockedDates = blockedDates[roomId] || [];
+        for (const block of roomBlockedDates) {
+            const blockStart = new Date(block.start); blockStart.setHours(0, 0, 0, 0);
+            const blockEnd = new Date(block.start);
+            blockEnd.setDate(blockEnd.getDate() + 1);
+            blockEnd.setHours(0, 0, 0, 0);
+            if (checkIn < blockEnd && checkOut > blockStart) {
+                return false; // Conflict with OTA booking
             }
-        } catch (e) { /* ignore parse errors */ }
+        }
 
         return true;
     };
@@ -453,9 +452,14 @@ const AdminDashboard = ({ onLogout }) => {
                                                         const result = await fetchIcalDates(url);
                                                         if (result.success) {
                                                             const blockedCount = result.dates.length;
-                                                            localStorage.setItem(`ical_blocked_${r.id}`, JSON.stringify(result.dates));
-                                                            setBlockedDates(prev => ({ ...prev, [r.id]: result.dates }));
-                                                            alert(`✅ Synced! Found ${blockedCount} blocked date(s) from OTA.`);
+                                                            // Save to Supabase
+                                                            const saveResult = await SupabaseService.saveBlockedDates(r.id, result.dates);
+                                                            if (saveResult.success) {
+                                                                setBlockedDates(prev => ({ ...prev, [r.id]: result.dates }));
+                                                                alert(`✅ Synced! Saved ${blockedCount} blocked date(s) to database.`);
+                                                            } else {
+                                                                alert(`⚠️ Synced ${blockedCount} dates but failed to save to database.`);
+                                                            }
                                                         } else {
                                                             alert(`❌ Sync failed: ${result.error}`);
                                                         }
