@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import QRCode from 'react-qr-code';
+import Barcode from 'react-barcode';
 import { SupabaseService } from '../../services/SupabaseService';
 import titleBarImg from '../../assets/title-bar.jpeg';
 
@@ -47,8 +47,6 @@ const BillView = () => {
     const lineItems = invoice ? invoice.items : [];
     const invNumber = invoice ? invoice.invoice_number : `INV-${booking.id.toString().slice(0, 8).toUpperCase()}`;
     const invDate = invoice ? invoice.issue_date : new Date().toISOString();
-
-    const currentUrl = window.location.href;
 
     return (
         <div className="bill-container" style={{
@@ -126,14 +124,15 @@ const BillView = () => {
                         }}>{booking.status}</span>
                     </div>
 
-                    {/* QR Code */}
+                    {/* Barcode - Invoice Number */}
                     <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end' }}>
-                        <div style={{ padding: '5px', background: 'white', border: '1px solid #eee' }}>
-                            <QRCode
-                                value={currentUrl}
-                                size={80}
-                                style={{ height: "auto", maxWidth: "100%", width: "100%" }}
-                                viewBox={`0 0 256 256`}
+                        <div style={{ background: 'white' }}>
+                            <Barcode
+                                value={invNumber}
+                                width={1.5}
+                                height={40}
+                                fontSize={12}
+                                displayValue={true}
                             />
                         </div>
                     </div>

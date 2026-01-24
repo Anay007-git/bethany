@@ -42,28 +42,42 @@ export const SupabaseService = {
             if (bookingError) throw bookingError;
 
             // C. Create Invoice Record (Immutable Breakdown) - INLINE to avoid 'this' binding issues
+            console.log('[DEBUG] invoiceItems received:', bookingData.invoiceItems);
+            console.log('[DEBUG] invoiceItems length:', bookingData.invoiceItems?.length);
+
             if (bookingData.invoiceItems && bookingData.invoiceItems.length > 0) {
                 try {
                     const invNum = `INV-${Date.now().toString().slice(-6)}`;
 
-                    const { error: invoiceError } = await supabase
+                    const invoicePayload = {
+                        booking_id: booking.id,
+                        invoice_number: invNum,
+                        items: bookingData.invoiceItems,
+                        total_amount: bookingData.totalPrice,
+                        status: 'issued'
+                    };
+
+                    console.log('[DEBUG] Invoice payload:', JSON.stringify(invoicePayload, null, 2));
+
+                    const { data: invoiceData, error: invoiceError } = await supabase
                         .from('invoices')
-                        .insert([{
-                            booking_id: booking.id,
-                            invoice_number: invNum,
-                            items: bookingData.invoiceItems,
-                            total_amount: bookingData.totalPrice,
-                            status: 'issued'
-                        }]);
+                        .insert([invoicePayload])
+                        .select();
 
                     if (invoiceError) {
-                        console.error('Invoice Creation Error:', invoiceError);
+                        console.error('[ERROR] Invoice Creation Error:', invoiceError);
+                        console.error('[ERROR] Error message:', invoiceError.message);
+                        console.error('[ERROR] Error details:', invoiceError.details);
+                        console.error('[ERROR] Error hint:', invoiceError.hint);
+                        console.error('[ERROR] Error code:', invoiceError.code);
                     } else {
-                        console.log('Invoice created successfully:', invNum);
+                        console.log('[SUCCESS] Invoice created:', invNum, invoiceData);
                     }
                 } catch (invErr) {
-                    console.error('Invoice Logic Error:', invErr);
+                    console.error('[EXCEPTION] Invoice Logic Error:', invErr);
                 }
+            } else {
+                console.warn('[WARN] No invoiceItems provided, skipping invoice creation');
             }
 
             return { success: true, booking, guest };
@@ -258,36 +272,68 @@ export const SupabaseService = {
     // 6. Get Booking by Phone (Bill Lookup)
     getBookingsByPhone: async (phone) => {
         try {
-            // Normalize phone: remove spaces, dashes, etc.
+            // Normalize phone: remove all non-digits
             const cleanInput = phone.replace(/\D/g, '');
 
-            // STRATEGY: Fetch recent bookings and filter in JS. 
-            // This is necessary because the DB stores phone numbers in various formats (e.g., "+91 ...", "987-...", etc.)
-            // and standard SQL 'ilike' won't match a clean input against a formatted stored value easily.
+            console.log('[DEBUG] Phone Lookup - Input:', phone, '-> Clean:', cleanInput);
+
+            if (cleanInput.length < 6) {
+                console.log('[DEBUG] Phone too short, need at least 6 digits');
+                return { success: true, data: [] };
+            }
+
+            // Fetch recent bookings
             const { data, error } = await supabase
                 .from('bookings')
                 .select(`
                     *,
-                    guests!inner(full_name, phone, email)
+                    guests(full_name, phone, email)
                 `)
                 .order('created_at', { ascending: false })
-                .limit(100); // Fetch last 100 bookings to filter
+                .limit(200);
 
-            if (error) throw error;
+            if (error) {
+                console.error('[ERROR] Supabase query error:', error);
+                throw error;
+            }
 
-            // Client-side robust matching: Check last 10 digits
+            console.log('[DEBUG] Total bookings fetched:', data?.length);
+            if (data?.length > 0) {
+                console.log('[DEBUG] Sample booking guests structure:', typeof data[0].guests, data[0].guests);
+            }
+
+            // Client-side flexible matching
+            const inputDigits = cleanInput.slice(-10); // Last 10 digits of input
+
             const matches = data.filter(b => {
-                const dbPhone = (b.guests?.phone || '').replace(/\D/g, '');
-                // Check if last 10 digits match
-                const dbLast10 = dbPhone.slice(-10);
-                const inputLast10 = cleanInput.slice(-10);
-                return dbLast10 === inputLast10 && dbLast10.length >= 10;
+                // Handle both array and object guest structures
+                let guestData = b.guests;
+                if (Array.isArray(guestData)) {
+                    guestData = guestData[0]; // Take first guest if array
+                }
+
+                const dbPhone = (guestData?.phone || '').replace(/\D/g, '');
+                const dbDigits = dbPhone.slice(-10);
+
+                // Match if last N digits are same
+                const matchLength = Math.min(inputDigits.length, dbDigits.length);
+                if (matchLength < 6) return false;
+
+                const inputSuffix = inputDigits.slice(-matchLength);
+                const dbSuffix = dbDigits.slice(-matchLength);
+
+                const isMatch = inputSuffix === dbSuffix;
+                if (isMatch) {
+                    console.log('[DEBUG] Match found:', guestData?.phone, '-> Clean:', dbDigits);
+                }
+                return isMatch;
             });
 
+            console.log('[DEBUG] Matches found:', matches.length);
             return { success: true, data: matches };
 
         } catch (error) {
-            console.error('Fetch by Phone Error:', error);
+            console.error('[ERROR] Fetch by Phone Error:', error);
             return { success: false, error };
         }
     },

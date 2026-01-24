@@ -153,6 +153,48 @@ const AdminDashboard = ({ onLogout }) => {
 
         const mealString = selectedMeals.length > 0 ? selectedMeals.join(' | ') : 'No Meals Selected';
 
+        // --- INVOICE ITEMS CALCULATION ---
+        const invoiceItems = [];
+        const start = new Date(offlineForm.checkIn);
+        const end = new Date(offlineForm.checkOut);
+        const nights = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+
+        // Room line item
+        if (selectedRoomObj && nights > 0) {
+            let roomTotal = 0;
+            for (let i = 0; i < nights; i++) {
+                let d = new Date(start);
+                d.setDate(start.getDate() + i);
+                roomTotal += getSeasonalRoomPrice(d, selectedRoomObj.id);
+            }
+            invoiceItems.push({
+                description: `${selectedRoomObj.name} (${nights} Nights)`,
+                quantity: 1,
+                unit_price: roomTotal,
+                total: roomTotal
+            });
+        }
+
+        // Meal line items
+        const mealTypes = [
+            { id: 'breakfast', label: 'Breakfast', price: MEAL_PRICES.breakfast },
+            { id: 'lunch', label: 'Lunch', price: MEAL_PRICES.lunch },
+            { id: 'dinner', label: 'Dinner', price: MEAL_PRICES.dinner }
+        ];
+        mealTypes.forEach(mt => {
+            const count = (parseInt(ms[mt.id]?.veg) || 0) + (parseInt(ms[mt.id]?.nonVeg) || 0);
+            if (count > 0) {
+                const totalPlates = count * nights;
+                const totalCost = totalPlates * mt.price;
+                invoiceItems.push({
+                    description: `${mt.label} Charges (${count} plates/day)`,
+                    quantity: totalPlates,
+                    unit_price: mt.price,
+                    total: totalCost
+                });
+            }
+        });
+
         const bookingData = {
             name: offlineForm.name,
             phone: offlineForm.phone,
@@ -164,7 +206,8 @@ const AdminDashboard = ({ onLogout }) => {
             selectedRooms: [selectedRoomObj],
             meals: mealString,
             message: 'Manual Booking by Admin',
-            source: 'offline'
+            source: 'offline',
+            invoiceItems: invoiceItems // <--- Pass invoice breakdown
         };
 
         const result = await SupabaseService.createBooking(bookingData);
@@ -251,16 +294,31 @@ const AdminDashboard = ({ onLogout }) => {
         document.body.removeChild(link);
     };
 
-    // Helper for Meal Change
+    // Helper for Meal Change - with capacity validation
     const handleMealChange = (type, diet, val) => {
-        const count = Math.max(0, parseInt(val) || 0);
+        const newCount = Math.max(0, parseInt(val) || 0);
+        const guestCount = parseInt(offlineForm.guests) || 1;
+
+        // Calculate total meals for this meal type after the change
+        const currentMeal = offlineForm.mealSelection[type];
+        const otherDietCount = diet === 'veg'
+            ? (parseInt(currentMeal.nonVeg) || 0)
+            : (parseInt(currentMeal.veg) || 0);
+        const totalForThisMeal = newCount + otherDietCount;
+
+        // Validate: total plates for this meal type cannot exceed guest count
+        if (totalForThisMeal > guestCount) {
+            alert(`Total ${type} plates (Veg + Non-Veg) cannot exceed ${guestCount} guests.`);
+            return;
+        }
+
         setOfflineForm(prev => ({
             ...prev,
             mealSelection: {
                 ...prev.mealSelection,
                 [type]: {
                     ...prev.mealSelection[type],
-                    [diet]: count
+                    [diet]: newCount
                 }
             }
         }));
@@ -351,8 +409,32 @@ const AdminDashboard = ({ onLogout }) => {
                             <input type="text" value={offlineForm.phone} onChange={e => setOfflineForm({ ...offlineForm, phone: e.target.value })} required className="form-input" />
                         </div>
                         <div className="form-group">
-                            <label>Number of Guests</label>
-                            <input type="number" min="1" value={offlineForm.guests} onChange={e => setOfflineForm({ ...offlineForm, guests: e.target.value })} required className="form-input" />
+                            <label>
+                                Number of Guests
+                                {offlineForm.room && (() => {
+                                    const selectedRoom = rooms.find(r => r.id === offlineForm.room);
+                                    return selectedRoom ? <span style={{ fontSize: '0.85rem', color: '#64748b' }}> (Max: {selectedRoom.capacity})</span> : null;
+                                })()}
+                            </label>
+                            <input
+                                type="number"
+                                min="1"
+                                max={offlineForm.room ? (rooms.find(r => r.id === offlineForm.room)?.capacity || 10) : 10}
+                                value={offlineForm.guests}
+                                onChange={e => {
+                                    const val = parseInt(e.target.value) || 1;
+                                    const selectedRoom = rooms.find(r => r.id === offlineForm.room);
+                                    const maxCapacity = selectedRoom?.capacity || 10;
+                                    if (val > maxCapacity) {
+                                        alert(`This room can accommodate maximum ${maxCapacity} guests.`);
+                                        setOfflineForm({ ...offlineForm, guests: maxCapacity });
+                                    } else {
+                                        setOfflineForm({ ...offlineForm, guests: val });
+                                    }
+                                }}
+                                required
+                                className="form-input"
+                            />
                         </div>
 
                         {/* Dates */}
