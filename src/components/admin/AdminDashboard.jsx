@@ -152,6 +152,12 @@ const AdminDashboard = ({ onLogout }) => {
     }, [offlineForm.checkIn, offlineForm.checkOut, offlineForm.room, offlineForm.mealSelection, rooms]);
 
     const handleStatusChange = async (bookingId, newStatus) => {
+        const booking = allBookings.find(b => b.id === bookingId);
+        if (booking && booking.status.toLowerCase() === 'cancelled') {
+            alert('❌ Cannot change status of a Cancelled booking.');
+            return;
+        }
+
         if (!window.confirm(`Change status to ${newStatus.toUpperCase()}?`)) return;
         const result = await SupabaseService.updateBookingStatus(bookingId, newStatus);
         if (result.success) loadData();
@@ -340,6 +346,27 @@ const AdminDashboard = ({ onLogout }) => {
             }));
     }, [allBookings, blockedDates, rooms]);
 
+    // Cancellation Trends Logic
+    const cancellationData = useMemo(() => {
+        const monthMap = {};
+        allBookings.forEach(b => {
+            const date = new Date(b.check_in);
+            const key = `${date.toLocaleString('default', { month: 'short' })} ${date.getFullYear()}`;
+            if (!monthMap[key]) monthMap[key] = { confirmed: 0, cancelled: 0 };
+
+            const status = b.status.toLowerCase();
+            if (['booked', 'confirmed'].includes(status)) {
+                monthMap[key].confirmed += 1;
+            } else if (status === 'cancelled') {
+                monthMap[key].cancelled += 1;
+            }
+        });
+
+        return Object.entries(monthMap)
+            .sort((a, b) => new Date(a[0]) - new Date(b[0]))
+            .map(([label, data]) => ({ label, ...data }));
+    }, [allBookings]);
+
     const exportCSV = () => {
         // ... (Same CSV Logic)
         const headers = ["Booking Date", "Check In", "Check Out", "Guest Name", "Phone", "Rooms", "Amount", "Status"];
@@ -459,6 +486,37 @@ const AdminDashboard = ({ onLogout }) => {
                         <div style={{ display: 'flex', gap: '15px', justifyContent: 'center', marginTop: '10px', fontSize: '0.8rem' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}><div style={{ width: '10px', height: '10px', background: '#10b981', borderRadius: '2px' }}></div> Direct</div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}><div style={{ width: '10px', height: '10px', background: '#0891b2', borderRadius: '2px' }}></div> OTA (Est.)</div>
+                        </div>
+                    </div>
+
+                    {/* Cancellation Trends Chart */}
+                    <div className="card-panel" style={{ marginTop: '20px' }}>
+                        <h3>📉 Booking Trends (Confirmed vs Cancelled)</h3>
+                        <div style={{ display: 'flex', alignItems: 'flex-end', height: '250px', gap: '20px', padding: '20px 0', overflowX: 'auto' }}>
+                            {cancellationData.map((data, i) => {
+                                const total = data.confirmed + data.cancelled;
+                                const maxVal = Math.max(...cancellationData.map(d => d.confirmed + d.cancelled)) || 1;
+                                const confirmedHeight = (data.confirmed / maxVal) * 200;
+                                const cancelledHeight = (data.cancelled / maxVal) * 200;
+
+                                return (
+                                    <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: '60px' }}>
+                                        <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', height: '200px', width: '40px', background: '#f1f5f9', borderRadius: '4px', overflow: 'hidden', position: 'relative' }}>
+                                            {/* Cancelled Portion (Top red) */}
+                                            <div style={{ height: `${cancelledHeight}px`, background: '#ef4444', width: '100%', transition: 'height 0.3s' }} title={`Cancelled: ${data.cancelled}`}></div>
+                                            {/* Confirmed Portion (Bottom blue) */}
+                                            <div style={{ height: `${confirmedHeight}px`, background: '#3b82f6', width: '100%', transition: 'height 0.3s' }} title={`Confirmed: ${data.confirmed}`}></div>
+                                        </div>
+                                        <span style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '10px' }}>{data.label}</span>
+                                        <span style={{ fontSize: '0.7rem', fontWeight: 'bold' }}>{total}</span>
+                                    </div>
+                                );
+                            })}
+                            {cancellationData.length === 0 && <div style={{ color: '#94a3b8', margin: 'auto' }}>No booking data available</div>}
+                        </div>
+                        <div style={{ display: 'flex', gap: '15px', justifyContent: 'center', marginTop: '10px', fontSize: '0.8rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}><div style={{ width: '10px', height: '10px', background: '#3b82f6', borderRadius: '2px' }}></div> Confirmed</div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}><div style={{ width: '10px', height: '10px', background: '#ef4444', borderRadius: '2px' }}></div> Cancelled</div>
                         </div>
                     </div>
 
