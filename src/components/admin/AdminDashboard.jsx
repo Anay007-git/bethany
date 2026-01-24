@@ -744,24 +744,7 @@ const AdminDashboard = ({ onLogout }) => {
 
             {activeTab === 'dashboard' && (
                 <div className="dashboard-layout">
-                    {/* Graph */}
-                    <div className="card-panel">
-                        <h3 style={{ fontSize: '1.2rem', fontWeight: '700', marginBottom: '10px', color: '#1e293b' }}>Revenue Trends</h3>
-                        <div className="chart-container">
-                            {monthlyData.length === 0 && <p style={{ color: '#94a3b8', width: '100%', textAlign: 'center' }}>No revenue data available.</p>}
-                            {monthlyData.map((d, i) => {
-                                const maxVal = Math.max(...monthlyData.map(md => md.value)) || 1;
-                                const heightPct = (d.value / maxVal) * 100;
-                                return (
-                                    <div key={i} className="chart-bar-group">
-                                        <span className="chart-tooltip">₹{d.value.toLocaleString()}</span>
-                                        <div className="chart-bar" style={{ height: `${Math.max(heightPct, 5)}%` }}></div>
-                                        <span className="chart-label">{d.label}</span>
-                                    </div>
-                                )
-                            })}
-                        </div>
-                    </div>
+
 
                     {/* Table */}
                     <div className="card-panel">
