@@ -195,7 +195,7 @@ const BillView = () => {
             {/* Footer */}
             <footer style={{ marginTop: '60px', textAlign: 'center', color: '#888', fontSize: '12px', borderTop: '1px solid #eee', paddingTop: '20px' }}>
                 <p style={{ fontStyle: 'italic', marginBottom: '10px' }}>Thank you for choosing Namaste Hills Bethany Homestay!</p>
-                <p>For any queries, please contact us at +91 97759 69371</p>
+                <p>For any queries, please contact us at +91 891 091 1758</p>
                 <p style={{ fontSize: '10px', marginTop: '10px' }}>This is a computer generated invoice.</p>
             </footer>
 
