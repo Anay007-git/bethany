@@ -467,6 +467,15 @@ const AdminDashboard = ({ onLogout }) => {
                                                 >
                                                     🔄 Sync
                                                 </button>
+                                                <button
+                                                    className="btn-primary"
+                                                    style={{ padding: '5px 10px', fontSize: '0.8rem', background: '#6366f1' }}
+                                                    onClick={() => {
+                                                        window.open(`/ical/${r.id}`, '_blank');
+                                                    }}
+                                                >
+                                                    📥 Export
+                                                </button>
                                             </td>
                                         </tr>
                                         {blockedDates[r.id] && blockedDates[r.id].length > 0 && (
