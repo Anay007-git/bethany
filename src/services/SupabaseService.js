@@ -61,6 +61,11 @@ export const SupabaseService = {
                 }
             }
 
+            // D. Trigger Background iCal Update (Fire & Forget)
+            bookingData.selectedRooms.forEach(room => {
+                SupabaseService.generateAndUploadIcal(room.id);
+            });
+
             return { success: true, booking, guest };
 
         } catch (error) {
@@ -463,7 +468,76 @@ export const SupabaseService = {
         }
     },
 
-    // 7. Get Single Booking by ID (Bill View)
+    // --- iCal Sync (Direct OTP Support) ---
+    async generateAndUploadIcal(roomId) {
+        try {
+            console.log(`Generating iCal for ${roomId}...`);
+            // 1. Fetch all active bookings for this room
+            const { data: bookings } = await supabase
+                .from('bookings')
+                .select('check_in, check_out, status, room_ids')
+                .neq('status', 'cancelled');
+
+            // Filter locally (since room_ids is JSONB)
+            // Or ideally use .contains('room_ids', JSON.stringify([{id: roomId}])) if structure matches exactly
+            // But simple array filter is safer for JSONB arrays of objects
+            const roomBookings = bookings.filter(b =>
+                Array.isArray(b.room_ids) && b.room_ids.some(r => r.id === roomId)
+            );
+
+            // 2. Build iCal content
+            const events = roomBookings.map((b, i) => {
+                const start = b.check_in.replace(/-/g, '');
+                const end = b.check_out.replace(/-/g, '');
+                return [
+                    'BEGIN:VEVENT',
+                    `DTSTART;VALUE=DATE:${start}`,
+                    `DTEND;VALUE=DATE:${end}`,
+                    `SUMMARY:Reserved`,
+                    `UID:${start}-${i}@bethany`,
+                    `STATUS:CONFIRMED`,
+                    'END:VEVENT'
+                ].join('\r\n');
+            });
+
+            const icalContent = [
+                'BEGIN:VCALENDAR',
+                'VERSION:2.0',
+                'PRODID:-//Bethany Homestay//Online Calendar//EN',
+                'CALSCALE:GREGORIAN',
+                `X-WR-CALNAME:Bethany ${roomId}`,
+                ...events,
+                'END:VCALENDAR'
+            ].join('\r\n');
+
+            // 3. Upload to Supabase Storage (Bucket: 'calendars')
+            // Ensure bucket exists and is public
+            const fileName = `${roomId}.ics`;
+            const file = new Blob([icalContent], { type: 'text/calendar' });
+
+            const { error: uploadError } = await supabase.storage
+                .from('calendars')
+                .upload(fileName, file, { upsert: true, contentType: 'text/calendar' });
+
+            if (uploadError) {
+                console.error('iCal Upload Error:', uploadError);
+                return null;
+            }
+
+            // 4. Get Public URL
+            const { data: { publicUrl } } = supabase.storage
+                .from('calendars')
+                .getPublicUrl(fileName);
+
+            console.log(`iCal updated: ${publicUrl}`);
+            return publicUrl;
+
+        } catch (err) {
+            console.error('iCal Generation Failed:', err);
+            return null;
+        }
+    },
+
     getBookingById: async (bookingId) => {
         try {
             const { data, error } = await supabase

@@ -1049,11 +1049,19 @@ const AdminDashboard = ({ onLogout }) => {
                                                     </button>
                                                     <button
                                                         className="btn-primary"
-                                                        style={{ padding: '6px 12px', fontSize: '0.8rem', background: '#4f46e5' }}
-                                                        onClick={() => window.open(`/ical/${r.id}`, '_blank')}
-                                                        title="Download .ics file"
+                                                        style={{ padding: '6px 12px', fontSize: '0.8rem', background: '#8b5cf6' }}
+                                                        onClick={async () => {
+                                                            const url = await SupabaseService.generateAndUploadIcal(r.id);
+                                                            if (url) {
+                                                                navigator.clipboard.writeText(url);
+                                                                alert(`🔗 Link Copied!\n\n${url}\n\nPaste this into Airbnb/Booking.com.`);
+                                                            } else {
+                                                                alert('Sync Failed. Check console.');
+                                                            }
+                                                        }}
+                                                        title="Generate & Copy OTA Link"
                                                     >
-                                                        📥
+                                                        🔗 OTA Link
                                                     </button>
                                                 </td>
                                             </tr>
