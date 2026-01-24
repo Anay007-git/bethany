@@ -26,7 +26,7 @@ const AdminDashboard = ({ onLogout }) => {
     // Offline Booking Form State
     const [offlineForm, setOfflineForm] = useState({
         name: '', phone: '', email: 'offline@bethany.com',
-        checkIn: '', checkOut: '', room: '', guests: 1, price: 0,
+        checkIn: '', checkOut: '', room: '', guests: 1, price: 0, discount: 0,
         mealSelection: {
             breakfast: { veg: 0, nonVeg: 0 },
             lunch: { veg: 0, nonVeg: 0 },
@@ -201,9 +201,13 @@ const AdminDashboard = ({ onLogout }) => {
                 total += dailyMealCost;
             }
 
+            // Subtract Discount (Fixed Amount)
+            const discountVal = parseInt(offlineForm.discount) || 0;
+            total = Math.max(0, total - discountVal); // Ensure non-negative
+
             setOfflineForm(prev => ({ ...prev, price: total }));
         }
-    }, [offlineForm.checkIn, offlineForm.checkOut, offlineForm.room, offlineForm.mealSelection, rooms]);
+    }, [offlineForm.checkIn, offlineForm.checkOut, offlineForm.room, offlineForm.mealSelection, offlineForm.discount, rooms]);
 
     const handleStatusChange = async (bookingId, newStatus) => {
         const booking = allBookings.find(b => b.id === bookingId);
@@ -362,6 +366,16 @@ const AdminDashboard = ({ onLogout }) => {
             }
         });
 
+        // Add Discount to Invoice if Present
+        if (offlineForm.discount > 0) {
+            invoiceItems.push({
+                description: 'Special Discount',
+                quantity: 1,
+                unit_price: -offlineForm.discount,
+                total: -offlineForm.discount
+            });
+        }
+
         const bookingData = {
             name: offlineForm.name,
             phone: offlineForm.phone,
@@ -394,7 +408,7 @@ const AdminDashboard = ({ onLogout }) => {
 
             setOfflineForm({
                 name: '', phone: '', email: 'offline@bethany.com',
-                checkIn: '', checkOut: '', room: '', guests: 1, price: 0,
+                checkIn: '', checkOut: '', room: '', guests: 1, price: 0, discount: 0,
                 mealSelection: { breakfast: { veg: 0, nonVeg: 0 }, lunch: { veg: 0, nonVeg: 0 }, dinner: { veg: 0, nonVeg: 0 } }
             });
             loadData();
@@ -1312,6 +1326,16 @@ const AdminDashboard = ({ onLogout }) => {
 
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f1f5f9', padding: '20px', borderRadius: '12px' }}>
                                 <div>
+                                    <label style={{ display: 'block', marginBottom: '5px', fontWeight: '500', fontSize: '0.9rem' }}>Discount (₹)</label>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        value={offlineForm.discount || ''}
+                                        onChange={e => setOfflineForm({ ...offlineForm, discount: parseInt(e.target.value) || 0 })}
+                                        className="date-input"
+                                        placeholder="0"
+                                        style={{ width: '120px', padding: '8px', marginBottom: '8px' }}
+                                    />
                                     <div style={{ fontSize: '0.9rem', color: '#64748b' }}>Total Estimated Price</div>
                                     <div style={{ fontSize: '1.5rem', fontWeight: '700', color: '#1e293b' }}>₹{offlineForm.price.toLocaleString('en-IN')}</div>
                                 </div>
