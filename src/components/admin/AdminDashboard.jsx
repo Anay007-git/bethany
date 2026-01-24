@@ -389,6 +389,47 @@ const AdminDashboard = ({ onLogout }) => {
                         <StatCard title="Pending Review" value={metrics.pending} icon="⏳" color="#f59e0b" subtitle="Action needed" />
                         <StatCard title="Total Enquiries" value={metrics.totalRequests} icon="📊" color="#8b5cf6" subtitle="All requests" />
                     </div>
+
+                    {/* OTA Synced Bookings Section */}
+                    {Object.keys(blockedDates).length > 0 && (
+                        <div className="card-panel" style={{ marginTop: '20px' }}>
+                            <h3>🔗 OTA Synced Bookings</h3>
+                            <p style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '15px' }}>
+                                Blocked dates imported from external platforms (Goibibo, Booking.com, Airbnb)
+                            </p>
+                            <div style={{ overflowX: 'auto' }}>
+                                <table className="admin-table">
+                                    <thead>
+                                        <tr><th>Room</th><th>Blocked Date</th><th>Source</th></tr>
+                                    </thead>
+                                    <tbody>
+                                        {Object.entries(blockedDates).flatMap(([roomId, dates]) => {
+                                            const room = rooms.find(r => r.id === roomId);
+                                            const roomName = room?.name || roomId;
+                                            return dates.slice(0, 20).map((d, i) => (
+                                                <tr key={`${roomId}-${i}`}>
+                                                    <td><strong>{roomName}</strong></td>
+                                                    <td>{d.start}</td>
+                                                    <td><span style={{
+                                                        background: '#dbeafe',
+                                                        color: '#1e40af',
+                                                        padding: '2px 8px',
+                                                        borderRadius: '4px',
+                                                        fontSize: '0.8rem'
+                                                    }}>OTA Import</span></td>
+                                                </tr>
+                                            ));
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                            {Object.values(blockedDates).flat().length > 20 && (
+                                <p style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '10px' }}>
+                                    Showing first 20 entries. View all in Inventory tab.
+                                </p>
+                            )}
+                        </div>
+                    )}
                 </>
             )}
 
