@@ -302,18 +302,43 @@ const AdminDashboard = ({ onLogout }) => {
         };
     }, [filteredBookings, blockedDates, rooms]);
 
-    // Graph Logic (Same as before)
+    // Graph Logic - includes both direct and OTA revenue
     const monthlyData = useMemo(() => {
         const monthMap = {};
+
+        // Direct bookings revenue
         allBookings.forEach(b => {
             if (['booked', 'confirmed'].includes(b.status.toLowerCase())) {
                 const date = new Date(b.check_in);
                 const key = `${date.toLocaleString('default', { month: 'short' })} ${date.getFullYear()}`;
-                monthMap[key] = (monthMap[key] || 0) + (b.total_price || 0);
+                if (!monthMap[key]) monthMap[key] = { direct: 0, ota: 0 };
+                monthMap[key].direct += (b.total_price || 0);
             }
         });
-        return Object.entries(monthMap).map(([label, value]) => ({ label, value }));
-    }, [allBookings]);
+
+        // OTA revenue by month
+        Object.entries(blockedDates).forEach(([roomId, dates]) => {
+            const room = rooms.find(r => r.id === roomId);
+            if (room) {
+                const avgPrice = (room.price_low_season + room.price_high_season) / 2;
+                dates.forEach(d => {
+                    const date = new Date(d.start);
+                    const key = `${date.toLocaleString('default', { month: 'short' })} ${date.getFullYear()}`;
+                    if (!monthMap[key]) monthMap[key] = { direct: 0, ota: 0 };
+                    monthMap[key].ota += avgPrice;
+                });
+            }
+        });
+
+        return Object.entries(monthMap)
+            .sort((a, b) => new Date(a[0]) - new Date(b[0]))
+            .map(([label, data]) => ({
+                label,
+                direct: Math.round(data.direct),
+                ota: Math.round(data.ota),
+                total: Math.round(data.direct + data.ota)
+            }));
+    }, [allBookings, blockedDates, rooms]);
 
     const exportCSV = () => {
         // ... (Same CSV Logic)
@@ -405,6 +430,36 @@ const AdminDashboard = ({ onLogout }) => {
                         <StatCard title="Confirmed Bookings" value={metrics.bookings} icon="✅" color="#3b82f6" subtitle="Validated stays" />
                         <StatCard title="Pending Review" value={metrics.pending} icon="⏳" color="#f59e0b" subtitle="Action needed" />
                         <StatCard title="Total Enquiries" value={metrics.totalRequests} icon="📊" color="#8b5cf6" subtitle="All requests" />
+                    </div>
+
+                    {/* Revenue Trends Chart */}
+                    <div className="card-panel" style={{ marginTop: '20px' }}>
+                        <h3>📈 Revenue Trends (Direct vs OTA)</h3>
+                        <div style={{ display: 'flex', alignItems: 'flex-end', height: '250px', gap: '20px', padding: '20px 0', overflowX: 'auto' }}>
+                            {monthlyData.map((data, i) => {
+                                const maxVal = Math.max(...monthlyData.map(d => d.total)) || 1;
+                                const directHeight = (data.direct / maxVal) * 200;
+                                const otaHeight = (data.ota / maxVal) * 200;
+
+                                return (
+                                    <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: '60px' }}>
+                                        <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', height: '200px', width: '40px', background: '#f1f5f9', borderRadius: '4px', overflow: 'hidden', position: 'relative' }}>
+                                            {/* OTA Portion */}
+                                            <div style={{ height: `${otaHeight}px`, background: '#0891b2', width: '100%', transition: 'height 0.3s' }} title={`OTA: ₹${data.ota}`}></div>
+                                            {/* Direct Portion */}
+                                            <div style={{ height: `${directHeight}px`, background: '#10b981', width: '100%', transition: 'height 0.3s' }} title={`Direct: ₹${data.direct}`}></div>
+                                        </div>
+                                        <span style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '10px' }}>{data.label}</span>
+                                        <span style={{ fontSize: '0.7rem', fontWeight: 'bold' }}>₹{(data.total / 1000).toFixed(1)}k</span>
+                                    </div>
+                                );
+                            })}
+                            {monthlyData.length === 0 && <div style={{ color: '#94a3b8', margin: 'auto' }}>No revenue data available</div>}
+                        </div>
+                        <div style={{ display: 'flex', gap: '15px', justifyContent: 'center', marginTop: '10px', fontSize: '0.8rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}><div style={{ width: '10px', height: '10px', background: '#10b981', borderRadius: '2px' }}></div> Direct</div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}><div style={{ width: '10px', height: '10px', background: '#0891b2', borderRadius: '2px' }}></div> OTA (Est.)</div>
+                        </div>
                     </div>
 
                     {/* OTA Synced Bookings Section */}
