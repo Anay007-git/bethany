@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { SupabaseService } from '../../services/SupabaseService';
 import titleBarImg from '../../assets/title-bar.jpeg';
 import './AdminDashboard.css';
@@ -27,6 +27,9 @@ const AdminDashboard = ({ onLogout }) => {
 
     const MEAL_PRICES = { breakfast: 120, lunch: 200, dinner: 200 };
 
+    // State for OTA blocked dates per room
+    const [blockedDates, setBlockedDates] = useState({});
+
     useEffect(() => { loadData(); }, []);
 
     const loadData = async () => {
@@ -35,7 +38,18 @@ const AdminDashboard = ({ onLogout }) => {
         if (stats && stats.recentBookings) setAllBookings(stats.recentBookings);
 
         const roomsData = await SupabaseService.getRooms();
-        if (roomsData) setRooms(roomsData);
+        if (roomsData) {
+            setRooms(roomsData);
+            // Load blocked dates from localStorage for each room
+            const blocked = {};
+            roomsData.forEach(room => {
+                try {
+                    const data = localStorage.getItem(`ical_blocked_${room.id}`);
+                    if (data) blocked[room.id] = JSON.parse(data);
+                } catch (e) { /* ignore */ }
+            });
+            setBlockedDates(blocked);
+        }
 
         setLoading(false);
     };
@@ -392,65 +406,81 @@ const AdminDashboard = ({ onLogout }) => {
                             </thead>
                             <tbody>
                                 {rooms.map(r => (
-                                    <tr key={r.id}>
-                                        <td><strong>{r.name}</strong></td>
-                                        <td>₹{r.price_low_season}</td>
-                                        <td>₹{r.price_high_season}</td>
-                                        <td>{r.capacity}</td>
-                                        <td>
-                                            <input
-                                                type="text"
-                                                id={`ical-${r.id}`}
-                                                placeholder="Paste OTA iCal URL"
-                                                defaultValue={r.ical_import_url || ''}
-                                                style={{ width: '250px', padding: '5px', borderRadius: '4px', border: '1px solid #ddd' }}
-                                            />
-                                        </td>
-                                        <td style={{ display: 'flex', gap: '5px' }}>
-                                            <button
-                                                className="btn-primary"
-                                                style={{ padding: '5px 10px', fontSize: '0.8rem' }}
-                                                onClick={async () => {
-                                                    const input = document.getElementById(`ical-${r.id}`);
-                                                    const url = input?.value || '';
-                                                    const result = await SupabaseService.updateRoom(r.id, { ical_import_url: url });
-                                                    if (result.success) {
-                                                        alert('iCal URL saved!');
-                                                        loadData();
-                                                    } else {
-                                                        alert('Save failed');
-                                                    }
-                                                }}
-                                            >
-                                                💾 Save
-                                            </button>
-                                            <button
-                                                className="btn-primary"
-                                                style={{ padding: '5px 10px', fontSize: '0.8rem', background: '#10b981' }}
-                                                onClick={async () => {
-                                                    const url = r.ical_import_url;
-                                                    if (!url) {
-                                                        alert('No iCal URL saved for this room. Save one first.');
-                                                        return;
-                                                    }
-                                                    alert('Syncing... Please wait.');
-                                                    const { fetchIcalDates } = await import('../../utils/icalParser');
-                                                    const result = await fetchIcalDates(url);
-                                                    if (result.success) {
-                                                        const blocked = result.dates.length;
-                                                        alert(`✅ Synced! Found ${blocked} blocked date(s) from OTA.`);
-                                                        // Store in localStorage for availability check
-                                                        const key = `ical_blocked_${r.id}`;
-                                                        localStorage.setItem(key, JSON.stringify(result.dates));
-                                                    } else {
-                                                        alert(`❌ Sync failed: ${result.error}`);
-                                                    }
-                                                }}
-                                            >
-                                                🔄 Sync
-                                            </button>
-                                        </td>
-                                    </tr>
+                                    <React.Fragment key={r.id}>
+                                        <tr>
+                                            <td><strong>{r.name}</strong></td>
+                                            <td>₹{r.price_low_season}</td>
+                                            <td>₹{r.price_high_season}</td>
+                                            <td>{r.capacity}</td>
+                                            <td>
+                                                <input
+                                                    type="text"
+                                                    id={`ical-${r.id}`}
+                                                    placeholder="Paste OTA iCal URL"
+                                                    defaultValue={r.ical_import_url || ''}
+                                                    style={{ width: '250px', padding: '5px', borderRadius: '4px', border: '1px solid #ddd' }}
+                                                />
+                                            </td>
+                                            <td style={{ display: 'flex', gap: '5px' }}>
+                                                <button
+                                                    className="btn-primary"
+                                                    style={{ padding: '5px 10px', fontSize: '0.8rem' }}
+                                                    onClick={async () => {
+                                                        const input = document.getElementById(`ical-${r.id}`);
+                                                        const url = input?.value || '';
+                                                        const result = await SupabaseService.updateRoom(r.id, { ical_import_url: url });
+                                                        if (result.success) {
+                                                            alert('iCal URL saved!');
+                                                            loadData();
+                                                        } else {
+                                                            alert('Save failed');
+                                                        }
+                                                    }}
+                                                >
+                                                    💾 Save
+                                                </button>
+                                                <button
+                                                    className="btn-primary"
+                                                    style={{ padding: '5px 10px', fontSize: '0.8rem', background: '#10b981' }}
+                                                    onClick={async () => {
+                                                        const url = r.ical_import_url;
+                                                        if (!url) {
+                                                            alert('No iCal URL saved for this room. Save one first.');
+                                                            return;
+                                                        }
+                                                        alert('Syncing... Please wait.');
+                                                        const { fetchIcalDates } = await import('../../utils/icalParser');
+                                                        const result = await fetchIcalDates(url);
+                                                        if (result.success) {
+                                                            const blockedCount = result.dates.length;
+                                                            localStorage.setItem(`ical_blocked_${r.id}`, JSON.stringify(result.dates));
+                                                            setBlockedDates(prev => ({ ...prev, [r.id]: result.dates }));
+                                                            alert(`✅ Synced! Found ${blockedCount} blocked date(s) from OTA.`);
+                                                        } else {
+                                                            alert(`❌ Sync failed: ${result.error}`);
+                                                        }
+                                                    }}
+                                                >
+                                                    🔄 Sync
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        {blockedDates[r.id] && blockedDates[r.id].length > 0 && (
+                                            <tr style={{ background: '#fef2f2' }}>
+                                                <td colSpan="6" style={{ padding: '8px 15px' }}>
+                                                    <span style={{ fontSize: '0.85rem', color: '#991b1b' }}>
+                                                        <strong>🚫 OTA Blocked ({blockedDates[r.id].length}):</strong>{' '}
+                                                        {blockedDates[r.id].slice(0, 10).map((d, i) => (
+                                                            <span key={i} style={{ background: '#fee2e2', padding: '2px 6px', borderRadius: '4px', marginRight: '5px', fontSize: '0.8rem' }}>
+                                                                {d.start}
+                                                            </span>
+                                                        ))}
+                                                        {blockedDates[r.id].length > 10 && <span>+{blockedDates[r.id].length - 10} more</span>}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        )}
+                                    </React.Fragment>
                                 ))}
                             </tbody>
                         </table>
