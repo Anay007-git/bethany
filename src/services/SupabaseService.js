@@ -41,14 +41,10 @@ export const SupabaseService = {
 
             if (bookingError) throw bookingError;
 
-            // C. Create Invoice Record (Immutable Breakdown) - INLINE to avoid 'this' binding issues
-            console.log('[DEBUG] invoiceItems received:', bookingData.invoiceItems);
-            console.log('[DEBUG] invoiceItems length:', bookingData.invoiceItems?.length);
-
+            // C. Create Invoice Record (Immutable Breakdown)
             if (bookingData.invoiceItems && bookingData.invoiceItems.length > 0) {
                 try {
                     const invNum = `INV-${Date.now().toString().slice(-6)}`;
-
                     const invoicePayload = {
                         booking_id: booking.id,
                         invoice_number: invNum,
@@ -57,27 +53,12 @@ export const SupabaseService = {
                         status: 'issued'
                     };
 
-                    console.log('[DEBUG] Invoice payload:', JSON.stringify(invoicePayload, null, 2));
-
-                    const { data: invoiceData, error: invoiceError } = await supabase
+                    await supabase
                         .from('invoices')
-                        .insert([invoicePayload])
-                        .select();
-
-                    if (invoiceError) {
-                        console.error('[ERROR] Invoice Creation Error:', invoiceError);
-                        console.error('[ERROR] Error message:', invoiceError.message);
-                        console.error('[ERROR] Error details:', invoiceError.details);
-                        console.error('[ERROR] Error hint:', invoiceError.hint);
-                        console.error('[ERROR] Error code:', invoiceError.code);
-                    } else {
-                        console.log('[SUCCESS] Invoice created:', invNum, invoiceData);
-                    }
+                        .insert([invoicePayload]);
                 } catch (invErr) {
-                    console.error('[EXCEPTION] Invoice Logic Error:', invErr);
+                    // Silent fail for invoice creation
                 }
-            } else {
-                console.warn('[WARN] No invoiceItems provided, skipping invoice creation');
             }
 
             return { success: true, booking, guest };
@@ -272,68 +253,31 @@ export const SupabaseService = {
     // 6. Get Booking by Phone (Bill Lookup)
     getBookingsByPhone: async (phone) => {
         try {
-            // Normalize phone: remove all non-digits
             const cleanInput = phone.replace(/\D/g, '');
+            if (cleanInput.length < 6) return { success: true, data: [] };
 
-            console.log('[DEBUG] Phone Lookup - Input:', phone, '-> Clean:', cleanInput);
-
-            if (cleanInput.length < 6) {
-                console.log('[DEBUG] Phone too short, need at least 6 digits');
-                return { success: true, data: [] };
-            }
-
-            // Fetch recent bookings
             const { data, error } = await supabase
                 .from('bookings')
-                .select(`
-                    *,
-                    guests(full_name, phone, email)
-                `)
+                .select(`*, guests(full_name, phone, email)`)
                 .order('created_at', { ascending: false })
                 .limit(200);
 
-            if (error) {
-                console.error('[ERROR] Supabase query error:', error);
-                throw error;
-            }
+            if (error) throw error;
 
-            console.log('[DEBUG] Total bookings fetched:', data?.length);
-            if (data?.length > 0) {
-                console.log('[DEBUG] Sample booking guests structure:', typeof data[0].guests, data[0].guests);
-            }
-
-            // Client-side flexible matching
-            const inputDigits = cleanInput.slice(-10); // Last 10 digits of input
-
+            const inputDigits = cleanInput.slice(-10);
             const matches = data.filter(b => {
-                // Handle both array and object guest structures
                 let guestData = b.guests;
-                if (Array.isArray(guestData)) {
-                    guestData = guestData[0]; // Take first guest if array
-                }
+                if (Array.isArray(guestData)) guestData = guestData[0];
 
-                const dbPhone = (guestData?.phone || '').replace(/\D/g, '');
-                const dbDigits = dbPhone.slice(-10);
-
-                // Match if last N digits are same
+                const dbDigits = (guestData?.phone || '').replace(/\D/g, '').slice(-10);
                 const matchLength = Math.min(inputDigits.length, dbDigits.length);
                 if (matchLength < 6) return false;
 
-                const inputSuffix = inputDigits.slice(-matchLength);
-                const dbSuffix = dbDigits.slice(-matchLength);
-
-                const isMatch = inputSuffix === dbSuffix;
-                if (isMatch) {
-                    console.log('[DEBUG] Match found:', guestData?.phone, '-> Clean:', dbDigits);
-                }
-                return isMatch;
+                return inputDigits.slice(-matchLength) === dbDigits.slice(-matchLength);
             });
 
-            console.log('[DEBUG] Matches found:', matches.length);
             return { success: true, data: matches };
-
         } catch (error) {
-            console.error('[ERROR] Fetch by Phone Error:', error);
             return { success: false, error };
         }
     },
