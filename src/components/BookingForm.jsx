@@ -858,6 +858,20 @@ const BookingForm = ({ onToast }) => {
                 mode: 'no-cors'
             }).catch(err => console.error('Sheet Submission Error:', err));
 
+            // Step B-2: Trigger Email Confirmation (Background)
+            SupabaseService.sendBookingConfirmation({
+                id: bookingId,
+                guests: {
+                    full_name: formData.name,
+                    email: formData.email,
+                    phone: formData.phone
+                },
+                check_in: formData.checkIn,
+                check_out: formData.checkOut,
+                total_price: finalTotal,
+                room_ids: formData.selectedRooms.map(r => ({ name: r.name }))
+            }).catch(err => console.error('Email Trigger Failed:', err));
+
             // Step C: Success UI
             setBookingDetails({
                 ...formData,

@@ -69,8 +69,28 @@ export const SupabaseService = {
             return { success: true, booking, guest };
 
         } catch (error) {
-            console.error('Supabase Booking Error:', error);
-            return { success: false, error };
+        }
+    },
+
+    // 1.2 Send Booking Confirmation Email (Edge Function)
+    async sendBookingConfirmation(bookingData) {
+        try {
+            console.log("Triggering Email Function...");
+            const { data, error } = await supabase.functions.invoke('send-booking-email', {
+                body: { booking: bookingData }
+            });
+
+            if (error) {
+                console.error("Supabase Function Error:", error);
+                return { success: false, error };
+            }
+
+            console.log("Email Function Response:", data);
+            return { success: true, data };
+
+        } catch (err) {
+            console.error("Email Invocation Failed:", err);
+            return { success: false, error: err };
         }
     },
 
