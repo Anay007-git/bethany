@@ -135,7 +135,37 @@
 }
 
 /* Selected Range */
-.react-calendar__tile--active {
+/* Selected Range */
+.react-calendar__tile--active,
+.react-calendar__tile--range,
+.react-calendar__tile--rangeStart,
+.react-calendar__tile--rangeEnd {
+    background: #3498db !important;
+    color: white !important;
+    border-radius: 0;
+}
+
+.react-calendar__tile--rangeStart {
+    border-top-left-radius: 6px;
+    border-bottom-left-radius: 6px;
+}
+
+.react-calendar__tile--rangeEnd {
+    border-top-right-radius: 6px;
+    border-bottom-right-radius: 6px;
+}
+
+/* Middle of range - slightly lighter blue if desired, or same */
+.react-calendar__tile--range {
+    background: #e1f5fe !important;
+    /* Lighter blue for the middle */
+    color: #2980b9 !important;
+}
+
+/* Re-force active/start/end to be dark blue */
+.react-calendar__tile--active,
+.react-calendar__tile--rangeStart,
+.react-calendar__tile--rangeEnd {
     background: #3498db !important;
     color: white !important;
 }

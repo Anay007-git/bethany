@@ -1,76 +1,151 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 const ImageLightbox = ({ isOpen, images, initialIndex, onClose }) => {
-    const [index, setIndex] = useState(initialIndex);
+    // We heavily rely on native scrolling, so state is minimized
+    const scrollContainerRef = useRef(null);
 
+    // When opening, scroll to the initial index
     useEffect(() => {
-        setIndex(initialIndex);
-    }, [initialIndex]);
+        if (isOpen && scrollContainerRef.current) {
+            const container = scrollContainerRef.current;
+            const itemWidth = container.offsetWidth * 0.8; // Estimated
+            // We'll rely on scrollIntoView for precision
+            const target = container.children[initialIndex];
+            if (target) {
+                // Short timeout to ensure layout is ready
+                setTimeout(() => {
+                    target.scrollIntoView({ behavior: 'auto', block: 'center', inline: 'center' });
+                }, 10);
+            }
+        }
+    }, [isOpen, initialIndex]);
 
     if (!isOpen) return null;
 
-    const next = (e) => { e.stopPropagation(); setIndex((prev) => (prev + 1) % images.length); };
-    const prev = (e) => { e.stopPropagation(); setIndex((prev) => (prev - 1 + images.length) % images.length); };
-
-    // Helper to get current item
-    const currentItem = images[index];
-    // Check if the item is an object with src/type or just a string URL
-    const isVideo = currentItem?.type === 'video' || (typeof currentItem === 'string' && currentItem.endsWith('.mp4'));
-    const src = currentItem?.src || currentItem;
-
     return (
         <div
-            style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.95)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(5px)' }}
-            onClick={onClose}
+            style={{
+                position: 'fixed', inset: 0,
+                background: '#fff', // White background as per reference
+                zIndex: 9999,
+                display: 'flex', flexDirection: 'column',
+                animation: 'fadeIn 0.3s ease'
+            }}
         >
-            <button onClick={onClose} style={{ position: 'absolute', top: '20px', right: '30px', background: 'transparent', border: 'none', color: 'white', fontSize: '30px', cursor: 'pointer', zIndex: 10001, opacity: 0.8 }}>×</button>
-
-            <div style={{ position: 'relative', maxWidth: '90vw', maxHeight: '90vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                {isVideo ? (
-                    <video
-                        src={src}
-                        controls
-                        autoPlay
-                        style={{ maxHeight: '90vh', maxWidth: '90vw', borderRadius: '4px', boxShadow: '0 0 30px rgba(0,0,0,0.5)' }}
-                        onClick={(e) => e.stopPropagation()}
-                    />
-                ) : currentItem?.type === 'youtube' ? (
-                    <iframe
-                        width="100%"
-                        height="100%"
-                        src={`https://www.youtube.com/embed/${src}?autoplay=1&rel=0`}
-                        title="YouTube video"
-                        frameBorder="0"
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                        allowFullScreen
-                        style={{
-                            width: '80vw',
-                            height: '80vh',
-                            maxWidth: '500px', // Shorts format vertical
-                            borderRadius: '12px',
-                            boxShadow: '0 0 30px rgba(0,0,0,0.5)'
-                        }}
-                        onClick={(e) => e.stopPropagation()}
-                    ></iframe>
-                ) : (
-                    <img
-                        src={src}
-                        alt="Fullscreen view"
-                        style={{ maxHeight: '90vh', maxWidth: '90vw', objectFit: 'contain', borderRadius: '4px', boxShadow: '0 0 30px rgba(0,0,0,0.5)' }}
-                        onClick={(e) => e.stopPropagation()}
-                    />
-                )}
+            {/* Header / Controls */}
+            <div style={{
+                padding: '20px 40px',
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                zIndex: 10
+            }}>
+                <div style={{ fontSize: '1.5rem', fontWeight: '800', color: '#1d1d1f' }}>
+                    Gallery
+                </div>
+                <button
+                    onClick={onClose}
+                    style={{
+                        background: 'transparent', border: 'none',
+                        color: '#1d1d1f', fontSize: '2rem', cursor: 'pointer',
+                        padding: '10px', lineHeight: 1
+                    }}
+                >
+                    &times;
+                </button>
             </div>
 
-            {images.length > 1 && (
-                <>
-                    <button onClick={prev} style={{ position: 'absolute', left: '20px', background: 'rgba(255,255,255,0.15)', color: 'white', border: 'none', width: '50px', height: '50px', fontSize: '24px', cursor: 'pointer', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.3s' }}>❮</button>
-                    <button onClick={next} style={{ position: 'absolute', right: '20px', background: 'rgba(255,255,255,0.15)', color: 'white', border: 'none', width: '50px', height: '50px', fontSize: '24px', cursor: 'pointer', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.3s' }}>❯</button>
-                    <div style={{ position: 'absolute', bottom: '20px', color: 'rgba(255,255,255,0.7)', fontVariantNumeric: 'tabular-nums' }}>
-                        {index + 1} / {images.length}
-                    </div>
-                </>
-            )}
+            {/* Horizontal Scroll Strip */}
+            <style>{`
+                .lightbox-scroll-container::-webkit-scrollbar { display: none; }
+                @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+            `}</style>
+            <div
+                ref={scrollContainerRef}
+                className="lightbox-scroll-container"
+                style={{
+                    flex: 1,
+                    display: 'flex',
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    overflowX: 'auto',
+                    overflowY: 'hidden',
+                    scrollSnapType: 'x mandatory',
+                    padding: '0 50vw 0 50vw', // Center padding
+                    gap: '40px',
+                    scrollbarWidth: 'none', // Hide scrollbar Firefox
+                    msOverflowStyle: 'none' // Hide scrollbar IE
+                }}
+            >
+                {images.map((item, index) => {
+                    const isVideo = item.type === 'video' || (typeof item.src === 'string' && item.src.endsWith('.mp4'));
+                    const isYoutube = item.type === 'youtube';
+
+                    return (
+                        <div
+                            key={index}
+                            style={{
+                                flex: '0 0 auto',
+                                scrollSnapAlign: 'center',
+                                width: '80vw',
+                                maxWidth: '600px', // Portrait-ish width
+                                height: '80vh',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                position: 'relative',
+                                transition: 'transform 0.3s ease'
+                            }}
+                        >
+                            {isVideo ? (
+                                <video
+                                    src={item.src}
+                                    controls
+                                    style={{
+                                        width: '100%', height: '100%', objectFit: 'contain', // Changed to contain to see full image
+                                        boxShadow: '0 20px 50px rgba(0,0,0,0.1)',
+                                        backgroundColor: '#000' // Dark bg for video
+                                    }}
+                                    onClick={(e) => e.stopPropagation()}
+                                />
+                            ) : isYoutube ? (
+                                <iframe
+                                    width="100%" height="100%"
+                                    src={`https://www.youtube.com/embed/${item.src}`}
+                                    title="YouTube video"
+                                    frameBorder="0"
+                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                    allowFullScreen
+                                    style={{
+                                        boxShadow: '0 20px 50px rgba(0,0,0,0.1)',
+                                    }}
+                                ></iframe>
+                            ) : (
+                                <img
+                                    src={item.src}
+                                    alt={item.alt || `Gallery Image ${index}`}
+                                    style={{
+                                        width: '100%', height: '100%', objectFit: 'contain', // Changed to contain
+                                        boxShadow: '0 20px 50px rgba(0,0,0,0.15)',
+                                    }}
+                                    onClick={(e) => e.stopPropagation()}
+                                />
+                            )}
+                        </div>
+                    );
+                })}
+            </div>
+
+            {/* Bottom Indicators */}
+            <div style={{
+                padding: '20px',
+                textAlign: 'center',
+                color: '#86868b',
+                fontSize: '0.9rem',
+                display: 'flex', justifyContent: 'center', gap: '20px', alignItems: 'center'
+            }}>
+                <span>←</span>
+                <span>Scroll to browse</span>
+                <span>→</span>
+            </div>
         </div>
     );
 };

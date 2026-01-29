@@ -97,6 +97,62 @@ const ImageCarousel = ({ images, height = '200px', onImageClick }) => {
 
 
 
+const MealStepper = ({ label, value, name, onChange, color = '#2c3e50', max = 50 }) => {
+    const handleDecrement = (e) => {
+        e.stopPropagation(); // Prevent modal close or other bubbles
+        if (value > 0) {
+            onChange({ target: { name, value: value - 1 } });
+        }
+    };
+
+    const handleIncrement = (e) => {
+        e.stopPropagation();
+        if (value < max) {
+            onChange({ target: { name, value: value + 1 } });
+        }
+    };
+
+    return (
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '5px' }}>
+            <label style={{ fontSize: '0.9rem', color: color, fontWeight: 'bold', display: 'block' }}>{label}</label>
+            <div style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                background: '#f8f9fa', borderRadius: '8px', border: '1px solid #ddd',
+                padding: '5px', height: '42px'
+            }}>
+                <button
+                    type="button"
+                    onClick={handleDecrement}
+                    style={{
+                        width: '32px', height: '32px', borderRadius: '6px',
+                        border: 'none', background: value > 0 ? '#e9ecef' : '#f1f3f5',
+                        color: value > 0 ? '#2c3e50' : '#adb5bd', fontSize: '1.2rem',
+                        cursor: value > 0 ? 'pointer' : 'default', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        transition: 'all 0.2s'
+                    }}
+                >
+                    -
+                </button>
+                <span style={{ fontSize: '1.1rem', fontWeight: '700', color: '#2c3e50', minWidth: '30px', textAlign: 'center' }}>{value}</span>
+                <button
+                    type="button"
+                    onClick={handleIncrement}
+                    style={{
+                        width: '32px', height: '32px', borderRadius: '6px',
+                        border: 'none', background: '#e9ecef',
+                        color: '#2c3e50', fontSize: '1.2rem',
+                        cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        transition: 'all 0.2s'
+                    }}
+                >
+                    +
+                </button>
+            </div>
+        </div>
+    );
+};
+
+
 const BookingForm = ({ onToast }) => {
     // State for Dynamic Rooms
     const [rooms, setRooms] = useState([]);
@@ -142,11 +198,9 @@ const BookingForm = ({ onToast }) => {
     // Calendar Reset Key (for uncontrolled component usage)
     const [calendarKey, setCalendarKey] = useState(0);
 
-    // Reset calendar when form clears
+    // Reset calendar visual key whenever dates change (forces re-render with new default values)
     useEffect(() => {
-        if (!formData.checkIn && !formData.checkOut) {
-            setCalendarKey(prev => prev + 1);
-        }
+        setCalendarKey(prev => prev + 1);
     }, [formData.checkIn, formData.checkOut]);
 
     // Fetch Rooms on Load
@@ -491,7 +545,13 @@ const BookingForm = ({ onToast }) => {
         }
 
         const start = dates[0];
-        const end = dates[1];
+        let end = dates[1];
+
+        // Ensure minimum 1 night stay (if start == end, make end = start + 1 day)
+        if (start && end && start.toDateString() === end.toDateString()) {
+            end = new Date(start);
+            end.setDate(end.getDate() + 1);
+        }
 
         const toLocalISO = (d) => {
             const offset = d.getTimezoneOffset() * 60000;
@@ -933,51 +993,63 @@ const BookingForm = ({ onToast }) => {
                         {/* Search Card */}
                         <div className="search-card" style={{ background: 'white', padding: '20px', borderRadius: '16px', boxShadow: '0 10px 30px rgba(0,0,0,0.08)', border: '1px solid rgba(0,0,0,0.02)' }}>
 
-                            {/* Date Picker Trigger */}
-                            <div className="form-group" style={{ marginBottom: '20px', position: 'relative' }}>
-                                <label style={{ fontWeight: '700', marginBottom: '8px', display: 'block', color: '#2c3e50', fontSize: '0.9rem', letterSpacing: '0.5px' }}>DATES</label>
-                                <div
-                                    className="date-trigger"
-                                    onClick={() => { setShowCalendar(!showCalendar); setShowRoomPicker(false); }}
-                                    style={{
-                                        padding: '12px 15px',
-                                        borderRadius: '10px',
-                                        background: '#f8f9fa',
-                                        border: '2px solid transparent',
-                                        cursor: 'pointer',
-                                        display: 'flex',
-                                        justifyContent: 'space-between',
-                                        alignItems: 'center',
-                                        transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                                        boxShadow: showCalendar ? '0 0 0 3px rgba(52, 152, 219, 0.2)' : 'none',
-                                        borderColor: showCalendar ? '#3498db' : '#e9ecef'
-                                    }}
-                                >
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                        <span style={{ fontSize: '1.2rem' }}>📅</span>
-                                        <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                            <span style={{ fontSize: '0.95rem', fontWeight: '600', color: '#2c3e50' }}>{formData.checkIn ? new Date(formData.checkIn).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : 'Check-in'}</span>
-                                            <span style={{ fontSize: '0.75rem', color: '#7f8c8d' }}>to</span>
-                                            <span style={{ fontSize: '0.95rem', fontWeight: '600', color: '#2c3e50' }}>{formData.checkOut ? new Date(formData.checkOut).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : 'Check-out'}</span>
+                            {/* Date Picker Trigger - Split Layout */}
+                            <div className="form-group" style={{ marginBottom: '25px', position: 'relative' }}>
+                                <label style={{ fontWeight: '700', marginBottom: '12px', display: 'block', color: '#2c3e50', fontSize: '0.85rem', letterSpacing: '1px', textTransform: 'uppercase' }}>DATES</label>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+
+                                    {/* Check-in Box */}
+                                    <div
+                                        className="date-box"
+                                        onClick={() => { setShowCalendar(true); setShowRoomPicker(false); }}
+                                        style={{
+                                            background: '#f8f9fa', padding: '15px', borderRadius: '12px', border: '1px solid #e9ecef',
+                                            cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: '8px',
+                                            transition: 'all 0.2s ease', position: 'relative'
+                                        }}
+                                    >
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#7f8c8d' }}>
+                                            <span style={{ fontSize: '1.2rem' }}>📅</span>
+                                            <span style={{ fontSize: '0.8rem', fontWeight: 'bold' }}>Check-in</span>
+                                        </div>
+                                        <div style={{ fontSize: '1rem', fontWeight: '700', color: '#2c3e50' }}>
+                                            {formData.checkIn ? new Date(formData.checkIn).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'}
                                         </div>
                                     </div>
-                                    <span style={{ fontSize: '0.8rem', color: '#95a5a6' }}>{showCalendar ? '▲' : '▼'}</span>
+
+                                    {/* Check-out Box */}
+                                    <div
+                                        className="date-box"
+                                        onClick={() => { setShowCalendar(true); setShowRoomPicker(false); }}
+                                        style={{
+                                            background: '#f8f9fa', padding: '15px', borderRadius: '12px', border: '1px solid #e9ecef',
+                                            cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: '8px',
+                                            transition: 'all 0.2s ease'
+                                        }}
+                                    >
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#7f8c8d' }}>
+                                            <span style={{ fontSize: '1.2rem' }}>📅</span>
+                                            <span style={{ fontSize: '0.8rem', fontWeight: 'bold' }}>Check-out</span>
+                                        </div>
+                                        <div style={{ fontSize: '1rem', fontWeight: '700', color: '#2c3e50' }}>
+                                            {formData.checkOut ? new Date(formData.checkOut).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'}
+                                        </div>
+                                    </div>
+
                                 </div>
-
-
                             </div>
 
                             {/* Room Picker Trigger */}
-                            <div className="form-group" style={{ marginBottom: '20px', position: 'relative' }}>
-                                <label style={{ fontWeight: '700', marginBottom: '8px', display: 'block', color: '#2c3e50', fontSize: '0.9rem', letterSpacing: '0.5px' }}>ROOMS</label>
+                            <div className="form-group" style={{ marginBottom: '25px', position: 'relative' }}>
+                                <label style={{ fontWeight: '700', marginBottom: '12px', display: 'block', color: '#2c3e50', fontSize: '0.85rem', letterSpacing: '1px', textTransform: 'uppercase' }}>ROOMS</label>
                                 <div
                                     className="room-trigger"
                                     onClick={() => { setShowRoomPicker(!showRoomPicker); setShowCalendar(false); }}
                                     style={{
-                                        padding: '12px 15px',
-                                        borderRadius: '10px',
+                                        padding: '16px',
+                                        borderRadius: '12px',
                                         background: '#f8f9fa',
-                                        border: '2px solid transparent',
+                                        border: '1px solid #e9ecef',
                                         cursor: 'pointer',
                                         display: 'flex',
                                         justifyContent: 'space-between',
@@ -987,45 +1059,53 @@ const BookingForm = ({ onToast }) => {
                                         borderColor: showRoomPicker ? '#3498db' : '#e9ecef'
                                     }}
                                 >
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                        <span style={{ fontSize: '1.2rem' }}>🛏️</span>
-                                        <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                            <span style={{ fontSize: '0.95rem', fontWeight: '600', color: '#2c3e50' }}>{formData.selectedRooms.length > 0 ? `${formData.selectedRooms.length} Room${formData.selectedRooms.length > 1 ? 's' : ''} Selected` : 'Select Rooms'}</span>
-                                            <span style={{ fontSize: '0.75rem', color: '#7f8c8d' }}>{formData.selectedRooms.length > 0 ? 'Tap to edit' : 'Tap to choose'}</span>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                                        <span style={{ fontSize: '1.4rem' }}>🛏️</span>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                            <span style={{ fontSize: '1rem', fontWeight: '700', color: '#2c3e50' }}>
+                                                {formData.selectedRooms.length > 0 ? `${formData.selectedRooms.length} Room${formData.selectedRooms.length > 1 ? 's' : ''} Selected` : 'Select Rooms'}
+                                            </span>
+                                            <span style={{ fontSize: '0.75rem', color: '#7f8c8d' }}>
+                                                {formData.selectedRooms.length > 0 ? formData.selectedRooms.map(r => r.name).join(', ') : 'Tap to browse available rooms'}
+                                            </span>
                                         </div>
                                     </div>
                                     <span style={{ fontSize: '0.8rem', color: '#95a5a6' }}>{showRoomPicker ? '▲' : '▼'}</span>
                                 </div>
                             </div>
 
-                            {/* Guest Selector (Moved here for cohesion) */}
+                            {/* Guest Selector */}
                             <div className="form-group" style={{ marginBottom: '10px' }}>
-                                <label style={{ fontWeight: '700', marginBottom: '8px', display: 'block', color: '#2c3e50', fontSize: '0.9rem', letterSpacing: '0.5px' }}>GUESTS</label>
-                                <select
-                                    name="guests"
-                                    value={formData.guests}
-                                    onChange={handleChange}
-                                    style={{
-                                        width: '100%',
-                                        padding: '12px 15px',
-                                        borderRadius: '10px',
-                                        border: '2px solid #e9ecef',
-                                        fontSize: '0.95rem',
-                                        backgroundColor: '#f8f9fa',
-                                        cursor: 'pointer',
-                                        outline: 'none',
-                                        transition: 'border-color 0.2s',
-                                        appearance: 'none',
-                                        backgroundImage: `url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%232c3e50%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E")`,
-                                        backgroundRepeat: 'no-repeat',
-                                        backgroundPosition: 'right 15px top 50%',
-                                        backgroundSize: '12px auto'
-                                    }}
-                                >
-                                    {[...Array(15)].map((_, i) => (
-                                        <option key={i} value={i + 1}>{i + 1} Guest{i > 0 ? 's' : ''}</option>
-                                    ))}
-                                </select>
+                                <label style={{ fontWeight: '700', marginBottom: '12px', display: 'block', color: '#2c3e50', fontSize: '0.85rem', letterSpacing: '1px', textTransform: 'uppercase' }}>GUESTS</label>
+                                <div style={{ position: 'relative' }}>
+                                    <div style={{ position: 'absolute', left: '15px', top: '50%', transform: 'translateY(-50%)', fontSize: '1.2rem', pointerEvents: 'none' }}>👥</div>
+                                    <select
+                                        name="guests"
+                                        value={formData.guests}
+                                        onChange={handleChange}
+                                        style={{
+                                            width: '100%',
+                                            padding: '16px 15px 16px 50px', // Left padding for icon
+                                            borderRadius: '12px',
+                                            border: '1px solid #e9ecef',
+                                            fontSize: '1rem',
+                                            fontWeight: '500',
+                                            color: '#2c3e50',
+                                            backgroundColor: '#f8f9fa',
+                                            cursor: 'pointer',
+                                            outline: 'none',
+                                            appearance: 'none',
+                                            backgroundImage: `url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%2395a5a6%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E")`,
+                                            backgroundRepeat: 'no-repeat',
+                                            backgroundPosition: 'right 15px center',
+                                            backgroundSize: '10px auto'
+                                        }}
+                                    >
+                                        {[...Array(15)].map((_, i) => (
+                                            <option key={i} value={i + 1}>{i + 1} Guest{i > 0 ? 's' : ''}</option>
+                                        ))}
+                                    </select>
+                                </div>
                             </div>
                             {formData.guests > 4 && (
                                 <div style={{ fontSize: '0.8rem', color: '#7f8c8d', marginBottom: '10px', fontStyle: 'italic' }}>
@@ -1065,6 +1145,15 @@ const BookingForm = ({ onToast }) => {
                                 )}
                             </div>
 
+                            {/* Guest Count Summary */}
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px', padding: '10px', background: '#eef2f3', borderRadius: '8px', border: '1px solid #e1e7e9' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <span style={{ fontSize: '1.1rem' }}>👥</span>
+                                    <span style={{ fontWeight: '600', color: '#2c3e50', fontSize: '0.95rem' }}>Guests</span>
+                                </div>
+                                <span style={{ fontWeight: '700', color: '#2c3e50', fontSize: '1rem' }}>{formData.guests}</span>
+                            </div>
+
                             {/* Capacity Warning */}
                             {showCapacityWarning && (
                                 <div style={{ background: '#fadbd8', color: '#c0392b', padding: '12px', borderRadius: '8px', fontSize: '0.9rem', marginBottom: '15px', display: 'flex', alignItems: 'flex-start', gap: '10px', border: '1px solid #e74c3c' }}>
@@ -1081,12 +1170,22 @@ const BookingForm = ({ onToast }) => {
                             )}
 
                             {/* Meals Option Trigger */}
-                            <div className="meals-trigger" onClick={() => setShowMealPicker(true)} style={{ marginBottom: '15px', padding: '15px', background: '#fff9e6', borderRadius: '12px', border: '1px solid #ffeeba', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                    <span style={{ fontSize: '1.2rem' }}>🍽️</span>
+                            <div
+                                className="meals-trigger"
+                                onClick={() => setShowMealPicker(true)}
+                                style={{
+                                    marginBottom: '20px', padding: '15px 20px',
+                                    background: '#fff9e6', borderRadius: '12px', border: '1px solid #ffeeba',
+                                    cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                                    transition: 'transform 0.2s',
+                                    boxShadow: '0 2px 5px rgba(243, 156, 18, 0.1)'
+                                }}
+                            >
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                                    <span style={{ fontSize: '1.5rem', filter: 'drop-shadow(0 2px 2px rgba(0,0,0,0.1))' }}>🍽️</span>
                                     <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                        <span style={{ fontWeight: '700', color: '#d35400', fontSize: '0.95rem' }}>Meal Plan</span>
-                                        <span style={{ fontSize: '0.8rem', color: '#e67e22' }}>
+                                        <span style={{ fontWeight: '800', color: '#d35400', fontSize: '1rem', letterSpacing: '0.5px' }}>Meal Plan</span>
+                                        <span style={{ fontSize: '0.85rem', color: '#e67e22', fontWeight: '500' }}>
                                             {(formData.mealSelection.breakfast.veg + formData.mealSelection.breakfast.nonVeg +
                                                 formData.mealSelection.lunch.veg + formData.mealSelection.lunch.nonVeg +
                                                 formData.mealSelection.dinner.veg + formData.mealSelection.dinner.nonVeg) > 0
@@ -1095,7 +1194,7 @@ const BookingForm = ({ onToast }) => {
                                         </span>
                                     </div>
                                 </div>
-                                <span style={{ fontSize: '0.9rem', color: '#d35400' }}>{showMealPicker ? '▲' : '▶'}</span>
+                                <span style={{ fontSize: '1rem', color: '#d35400' }}>▶</span>
                             </div>
 
                             {/* Coupon Input */}
@@ -1163,8 +1262,8 @@ const BookingForm = ({ onToast }) => {
                                 <input type="email" name="email" value={formData.email} onChange={handleChange} placeholder="Email" required style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ddd', marginBottom: '10px', fontSize: '0.9rem' }} />
                                 <textarea name="message" value={formData.message} onChange={handleChange} placeholder="Message" rows="2" style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ddd', marginBottom: '15px', fontSize: '0.9rem' }} />
 
-                                <button type="submit" disabled={isSubmitting || formData.selectedRooms.length === 0 || showCapacityWarning} style={{ width: '100%', padding: '12px', background: isSubmitting || formData.selectedRooms.length === 0 || showCapacityWarning ? '#bdc3c7' : '#2ecc71', color: 'white', border: 'none', borderRadius: '8px', fontSize: '1.1rem', fontWeight: 'bold', cursor: isSubmitting || formData.selectedRooms.length === 0 || showCapacityWarning ? 'not-allowed' : 'pointer', transition: 'background 0.3s' }}>
-                                    {showCapacityWarning ? 'Select More Rooms' : (isSubmitting ? '...' : 'Confirm Request')}
+                                <button type="submit" disabled={isSubmitting || formData.selectedRooms.length === 0 || showCapacityWarning} style={{ width: '100%', padding: '14px', background: isSubmitting || formData.selectedRooms.length === 0 || showCapacityWarning ? '#bdc3c7' : '#3498db', color: 'white', border: 'none', borderRadius: '12px', fontSize: '1.1rem', fontWeight: '800', cursor: isSubmitting || formData.selectedRooms.length === 0 || showCapacityWarning ? 'not-allowed' : 'pointer', transition: 'all 0.3s', boxShadow: '0 4px 15px rgba(52, 152, 219, 0.4)' }}>
+                                    {showCapacityWarning ? 'Select More Rooms' : (isSubmitting ? 'Processing...' : 'Confirm Request')}
                                 </button>
                             </form>
 
@@ -1447,29 +1546,21 @@ const BookingForm = ({ onToast }) => {
                                         </div>
                                         <div style={{ fontWeight: 'bold', color: '#e67e22', fontSize: '1.1rem' }}>₹{MEAL_PRICES.breakfast}</div>
                                     </div>
-                                    <div style={{ display: 'flex', gap: '15px' }}>
-                                        <div style={{ flex: 1 }}>
-                                            <label style={{ fontSize: '0.9rem', color: '#27ae60', fontWeight: 'bold', marginBottom: '5px', display: 'block' }}>Veg</label>
-                                            <input
-                                                type="number"
-                                                min="0"
-                                                name="meal_breakfast_veg"
-                                                value={formData.mealSelection.breakfast.veg}
-                                                onChange={handleChange}
-                                                style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd', fontSize: '1rem', textAlign: 'center' }}
-                                            />
-                                        </div>
-                                        <div style={{ flex: 1 }}>
-                                            <label style={{ fontSize: '0.9rem', color: '#c0392b', fontWeight: 'bold', marginBottom: '5px', display: 'block' }}>Non-Veg</label>
-                                            <input
-                                                type="number"
-                                                min="0"
-                                                name="meal_breakfast_nonVeg"
-                                                value={formData.mealSelection.breakfast.nonVeg}
-                                                onChange={handleChange}
-                                                style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd', fontSize: '1rem', textAlign: 'center' }}
-                                            />
-                                        </div>
+                                    <div style={{ display: 'flex', gap: '20px' }}>
+                                        <MealStepper
+                                            label="Veg"
+                                            name="meal_breakfast_veg"
+                                            value={formData.mealSelection.breakfast.veg}
+                                            onChange={handleChange}
+                                            color="#27ae60"
+                                        />
+                                        <MealStepper
+                                            label="Non-Veg"
+                                            name="meal_breakfast_nonVeg"
+                                            value={formData.mealSelection.breakfast.nonVeg}
+                                            onChange={handleChange}
+                                            color="#c0392b"
+                                        />
                                     </div>
                                 </div>
 
@@ -1482,29 +1573,21 @@ const BookingForm = ({ onToast }) => {
                                         </div>
                                         <div style={{ fontWeight: 'bold', color: '#e67e22', fontSize: '1.1rem' }}>₹{MEAL_PRICES.lunch}</div>
                                     </div>
-                                    <div style={{ display: 'flex', gap: '15px' }}>
-                                        <div style={{ flex: 1 }}>
-                                            <label style={{ fontSize: '0.9rem', color: '#27ae60', fontWeight: 'bold', marginBottom: '5px', display: 'block' }}>Veg</label>
-                                            <input
-                                                type="number"
-                                                min="0"
-                                                name="meal_lunch_veg"
-                                                value={formData.mealSelection.lunch.veg}
-                                                onChange={handleChange}
-                                                style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd', fontSize: '1rem', textAlign: 'center' }}
-                                            />
-                                        </div>
-                                        <div style={{ flex: 1 }}>
-                                            <label style={{ fontSize: '0.9rem', color: '#c0392b', fontWeight: 'bold', marginBottom: '5px', display: 'block' }}>Non-Veg</label>
-                                            <input
-                                                type="number"
-                                                min="0"
-                                                name="meal_lunch_nonVeg"
-                                                value={formData.mealSelection.lunch.nonVeg}
-                                                onChange={handleChange}
-                                                style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd', fontSize: '1rem', textAlign: 'center' }}
-                                            />
-                                        </div>
+                                    <div style={{ display: 'flex', gap: '20px' }}>
+                                        <MealStepper
+                                            label="Veg"
+                                            name="meal_lunch_veg"
+                                            value={formData.mealSelection.lunch.veg}
+                                            onChange={handleChange}
+                                            color="#27ae60"
+                                        />
+                                        <MealStepper
+                                            label="Non-Veg"
+                                            name="meal_lunch_nonVeg"
+                                            value={formData.mealSelection.lunch.nonVeg}
+                                            onChange={handleChange}
+                                            color="#c0392b"
+                                        />
                                     </div>
                                 </div>
 
@@ -1517,29 +1600,21 @@ const BookingForm = ({ onToast }) => {
                                         </div>
                                         <div style={{ fontWeight: 'bold', color: '#e67e22', fontSize: '1.1rem' }}>₹{MEAL_PRICES.dinner}</div>
                                     </div>
-                                    <div style={{ display: 'flex', gap: '15px' }}>
-                                        <div style={{ flex: 1 }}>
-                                            <label style={{ fontSize: '0.9rem', color: '#27ae60', fontWeight: 'bold', marginBottom: '5px', display: 'block' }}>Veg</label>
-                                            <input
-                                                type="number"
-                                                min="0"
-                                                name="meal_dinner_veg"
-                                                value={formData.mealSelection.dinner.veg}
-                                                onChange={handleChange}
-                                                style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd', fontSize: '1rem', textAlign: 'center' }}
-                                            />
-                                        </div>
-                                        <div style={{ flex: 1 }}>
-                                            <label style={{ fontSize: '0.9rem', color: '#c0392b', fontWeight: 'bold', marginBottom: '5px', display: 'block' }}>Non-Veg</label>
-                                            <input
-                                                type="number"
-                                                min="0"
-                                                name="meal_dinner_nonVeg"
-                                                value={formData.mealSelection.dinner.nonVeg}
-                                                onChange={handleChange}
-                                                style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd', fontSize: '1rem', textAlign: 'center' }}
-                                            />
-                                        </div>
+                                    <div style={{ display: 'flex', gap: '20px' }}>
+                                        <MealStepper
+                                            label="Veg"
+                                            name="meal_dinner_veg"
+                                            value={formData.mealSelection.dinner.veg}
+                                            onChange={handleChange}
+                                            color="#27ae60"
+                                        />
+                                        <MealStepper
+                                            label="Non-Veg"
+                                            name="meal_dinner_nonVeg"
+                                            value={formData.mealSelection.dinner.nonVeg}
+                                            onChange={handleChange}
+                                            color="#c0392b"
+                                        />
                                     </div>
                                 </div>
 

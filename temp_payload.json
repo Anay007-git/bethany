@@ -1,0 +1,18 @@
+{
+    "booking": {
+        "id": "TEST-EMAIL-001",
+        "guests": {
+            "full_name": "Test User",
+            "email": "biswasanay07@gmail.com",
+            "phone": "9876543210"
+        },
+        "check_in": "2026-02-01",
+        "check_out": "2026-02-03",
+        "total_price": 5000,
+        "room_ids": [
+            {
+                "name": "Test Room"
+            }
+        ]
+    }
+}

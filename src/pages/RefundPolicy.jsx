@@ -24,7 +24,7 @@ const RefundPolicy = () => {
                     <h4>2. Refund Process & Timeline</h4>
                     <ul>
                         <li>Eligible refunds will be processed to the original UPI ID or PhonePe account used for payment.</li>
-                        <li><strong>Refund timeline is not more than 5 days.</strong> We strive to process refunds as quickly as possible.</li>
+                        <li><strong>Refund will be credited to your original payment method within 5 days.</strong></li>
                         <li>Once initiated by us, the credit to your account is subject to your bank's processing times.</li>
                     </ul>
 

@@ -104,7 +104,8 @@ const BillView = () => {
 
                     <div style={{ marginTop: '15px', fontSize: '13px', color: '#555' }}>
                         <strong>Check In:</strong> {formatDate(booking.check_in)}<br />
-                        <strong>Check Out:</strong> {formatDate(booking.check_out)}
+                        <strong>Check Out:</strong> {formatDate(booking.check_out)}<br />
+                        <strong>Guests:</strong> {booking.guests_count}
                     </div>
                 </div>
                 <div style={{ textAlign: 'right' }}>

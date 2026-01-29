@@ -34,7 +34,7 @@ const PolicyModal = ({ type, onClose }) => {
                 <ul>
                     <li>Cancellation and refund terms will be communicated at the time of booking.</li>
                     <li>Eligible refunds will be processed to the original UPI ID or PhonePe account used for payment.</li>
-                    <li>Refund timelines are governed by PhonePe, UPI service providers, and banks, and may take 5–10 business days.</li>
+                    <li>Refund will be credited to your original payment method within 5 days.</li>
                     <li>No refunds will be provided for no-shows or early check-outs unless explicitly agreed upon in writing.</li>
                 </ul>
 

@@ -1,8 +1,15 @@
+import { useEffect, useRef } from 'react';
+
 const amenities = [
     {
         icon: (
-            <svg viewBox="0 0 24 24">
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
+                <polyline points="14 2 14 8 20 8" />
+                <path d="M8 13h2" />
+                <path d="M8 17h2" />
+                <path d="M14 13h2" />
+                <path d="M14 17h2" />
             </svg>
         ),
         title: 'Mountain Views',
@@ -10,8 +17,11 @@ const amenities = [
     },
     {
         icon: (
-            <svg viewBox="0 0 24 24">
-                <path d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8l3 3 3-3c-1.65-1.66-4.34-1.66-6 0zm-4-4l2 2c2.76-2.76 7.24-2.76 10 0l2-2C15.14 9.14 8.87 9.14 5 13z" />
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M5 12.55a11 11 0 0 1 14.08 0" />
+                <path d="M1.42 9a16 16 0 0 1 19.38 0" />
+                <path d="M8.53 16.11a6 6 0 0 1 6.95 0" />
+                <path d="M12 20h.01" />
             </svg>
         ),
         title: 'Free WiFi',
@@ -19,8 +29,10 @@ const amenities = [
     },
     {
         icon: (
-            <svg viewBox="0 0 24 24">
-                <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zm-7-2h2v-4h4v-2h-4V7h-2v4H8v2h4z" />
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 7v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7" />
+                <path d="M3 7l9-5 9 5" />
+                <path d="M12 14h.01" />
             </svg>
         ),
         title: 'Private Rooms',
@@ -28,28 +40,29 @@ const amenities = [
     },
     {
         icon: (
-            <svg viewBox="0 0 24 24">
-                <path d="M21.41 11.58l-9-9C12.05 2.22 11.55 2 11 2H4c-1.1 0-2 .9-2 2v7c0 .55.22 1.05.59 1.42l9 9c.36.36.86.58 1.41.58.55 0 1.05-.22 1.41-.59l7-7c.37-.36.59-.86.59-1.41 0-.55-.23-1.06-.59-1.42zM5.5 7C4.67 7 4 6.33 4 5.5S4.67 4 5.5 4 7 4.67 7 5.5 6.33 7 5.5 7z" />
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="10" r="3" />
+                <path d="M12 21.7C17.3 17 20 13 20 10a8 8 0 1 0-16 0c0 3 2.7 7 8 11.7z" />
             </svg>
         ),
         title: 'Local Experiences',
         description: 'Discover local culture with guided tours to monasteries, markets, and nature trails.'
     },
-
 ];
 
 const Amenities = () => {
     return (
-        <section id="amenities" className="amenities">
-            <div className="container">
-                <div className="section-header">
-                    <h2>What This Place Offers</h2>
-                    <p>Everything you need for a comfortable and memorable mountain retreat</p>
+        <section id="amenities" className="amenities-section" style={{ background: '#f0f0f3', padding: '100px 20px' }}>
+            <div className="container" style={{ maxWidth: '1200px', margin: '0 auto' }}>
+                <div className="section-header" style={{ textAlign: 'center', marginBottom: '60px' }}>
+                    <h2 style={{ fontSize: '2.5rem', color: '#1a1a1a', fontWeight: '800', marginBottom: '15px', letterSpacing: '-0.5px' }}>What This Place Offers</h2>
+                    <p style={{ fontSize: '1.1rem', color: '#666' }}>Everything you need for a comfortable and memorable mountain retreat</p>
                 </div>
-                <div className="amenities-grid">
+
+                <div className="neumorphic-grid">
                     {amenities.map((amenity, index) => (
-                        <div key={index} className="amenity-card">
-                            <div className="amenity-icon">
+                        <div key={index} className="neumorphic-card">
+                            <div className="medal-icon">
                                 {amenity.icon}
                             </div>
                             <h3>{amenity.title}</h3>
@@ -58,6 +71,76 @@ const Amenities = () => {
                     ))}
                 </div>
             </div>
+
+            <style>{`
+                .neumorphic-grid {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+                    gap: 30px;
+                }
+
+                .neumorphic-card {
+                    background: #f0f0f3;
+                    border-radius: 20px;
+                    padding: 30px;
+                    box-shadow: 
+                        10px 10px 20px #aeaec0,
+                        -10px -10px 20px #ffffff;
+                    transition: transform 0.3s ease;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: flex-start;
+                    height: 100%;
+                }
+
+                .neumorphic-card:hover {
+                    transform: translateY(-5px);
+                }
+
+                .medal-icon {
+                    width: 50px;
+                    height: 50px;
+                    border-radius: 50%;
+                    background: #f0f0f3;
+                    box-shadow: 
+                        5px 5px 10px #aeaec0,
+                        -5px -5px 10px #ffffff;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    margin-bottom: 25px;
+                    border: 2px solid rgba(255,255,255,0.2);
+                }
+
+                .medal-icon svg {
+                    width: 24px;
+                    height: 24px;
+                    color: #555;
+                    stroke-width: 2px;
+                }
+
+                .neumorphic-card h3 {
+                    font-size: 1.25rem;
+                    color: #1a1a1a;
+                    margin-bottom: 12px;
+                    font-weight: 700;
+                    letter-spacing: -0.02em;
+                }
+
+                .neumorphic-card p {
+                    font-size: 0.95rem;
+                    color: #666;
+                    line-height: 1.6;
+                    margin: 0;
+                }
+
+                @media (max-width: 768px) {
+                    .neumorphic-grid {
+                        grid-template-columns: 1fr;
+                        gap: 40px;
+                    }
+                }
+            `}</style>
         </section>
     );
 };

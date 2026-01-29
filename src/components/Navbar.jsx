@@ -46,7 +46,7 @@ const Navbar = () => {
 
   return (
     <>
-      <nav className={`navbar ${scrolled ? 'scrolled' : ''}`}>
+      <nav className={`navbar ${scrolled ? 'scrolled' : ''} ${mobileMenuOpen ? 'mobile-open' : ''}`}>
         <div className="container">
           <a href="/" className="navbar-logo">
             <img src={logoImg} alt="Bethany Homestay Logo" className="navbar-logo-img" />
@@ -60,30 +60,34 @@ const Navbar = () => {
             <li><a href="/#contact" onClick={(e) => scrollToSection(e, 'contact')}>Contact</a></li>
           </ul>
 
-          <a href="/#booking" className="navbar-cta" onClick={(e) => scrollToSection(e, 'booking')}>
-            Book Now
-          </a>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <a href="/#booking" className="navbar-cta" onClick={(e) => scrollToSection(e, 'booking')}>
+              Book Now
+            </a>
 
-          <button
-            className="mobile-menu-btn"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            aria-label="Toggle menu"
-          >
-            <span></span>
-            <span></span>
-            <span></span>
-          </button>
+            <button
+              className={`mobile-menu-btn ${mobileMenuOpen ? 'active' : ''}`}
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              aria-label="Toggle menu"
+            >
+              <span></span>
+              <span></span>
+              <span></span>
+            </button>
+          </div>
         </div>
       </nav>
 
       <div className={`mobile-nav ${mobileMenuOpen ? 'active' : ''}`}>
-        <ul>
-          <li><a href="/#about" onClick={(e) => scrollToSection(e, 'about')}>About</a></li>
-          <li><a href="/#amenities" onClick={(e) => scrollToSection(e, 'amenities')}>Feature</a></li>
-          <li><a href="/#gallery" onClick={(e) => scrollToSection(e, 'gallery')}>Gallery</a></li>
-          <li><a href="/#booking" onClick={(e) => scrollToSection(e, 'booking')}>Book Now</a></li>
-          <li><a href="/#contact" onClick={(e) => scrollToSection(e, 'contact')}>Contact</a></li>
-        </ul>
+        <div className="mobile-nav-content">
+          <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+            <li><a href="/#about" onClick={(e) => scrollToSection(e, 'about')}>About</a></li>
+            <li><a href="/#amenities" onClick={(e) => scrollToSection(e, 'amenities')}>Feature</a></li>
+            <li><a href="/#gallery" onClick={(e) => scrollToSection(e, 'gallery')}>Gallery</a></li>
+            <li><a href="/#booking" onClick={(e) => scrollToSection(e, 'booking')}>Book Now</a></li>
+            <li><a href="/#contact" onClick={(e) => scrollToSection(e, 'contact')}>Contact</a></li>
+          </ul>
+        </div>
       </div>
     </>
   );

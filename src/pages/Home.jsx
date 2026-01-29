@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import Navbar from '../components/Navbar';
-import Hero from '../components/Hero';
+import AppleHero from '../components/AppleHero';
 import About from '../components/About';
 import Amenities from '../components/Amenities';
 import Gallery from '../components/Gallery';
@@ -28,7 +28,7 @@ function Home() {
         <>
             <Navbar />
             <main>
-                <Hero />
+                <AppleHero />
                 <About />
                 <Gallery />
                 <BookingForm onToast={showToast} />
