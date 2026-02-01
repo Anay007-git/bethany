@@ -236,9 +236,16 @@ const BookingForm = ({ onToast }) => {
             const dbRooms = await SupabaseService.getRooms();
             if (dbRooms && dbRooms.length > 0) {
                 const formattedRooms = dbRooms.map(r => ({
-                    ...r,
+                    id: r.id,
+                    name: r.name,
                     price: r.price_low_season,
-                    beds: r.capacity,
+                    priceLowSeason: r.price_low_season,
+                    priceHighSeason: r.price_high_season,
+                    beds: r.capacity || `${r.max_guests || 4} Adults`,
+                    view: r.view || 'Mountain View',
+                    size: r.size || 'Standard Room',
+                    extraBed: r.extra_bed || null,
+                    description: r.description || '',
                     features: r.features || [],
                     images: r.images || []
                 }));

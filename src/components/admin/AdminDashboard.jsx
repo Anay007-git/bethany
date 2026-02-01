@@ -279,13 +279,15 @@ const AdminDashboard = ({ onLogout }) => {
     const handleSaveRoom = async () => {
         if (!editingRoom) return;
 
-        // Prepare updates
         const updates = {
             name: editForm.name,
             price_low_season: parseInt(editForm.price_low_season) || 0,
             price_high_season: parseInt(editForm.price_high_season) || 0,
-            capacity: parseInt(editForm.capacity) || 0,
+            capacity: editForm.capacity,
             description: editForm.description,
+            view: editForm.view,
+            size: editForm.size,
+            extra_bed: editForm.extra_bed,
             // Convert features string back to array
             features: editForm.features.split(',').map(f => f.trim()).filter(f => f),
             images: editForm.images,
@@ -1177,6 +1179,22 @@ const AdminDashboard = ({ onLogout }) => {
                                             <div>
                                                 <label className="form-label" style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#475569', fontSize: '0.9rem' }}>High Season Price (₹)</label>
                                                 <input type="number" name="price_high_season" value={editForm.price_high_season || 0} onChange={handleEditChange} className="form-input" style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '1rem' }} />
+                                            </div>
+                                        </div>
+
+                                        {/* Additional Info Grid */}
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px' }}>
+                                            <div>
+                                                <label className="form-label" style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#475569', fontSize: '0.9rem' }}>View Type</label>
+                                                <input type="text" name="view" value={editForm.view || ''} onChange={handleEditChange} className="form-input" placeholder="e.g. Mountain View" style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '1rem' }} />
+                                            </div>
+                                            <div>
+                                                <label className="form-label" style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#475569', fontSize: '0.9rem' }}>Room Size</label>
+                                                <input type="text" name="size" value={editForm.size || ''} onChange={handleEditChange} className="form-input" placeholder="e.g. 320 sq.ft" style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '1rem' }} />
+                                            </div>
+                                            <div>
+                                                <label className="form-label" style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#475569', fontSize: '0.9rem' }}>Extra Bed</label>
+                                                <input type="text" name="extra_bed" value={editForm.extra_bed || ''} onChange={handleEditChange} className="form-input" placeholder="e.g. 1 Cot available" style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '1rem' }} />
                                             </div>
                                         </div>
 
