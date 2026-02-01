@@ -400,18 +400,21 @@ const BookingForm = ({ onToast }) => {
         return false;
     };
 
-    // Get Room Price for a specific date
+    // Get Room Price for a specific date (from Supabase data)
     const getSeasonalRoomPrice = (date, roomId) => {
         const highSeason = isHighSeason(date);
+        const room = rooms.find(r => r.id === roomId);
 
-        // Carmel: High=3600, Low=3000
-        if (roomId === 'carmel') {
-            return highSeason ? 3600 : 3000;
+        if (!room) {
+            // Fallback if room not found
+            return highSeason ? 3000 : 2500;
         }
 
-        // Others (Jordan, Sion, Zion): High=3000, Low=2500
-        // User requested "Rest are 3000" during high season, and "Off season rate is fixed to existing" (which is 2500)
-        return highSeason ? 3000 : 2500;
+        // Use database prices (priceLowSeason/priceHighSeason from mapping)
+        const lowPrice = room.priceLowSeason || room.price || 2500;
+        const highPrice = room.priceHighSeason || room.price || 3000;
+
+        return highSeason ? highPrice : lowPrice;
     };
 
 
