@@ -10,6 +10,7 @@ const AdminDashboard = ({ onLogout }) => {
     const [rooms, setRooms] = useState([]);
     const [allBookings, setAllBookings] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [isCollapsed, setIsCollapsed] = useState(false);
 
     // Room Editing State
     const [editingRoom, setEditingRoom] = useState(null);
@@ -17,9 +18,14 @@ const AdminDashboard = ({ onLogout }) => {
     const [newImageUrl, setNewImageUrl] = useState('');
     const [uploadingImg, setUploadingImg] = useState(false);
 
-    const [dateRange, setDateRange] = useState({
-        start: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
-        end: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().split('T')[0]
+    const [dateRange, setDateRange] = useState(() => {
+        const start = new Date();
+        const end = new Date();
+        end.setDate(end.getDate() + 180);
+        return {
+            start: start.toISOString().split('T')[0],
+            end: end.toISOString().split('T')[0]
+        };
     });
     const [statusFilter, setStatusFilter] = useState('all');
 
@@ -245,28 +251,41 @@ const AdminDashboard = ({ onLogout }) => {
     const handleImageUpload = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
+        console.log('Uploading image:', file.name);
 
         setUploadingImg(true);
         const result = await SupabaseService.uploadRoomImage(file);
+        console.log('Upload result:', result);
         setUploadingImg(false);
 
         if (result.success) {
             setEditForm(prev => ({
                 ...prev,
-                images: [...prev.images, result.publicUrl]
+                images: [...(Array.isArray(prev.images) ? prev.images : []), result.publicUrl]
             }));
+            console.log('Image added successfully:', result.publicUrl);
         } else {
-            alert('Image upload failed. Bucket "room-images" might not exist.');
+            alert('Image upload failed. Bucket "room-images" might not exist. Check console for details.');
+            console.error('Upload error:', result.error);
         }
     };
 
     const handleAddImageURL = () => {
-        if (!newImageUrl) return;
-        setEditForm(prev => ({
-            ...prev,
-            images: [...prev.images, newImageUrl]
-        }));
+        if (!newImageUrl) {
+            console.log('No URL entered');
+            return;
+        }
+        console.log('Adding image URL:', newImageUrl);
+        setEditForm(prev => {
+            const currentImages = Array.isArray(prev.images) ? prev.images : [];
+            console.log('Current images:', currentImages);
+            return {
+                ...prev,
+                images: [...currentImages, newImageUrl]
+            };
+        });
         setNewImageUrl('');
+        console.log('Image URL added');
     };
 
     const handleRemoveImage = (index) => {
@@ -567,20 +586,33 @@ const AdminDashboard = ({ onLogout }) => {
 
     // Helper for Meal Change - with capacity validation
     const handleMealChange = (type, diet, val) => {
+        // Allow empty string for better UX (deleting content)
+        if (val === '') {
+            setOfflineForm(prev => ({
+                ...prev,
+                mealSelection: {
+                    ...prev.mealSelection,
+                    [type]: {
+                        ...prev.mealSelection[type],
+                        [diet]: ''
+                    }
+                }
+            }));
+            return;
+        }
+
         const newCount = Math.max(0, parseInt(val) || 0);
         const guestCount = parseInt(offlineForm.guests) || 1;
 
         // Calculate total meals for this meal type after the change
         const currentMeal = offlineForm.mealSelection[type];
-        const otherDietCount = diet === 'veg'
-            ? (parseInt(currentMeal.nonVeg) || 0)
-            : (parseInt(currentMeal.veg) || 0);
+        const otherDietCount = parseInt(diet === 'veg' ? currentMeal.nonVeg : currentMeal.veg) || 0;
         const totalForThisMeal = newCount + otherDietCount;
 
         // Validate: total plates for this meal type cannot exceed guest count
         if (totalForThisMeal > guestCount) {
-            alert(`Total ${type} plates (Veg + Non-Veg) cannot exceed ${guestCount} guests.`);
-            return;
+            // Warning only, don't block input
+            console.warn(`Total ${type} plates (Veg + Non-Veg) exceed ${guestCount} guests.`);
         }
 
         setOfflineForm(prev => ({
@@ -600,53 +632,79 @@ const AdminDashboard = ({ onLogout }) => {
     return (
         <div className="admin-layout">
             {/* Sidebar Navigation */}
-            <aside className="admin-sidebar">
+            {/* Sidebar Navigation */}
+            <aside className={`admin-sidebar ${isCollapsed ? 'collapsed' : ''}`}>
                 <div className="sidebar-header">
-                    <div className="sidebar-brand">Bethany<span>Admin</span></div>
+                    <div className="sidebar-brand">
+                        {!isCollapsed && <>Bethany<span>Admin</span></>}
+                        {isCollapsed && <span style={{ fontSize: '1.5rem' }}>B</span>}
+                    </div>
+                    <button
+                        className="btn-secondary"
+                        onClick={() => setIsCollapsed(!isCollapsed)}
+                        style={{
+                            padding: '8px',
+                            minWidth: 'auto',
+                            borderRadius: '50%',
+                            width: '32px',
+                            height: '32px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            marginLeft: isCollapsed ? '0' : 'auto'
+                        }}
+                    >
+                        {isCollapsed ? '→' : '←'}
+                    </button>
                 </div>
 
                 <nav className="sidebar-nav">
                     <button
                         className={`nav-item ${activeTab === 'dashboard' ? 'active' : ''}`}
                         onClick={() => setActiveTab('dashboard')}
+                        title="Dashboard"
                     >
-                        📊 <span>Dashboard</span>
+                        📊 {!isCollapsed && <span>Dashboard</span>}
                     </button>
                     <button
                         className={`nav-item ${activeTab === 'inventory' ? 'active' : ''}`}
                         onClick={() => setActiveTab('inventory')}
+                        title="Inventory"
                     >
-                        🏨 <span>Inventory & OTA</span>
+                        🏨 {!isCollapsed && <span>Inventory & OTA</span>}
                     </button>
                     <button
                         className={`nav-item ${activeTab === 'offline' ? 'active' : ''}`}
                         onClick={() => setActiveTab('offline')}
+                        title="New Booking"
                     >
-                        ➕ <span>New Booking</span>
+                        ➕ {!isCollapsed && <span>New Booking</span>}
                     </button>
                     <button
                         className={`nav-item ${activeTab === 'marketing' ? 'active' : ''}`}
                         onClick={() => setActiveTab('marketing')}
+                        title="Marketing"
                     >
-                        📢 <span>Marketing</span>
+                        📢 {!isCollapsed && <span>Marketing</span>}
                     </button>
                     <button
                         className={`nav-item ${activeTab === 'coupons' ? 'active' : ''}`}
                         onClick={() => setActiveTab('coupons')}
+                        title="Coupons"
                     >
-                        🎟️ <span>Coupons</span>
+                        🎟️ {!isCollapsed && <span>Coupons</span>}
                     </button>
                 </nav>
 
                 <div className="sidebar-footer">
-                    <button onClick={onLogout} className="btn-danger" style={{ width: '100%', justifyContent: 'center' }}>
-                        🚪 Logout
+                    <button onClick={onLogout} className="btn-danger" style={{ width: '100%', justifyContent: 'center', padding: isCollapsed ? '12px 0' : '12px' }}>
+                        {isCollapsed ? '🚪' : '🚪 Logout'}
                     </button>
                 </div>
             </aside>
 
             {/* Main Content Area */}
-            <main className="admin-main">
+            <main className={`admin-main ${isCollapsed ? 'expanded' : ''}`}>
                 <header className="main-header">
                     <div className="page-title">
                         <h1>{activeTab === 'dashboard' ? 'Overview' : activeTab === 'inventory' ? 'Room Inventory' : activeTab === 'marketing' ? 'Customer CRM' : activeTab === 'coupons' ? 'Coupon Management' : 'Create Booking'}</h1>
@@ -657,12 +715,11 @@ const AdminDashboard = ({ onLogout }) => {
                         <div className="header-actions">
                             <div className="filter-bar">
                                 <input type="date" value={dateRange.start} onChange={e => setDateRange(p => ({ ...p, start: e.target.value }))} className="date-input" />
-                                <span style={{ color: '#cbd5e1' }}>→</span>
+                                <span>→</span>
                                 <input type="date" value={dateRange.end} onChange={e => setDateRange(p => ({ ...p, end: e.target.value }))} className="date-input" />
                                 <select
                                     value={statusFilter}
                                     onChange={(e) => setStatusFilter(e.target.value)}
-                                    style={{ padding: '8px', borderRadius: '6px', border: '1px solid #cbd5e1', color: '#475569', marginLeft: '10px' }}
                                 >
                                     <option value="all">All Status</option>
                                     <option value="pending">Pending</option>
@@ -690,71 +747,81 @@ const AdminDashboard = ({ onLogout }) => {
                         </div>
 
                         {/* Revenue Trends Chart */}
-                        <div className="card-panel" style={{ marginTop: '20px' }}>
+                        <div className="card-panel">
                             <h3>📈 Revenue Trends (Direct vs OTA)</h3>
-                            <div style={{ display: 'flex', alignItems: 'flex-end', height: '400px', gap: '40px', padding: '30px 0', overflowX: 'auto', justifyContent: monthlyData.length > 8 ? 'flex-start' : 'center' }}>
-                                {monthlyData.map((data, i) => {
-                                    const maxVal = Math.max(...monthlyData.map(d => d.total)) || 1;
-                                    const directHeight = (data.direct / maxVal) * 320;
-                                    const otaHeight = (data.ota / maxVal) * 320;
+                            <div className="chart-wrapper">
+                                <div className="chart-container">
+                                    {monthlyData.map((data, i) => {
+                                        const maxVal = Math.max(...monthlyData.map(d => d.total)) || 1;
+                                        // Calculate percentages relative to max value for height
+                                        const directPct = (data.direct / maxVal) * 100;
+                                        const otaPct = (data.ota / maxVal) * 100;
 
-                                    return (
-                                        <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: '80px' }}>
-                                            <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', height: '320px', width: '60px', background: '#f1f5f9', borderRadius: '8px', overflow: 'hidden', position: 'relative' }}>
-                                                {/* OTA Portion */}
-                                                <div style={{ height: `${otaHeight}px`, background: '#0891b2', width: '100%', transition: 'height 0.3s' }} title={`OTA: ₹${data.ota}`}></div>
-                                                {/* Direct Portion */}
-                                                <div style={{ height: `${directHeight}px`, background: '#10b981', width: '100%', transition: 'height 0.3s' }} title={`Direct: ₹${data.direct}`}></div>
+                                        return (
+                                            <div key={i} className="chart-bar-group">
+                                                <div className="chart-tooltip">
+                                                    Direct: ₹{(data.direct / 1000).toFixed(1)}k | OTA: ₹{(data.ota / 1000).toFixed(1)}k
+                                                </div>
+                                                <div className="chart-bar-track">
+                                                    {/* OTA Portion (Top) */}
+                                                    <div className="chart-bar-fill" style={{ height: `${otaPct}%`, background: 'var(--info-gradient)', opacity: 0.9 }}></div>
+                                                    <div style={{ height: '2px' }}></div> {/* Spacer */}
+                                                    {/* Direct Portion (Bottom) */}
+                                                    <div className="chart-bar-fill" style={{ height: `${directPct}%`, background: 'var(--success-gradient)' }}></div>
+                                                </div>
+                                                <span className="chart-label">{data.label.split(' ')[0]}</span>
                                             </div>
-                                            <span style={{ fontSize: '0.9rem', color: '#64748b', marginTop: '12px', fontWeight: '500' }}>{data.label}</span>
-                                            <span style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#334155' }}>₹{(data.total / 1000).toFixed(1)}k</span>
-                                        </div>
-                                    );
-                                })}
-                                {monthlyData.length === 0 && <div style={{ color: '#94a3b8', margin: 'auto', fontSize: '1.1rem' }}>No revenue data available</div>}
-                            </div>
-                            <div style={{ display: 'flex', gap: '25px', justifyContent: 'center', marginTop: '15px', fontSize: '0.9rem' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><div style={{ width: '14px', height: '14px', background: '#10b981', borderRadius: '4px' }}></div> Direct</div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><div style={{ width: '14px', height: '14px', background: '#0891b2', borderRadius: '4px' }}></div> OTA (Est.)</div>
+                                        );
+                                    })}
+                                    {monthlyData.length === 0 && <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', color: 'var(--text-muted)' }}>No revenue data available</div>}
+                                </div>
+                                <div className="chart-legend">
+                                    <div className="legend-item"><div className="legend-dot" style={{ background: 'var(--success)' }}></div> Direct</div>
+                                    <div className="legend-item"><div className="legend-dot" style={{ background: 'var(--info)' }}></div> OTA (Est.)</div>
+                                </div>
                             </div>
                         </div>
 
                         {/* Cancellation Trends Chart */}
-                        <div className="card-panel" style={{ marginTop: '20px' }}>
+                        <div className="card-panel">
                             <h3>📉 Booking Trends (Confirmed vs Cancelled)</h3>
-                            <div style={{ display: 'flex', alignItems: 'flex-end', height: '400px', gap: '40px', padding: '30px 0', overflowX: 'auto', justifyContent: cancellationData.length > 8 ? 'flex-start' : 'center' }}>
-                                {cancellationData.map((data, i) => {
-                                    const total = data.confirmed + data.cancelled;
-                                    const maxVal = Math.max(...cancellationData.map(d => d.confirmed + d.cancelled)) || 1;
-                                    const confirmedHeight = (data.confirmed / maxVal) * 320;
-                                    const cancelledHeight = (data.cancelled / maxVal) * 320;
+                            <div className="chart-wrapper">
+                                <div className="chart-container">
+                                    {cancellationData.map((data, i) => {
+                                        const maxVal = Math.max(...cancellationData.map(d => d.confirmed + d.cancelled)) || 1;
+                                        const confirmedPct = (data.confirmed / maxVal) * 100;
+                                        const cancelledPct = (data.cancelled / maxVal) * 100;
 
-                                    return (
-                                        <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: '80px' }}>
-                                            <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', height: '320px', width: '60px', background: '#f1f5f9', borderRadius: '8px', overflow: 'hidden', position: 'relative' }}>
-                                                {/* Cancelled Portion (Top red) */}
-                                                <div style={{ height: `${cancelledHeight}px`, background: '#ef4444', width: '100%', transition: 'height 0.3s' }} title={`Cancelled: ${data.cancelled}`}></div>
-                                                {/* Confirmed Portion (Bottom blue) */}
-                                                <div style={{ height: `${confirmedHeight}px`, background: '#3b82f6', width: '100%', transition: 'height 0.3s' }} title={`Confirmed: ${data.confirmed}`}></div>
+                                        return (
+                                            <div key={i} className="chart-bar-group">
+                                                <div className="chart-tooltip">
+                                                    Confirmed: {data.confirmed} | Cancelled: {data.cancelled}
+                                                </div>
+                                                <div className="chart-bar-track">
+                                                    {/* Cancelled Portion (Top) */}
+                                                    <div className="chart-bar-fill" style={{ height: `${cancelledPct}%`, background: 'var(--danger-gradient)', opacity: 0.9 }}></div>
+                                                    <div style={{ height: '2px' }}></div> {/* Spacer */}
+                                                    {/* Confirmed Portion (Bottom) */}
+                                                    <div className="chart-bar-fill" style={{ height: `${confirmedPct}%`, background: 'var(--primary-gradient)' }}></div>
+                                                </div>
+                                                <span className="chart-label">{data.label.split(' ')[0]}</span>
                                             </div>
-                                            <span style={{ fontSize: '0.9rem', color: '#64748b', marginTop: '12px', fontWeight: '500' }}>{data.label}</span>
-                                            <span style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#334155' }}>{total} Bookings</span>
-                                        </div>
-                                    );
-                                })}
-                                {cancellationData.length === 0 && <div style={{ color: '#94a3b8', margin: 'auto', fontSize: '1.1rem' }}>No booking data available</div>}
-                            </div>
-                            <div style={{ display: 'flex', gap: '25px', justifyContent: 'center', marginTop: '15px', fontSize: '0.9rem' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><div style={{ width: '14px', height: '14px', background: '#3b82f6', borderRadius: '4px' }}></div> Confirmed</div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><div style={{ width: '14px', height: '14px', background: '#ef4444', borderRadius: '4px' }}></div> Cancelled</div>
+                                        );
+                                    })}
+                                    {cancellationData.length === 0 && <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', color: 'var(--text-muted)' }}>No booking data available</div>}
+                                </div>
+                                <div className="chart-legend">
+                                    <div className="legend-item"><div className="legend-dot" style={{ background: 'var(--primary)' }}></div> Confirmed</div>
+                                    <div className="legend-item"><div className="legend-dot" style={{ background: 'var(--danger)' }}></div> Cancelled</div>
+                                </div>
                             </div>
                         </div>
 
                         {/* Recent Bookings Table */}
-                        <div className="card-panel" style={{ marginTop: '20px' }}>
+                        <div className="card-panel">
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
                                 <h3>Last 30 Days Bookings</h3>
-                                <span style={{ fontSize: '0.9rem', color: '#64748b' }}>
+                                <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>
                                     Showing {filteredBookings.length} bookings
                                 </span>
                             </div>
@@ -764,6 +831,7 @@ const AdminDashboard = ({ onLogout }) => {
                                     <thead>
                                         <tr>
                                             <th>Guest</th>
+                                            <th>Count</th>
                                             <th>Email</th>
                                             <th>Room</th>
                                             <th>Dates</th>
@@ -775,7 +843,7 @@ const AdminDashboard = ({ onLogout }) => {
                                     <tbody>
                                         {filteredBookings.length === 0 ? (
                                             <tr>
-                                                <td colSpan="7" style={{ textAlign: 'center', padding: '30px', color: '#94a3b8' }}>
+                                                <td colSpan="8" style={{ textAlign: 'center', padding: '30px', color: 'var(--text-muted)' }}>
                                                     No bookings found for the selected range.
                                                 </td>
                                             </tr>
@@ -783,35 +851,32 @@ const AdminDashboard = ({ onLogout }) => {
                                             filteredBookings.map(b => (
                                                 <tr key={b.id}>
                                                     <td>
-                                                        <div style={{ fontWeight: '600', color: '#1e293b' }}>{b.guests?.full_name || 'Unknown'}</div>
-                                                        <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{b.guests?.phone}</div>
+                                                        <div style={{ fontWeight: '600' }}>{b.guests?.full_name || 'Unknown'}</div>
+                                                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{b.guests?.phone}</div>
                                                     </td>
                                                     <td>
-                                                        <div style={{ fontSize: '0.85rem', color: '#64748b' }}>{b.guests?.email || '-'}</div>
+                                                        <div style={{ textAlign: 'center', fontWeight: '500' }}>{b.guests_count || 1} 👥</div>
                                                     </td>
+                                                    <td>{b.guests?.email || 'N/A'}</td>
                                                     <td>
-                                                        <div style={{ fontSize: '0.9rem' }}>
-                                                            {(b.room_ids || []).map(r => r.name).join(', ') || 'N/A'}
-                                                        </div>
+                                                        <div style={{ fontSize: '0.85rem' }}>{(b.room_ids || []).map(r => r.name).join(', ')}</div>
                                                     </td>
-                                                    <td>
-                                                        <div style={{ fontSize: '0.85rem' }}>
-                                                            {new Date(b.check_in).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} →
-                                                            {new Date(b.check_out).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
-                                                        </div>
+                                                    <td style={{ fontSize: '0.85rem' }}>
+                                                        <div>In: {new Date(b.check_in).toLocaleDateString()}</div>
+                                                        <div style={{ color: 'var(--text-muted)' }}>Out: {new Date(b.check_out).toLocaleDateString()}</div>
                                                     </td>
                                                     <td style={{ fontWeight: '600' }}>₹{b.total_price?.toLocaleString('en-IN')}</td>
                                                     <td>
                                                         <select
                                                             value={b.status.toLowerCase()}
                                                             onChange={(e) => handleStatusChange(b.id, e.target.value)}
-                                                            className={`status-badge status-${b.status.toLowerCase()}`}
+                                                            className={`status-badge ${getStatusStyle(b.status).className}`}
                                                             style={{
                                                                 border: 'none',
-                                                                outline: 'none',
                                                                 cursor: b.status === 'cancelled' ? 'not-allowed' : 'pointer',
                                                                 appearance: 'none',
-                                                                paddingRight: '10px'
+                                                                paddingRight: '12px',
+                                                                textAlign: 'center'
                                                             }}
                                                             disabled={b.status.toLowerCase() === 'cancelled'}
                                                         >
@@ -825,7 +890,7 @@ const AdminDashboard = ({ onLogout }) => {
                                                         <div style={{ display: 'flex', gap: '8px' }}>
                                                             <button
                                                                 className="btn-secondary"
-                                                                style={{ padding: '4px 8px', fontSize: '0.75rem' }}
+                                                                style={{ padding: '4px 10px', fontSize: '0.75rem' }}
                                                                 onClick={() => window.open(`/bill/${b.id}`, '_blank')}
                                                             >
                                                                 📄 Bill
@@ -833,7 +898,7 @@ const AdminDashboard = ({ onLogout }) => {
                                                             {b.guests?.phone && (
                                                                 <button
                                                                     className="btn-secondary"
-                                                                    style={{ padding: '4px 8px', fontSize: '0.75rem', color: '#10b981', borderColor: '#10b981' }}
+                                                                    style={{ padding: '4px 10px', fontSize: '0.75rem', color: 'var(--success)', borderColor: 'var(--success)' }}
                                                                     onClick={() => {
                                                                         const text = `Namaste ${b.guests.full_name}, thank you for choosing Bethany Homestay. Here is your invoice: ${window.location.origin}/bill/${b.id}`;
                                                                         window.open(`https://wa.me/${b.guests.phone}?text=${encodeURIComponent(text)}`, '_blank');
@@ -854,9 +919,9 @@ const AdminDashboard = ({ onLogout }) => {
 
                         {/* OTA Synced Bookings Section */}
                         {Object.keys(blockedDates).length > 0 && (
-                            <div className="card-panel" style={{ marginTop: '20px' }}>
+                            <div className="card-panel">
                                 <h3>🔗 OTA Synced Bookings</h3>
-                                <p style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '15px' }}>
+                                <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '15px' }}>
                                     Blocked dates imported from external platforms (Goibibo, Booking.com, Airbnb)
                                 </p>
                                 <div style={{ overflowX: 'auto' }}>
@@ -909,31 +974,31 @@ const AdminDashboard = ({ onLogout }) => {
                         </div>
 
                         {/* Coupon Form */}
-                        <div style={{ background: '#f8fafc', padding: '20px', borderRadius: '12px', marginBottom: '25px', border: '1px solid #e2e8f0' }}>
-                            <h4 style={{ marginTop: 0, marginBottom: '15px', color: '#334155' }}>{editingCoupon ? 'Edit Coupon' : 'Create New Coupon'}</h4>
-                            <form onSubmit={handleCouponSubmit} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '15px', alignItems: 'end' }}>
+                        <div className="meal-plan-section" style={{ marginTop: 0, marginBottom: '25px', padding: '25px' }}>
+                            <h4 style={{ marginTop: 0, marginBottom: '15px', color: 'var(--text-main)', fontSize: '1.1rem' }}>{editingCoupon ? 'Edit Coupon' : 'Create New Coupon'}</h4>
+                            <form onSubmit={handleCouponSubmit} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '20px', alignItems: 'end' }}>
                                 <div>
                                     <label className="form-label">Code</label>
-                                    <input type="text" value={couponForm.code} onChange={e => setCouponForm({ ...couponForm, code: e.target.value })} placeholder="e.g. SUMMER20" required className="form-input" style={{ textTransform: 'uppercase', fontWeight: 'bold' }} disabled={!!editingCoupon} />
+                                    <input type="text" value={couponForm.code} onChange={e => setCouponForm({ ...couponForm, code: e.target.value })} placeholder="e.g. SUMMER20" required className="date-input" style={{ width: '100%', textTransform: 'uppercase', fontWeight: 'bold' }} disabled={!!editingCoupon} />
                                 </div>
                                 <div>
                                     <label className="form-label">Discount Type</label>
-                                    <select value={couponForm.discount_type} onChange={e => setCouponForm({ ...couponForm, discount_type: e.target.value })} className="form-input">
+                                    <select value={couponForm.discount_type} onChange={e => setCouponForm({ ...couponForm, discount_type: e.target.value })} className="date-input" style={{ width: '100%' }}>
                                         <option value="percentage">Percentage (%)</option>
                                         <option value="fixed">Fixed Amount (₹)</option>
                                     </select>
                                 </div>
                                 <div>
                                     <label className="form-label">Value</label>
-                                    <input type="number" value={couponForm.discount_value} onChange={e => setCouponForm({ ...couponForm, discount_value: e.target.value })} required className="form-input" min="0" />
+                                    <input type="number" value={couponForm.discount_value} onChange={e => setCouponForm({ ...couponForm, discount_value: e.target.value })} required className="date-input" style={{ width: '100%' }} min="0" />
                                 </div>
                                 <div>
                                     <label className="form-label">Limit (Optional)</label>
-                                    <input type="number" value={couponForm.usage_limit || ''} onChange={e => setCouponForm({ ...couponForm, usage_limit: e.target.value })} placeholder="Max uses" className="form-input" min="0" />
+                                    <input type="number" value={couponForm.usage_limit || ''} onChange={e => setCouponForm({ ...couponForm, usage_limit: e.target.value })} placeholder="Max uses" className="date-input" style={{ width: '100%' }} min="0" />
                                 </div>
                                 <div>
                                     <label className="form-label">Expiry (Optional)</label>
-                                    <input type="date" value={couponForm.expiry_date || ''} onChange={e => setCouponForm({ ...couponForm, expiry_date: e.target.value })} className="form-input" />
+                                    <input type="date" value={couponForm.expiry_date || ''} onChange={e => setCouponForm({ ...couponForm, expiry_date: e.target.value })} className="date-input" style={{ width: '100%' }} />
                                 </div>
                                 <div style={{ display: 'flex', gap: '10px' }}>
                                     {editingCoupon && <button type="button" onClick={() => { setEditingCoupon(null); setCouponForm({ code: '', discount_type: 'percentage', discount_value: 0, usage_limit: '', expiry_date: '' }); }} className="btn-secondary">Cancel</button>}
@@ -951,24 +1016,24 @@ const AdminDashboard = ({ onLogout }) => {
                                 <tbody>
                                     {coupons.map(c => (
                                         <tr key={c.id}>
-                                            <td><strong style={{ color: '#2563eb', background: '#eff6ff', padding: '2px 6px', borderRadius: '4px' }}>{c.code}</strong></td>
+                                            <td><strong style={{ color: 'var(--primary)', background: 'rgba(99, 102, 241, 0.1)', padding: '4px 10px', borderRadius: '8px', border: '1px solid rgba(99, 102, 241, 0.2)' }}>{c.code}</strong></td>
                                             <td>{c.discount_type === 'percentage' ? `${c.discount_value}%` : `₹${c.discount_value}`}</td>
                                             <td>{c.usage_limit || '∞'}</td>
                                             <td>{c.usage_count}</td>
                                             <td>{c.expiry_date ? new Date(c.expiry_date).toLocaleDateString() : 'No Expiry'}</td>
                                             <td>
                                                 {c.is_active ?
-                                                    <span style={{ color: 'green', background: '#dcfce7', padding: '2px 8px', borderRadius: '12px', fontSize: '0.85rem' }}>Active</span> :
-                                                    <span style={{ color: 'red', background: '#fee2e2', padding: '2px 8px', borderRadius: '12px', fontSize: '0.85rem' }}>Inactive</span>
+                                                    <span className="status-badge status-confirmed">Active</span> :
+                                                    <span className="status-badge status-cancelled">Inactive</span>
                                                 }
                                             </td>
                                             <td>
-                                                <button className="btn-secondary" style={{ marginRight: '8px', padding: '4px 8px' }} onClick={() => { setEditingCoupon(c); setCouponForm(c); }} title="Edit">✏️</button>
-                                                <button className="btn-secondary" style={{ color: '#ef4444', borderColor: '#ef4444', padding: '4px 8px' }} onClick={() => handleDeleteCoupon(c.id)} title="Delete">🗑️</button>
+                                                <button className="btn-secondary" style={{ marginRight: '8px', padding: '6px 10px' }} onClick={() => { setEditingCoupon(c); setCouponForm(c); }} title="Edit">✏️</button>
+                                                <button className="btn-secondary" style={{ color: 'var(--danger)', borderColor: 'var(--danger)', padding: '6px 10px' }} onClick={() => handleDeleteCoupon(c.id)} title="Delete">🗑️</button>
                                             </td>
                                         </tr>
                                     ))}
-                                    {coupons.length === 0 && <tr><td colSpan="7" style={{ textAlign: 'center', padding: '30px', color: '#94a3b8' }}>No coupons found. Create your first one above! ☝️</td></tr>}
+                                    {coupons.length === 0 && <tr><td colSpan="7" style={{ textAlign: 'center', padding: '30px', color: 'var(--text-muted)' }}>No coupons found. Create your first one above! ☝️</td></tr>}
                                 </tbody>
                             </table>
                         </div>
@@ -1292,70 +1357,108 @@ const AdminDashboard = ({ onLogout }) => {
                         <form onSubmit={handleOfflineSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
                                 <div>
-                                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', fontSize: '0.9rem' }}>Guest Name</label>
+                                    <label className="form-label">Guest Name</label>
                                     <input type="text" value={offlineForm.name} onChange={e => setOfflineForm({ ...offlineForm, name: e.target.value })} required className="date-input" style={{ width: '100%' }} />
                                 </div>
                                 <div>
-                                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', fontSize: '0.9rem' }}>Phone</label>
+                                    <label className="form-label">Phone</label>
                                     <input type="text" value={offlineForm.phone} onChange={e => setOfflineForm({ ...offlineForm, phone: e.target.value })} required className="date-input" style={{ width: '100%' }} />
                                 </div>
                             </div>
 
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px' }}>
                                 <div>
-                                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', fontSize: '0.9rem' }}>Check In</label>
+                                    <label className="form-label">Check In</label>
                                     <input type="date" value={offlineForm.checkIn} onChange={e => setOfflineForm({ ...offlineForm, checkIn: e.target.value })} required className="date-input" style={{ width: '100%' }} />
                                 </div>
                                 <div>
-                                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', fontSize: '0.9rem' }}>Check Out</label>
+                                    <label className="form-label">Check Out</label>
                                     <input type="date" value={offlineForm.checkOut} onChange={e => setOfflineForm({ ...offlineForm, checkOut: e.target.value })} required className="date-input" style={{ width: '100%' }} />
                                 </div>
                                 <div>
-                                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', fontSize: '0.9rem' }}>Guests</label>
-                                    <input type="number" min="1" value={offlineForm.guests} onChange={e => setOfflineForm({ ...offlineForm, guests: parseInt(e.target.value) || 1 })} required className="date-input" style={{ width: '100%' }} />
+                                    <label className="form-label">Guests</label>
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        value={offlineForm.guests}
+                                        onChange={e => setOfflineForm({ ...offlineForm, guests: e.target.value === '' ? '' : parseInt(e.target.value) })}
+                                        onWheel={(e) => e.target.blur()}
+                                        required
+                                        className="date-input"
+                                        style={{ width: '100%' }}
+                                    />
                                 </div>
                             </div>
 
                             <div>
-                                <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', fontSize: '0.9rem' }}>Room Selection</label>
-                                <select value={offlineForm.room} onChange={e => setOfflineForm({ ...offlineForm, room: e.target.value })} required className="date-input" style={{ width: '100%' }}>
+                                <label className="form-label">Room Selection</label>
+                                <select
+                                    value={offlineForm.room}
+                                    onChange={e => setOfflineForm({ ...offlineForm, room: parseInt(e.target.value) || '' })}
+                                    required
+                                    className="date-input"
+                                    style={{ width: '100%' }}
+                                >
                                     <option value="">Select Room</option>
                                     {rooms.map(r => <option key={r.id} value={r.id}>{r.name} (Max: {r.capacity})</option>)}
                                 </select>
                                 {offlineForm.room && offlineForm.checkIn && offlineForm.checkOut && (
-                                    <div style={{ marginTop: '8px', fontSize: '0.85rem', fontWeight: '600', color: isRoomAvailable(offlineForm.room, offlineForm.checkIn, offlineForm.checkOut) ? '#10b981' : '#ef4444' }}>
+                                    <div style={{ marginTop: '8px', fontSize: '0.85rem', fontWeight: '600', color: isRoomAvailable(offlineForm.room, offlineForm.checkIn, offlineForm.checkOut) ? 'var(--success)' : 'var(--danger)' }}>
                                         {isRoomAvailable(offlineForm.room, offlineForm.checkIn, offlineForm.checkOut) ? '✅ Room Available' : '❌ Room Already Booked'}
                                     </div>
                                 )}
                             </div>
 
-                            <div style={{ background: '#f8fafc', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                                <label style={{ display: 'block', marginBottom: '15px', fontWeight: '600', fontSize: '0.9rem' }}>Meal Plan (Daily Count)</label>
+                            <div className="meal-plan-section">
+                                <label className="form-label" style={{ marginBottom: '15px', color: 'var(--text-main)', fontSize: '1rem' }}>Meal Plan (Daily Count)</label>
                                 {['breakfast', 'lunch', 'dinner'].map(type => (
-                                    <div key={type} style={{ display: 'flex', alignItems: 'center', marginBottom: '12px', gap: '15px' }}>
-                                        <div style={{ width: '100px', textTransform: 'capitalize', fontWeight: '500' }}>{type}</div>
+                                    <div key={type} className="meal-row">
+                                        <div style={{ width: '100px', textTransform: 'capitalize', fontWeight: '500', color: 'var(--text-muted)' }}>{type}</div>
                                         <div style={{ flex: 1, display: 'flex', gap: '10px' }}>
-                                            <input type="number" placeholder="Veg" min="0" value={offlineForm.mealSelection[type].veg || ''} onChange={(e) => handleMealChange(type, 'veg', e.target.value)} className="date-input" style={{ width: '100%' }} />
-                                            <input type="number" placeholder="Non-Veg" min="0" value={offlineForm.mealSelection[type].nonVeg || ''} onChange={(e) => handleMealChange(type, 'nonVeg', e.target.value)} className="date-input" style={{ width: '100%' }} />
+                                            <div style={{ flex: 1 }}>
+                                                <input
+                                                    type="number"
+                                                    placeholder="Veg"
+                                                    min="0"
+                                                    value={offlineForm.mealSelection[type].veg === '' ? '' : offlineForm.mealSelection[type].veg}
+                                                    onChange={(e) => handleMealChange(type, 'veg', e.target.value)}
+                                                    onWheel={(e) => e.target.blur()}
+                                                    className="date-input"
+                                                    style={{ width: '100%' }}
+                                                />
+                                            </div>
+                                            <div style={{ flex: 1 }}>
+                                                <input
+                                                    type="number"
+                                                    placeholder="Non-Veg"
+                                                    min="0"
+                                                    value={offlineForm.mealSelection[type].nonVeg === '' ? '' : offlineForm.mealSelection[type].nonVeg}
+                                                    onChange={(e) => handleMealChange(type, 'nonVeg', e.target.value)}
+                                                    onWheel={(e) => e.target.blur()}
+                                                    className="date-input"
+                                                    style={{ width: '100%' }}
+                                                />
+                                            </div>
                                         </div>
                                     </div>
                                 ))}
                             </div>
 
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f1f5f9', padding: '20px', borderRadius: '12px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-input)', padding: '20px', borderRadius: '12px', border: '1px solid var(--border-glass)' }}>
                                 <div>
-                                    <label style={{ display: 'block', marginBottom: '5px', fontWeight: '500', fontSize: '0.9rem' }}>Discount (₹)</label>
+                                    <label className="form-label">Discount (₹)</label>
                                     <input
                                         type="number"
                                         min="0"
-                                        value={offlineForm.discount || ''}
-                                        onChange={e => setOfflineForm({ ...offlineForm, discount: parseInt(e.target.value) || 0 })}
+                                        value={offlineForm.discount === 0 ? 0 : (offlineForm.discount || '')}
+                                        onChange={e => setOfflineForm({ ...offlineForm, discount: e.target.value === '' ? '' : parseInt(e.target.value) })}
+                                        onWheel={(e) => e.target.blur()}
                                         className="date-input"
                                         placeholder="0"
-                                        style={{ width: '120px', padding: '8px', marginBottom: '8px' }}
+                                        style={{ width: '120px', padding: '10px', marginBottom: '8px' }}
                                     />
-                                    <div style={{ fontSize: '0.9rem', color: '#64748b' }}>Total Estimated Price</div>
-                                    <div style={{ fontSize: '1.5rem', fontWeight: '700', color: '#1e293b' }}>₹{offlineForm.price.toLocaleString('en-IN')}</div>
+                                    <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>Total Estimated Price</div>
+                                    <div style={{ fontSize: '1.8rem', fontWeight: '700', color: 'var(--text-main)', textShadow: '0 2px 10px rgba(0,0,0,0.3)' }}>₹{(parseInt(offlineForm.price) || 0).toLocaleString('en-IN')}</div>
                                 </div>
                                 <button type="submit" disabled={!isRoomAvailable(offlineForm.room, offlineForm.checkIn, offlineForm.checkOut)} className="btn-primary" style={{ padding: '12px 24px', fontSize: '1rem', opacity: isRoomAvailable(offlineForm.room, offlineForm.checkIn, offlineForm.checkOut) ? 1 : 0.5 }}>
                                     Confirm Booking
@@ -1374,10 +1477,10 @@ const AdminDashboard = ({ onLogout }) => {
 const getStatusStyle = (status) => {
     switch ((status || '').toLowerCase()) {
         case 'booked':
-        case 'confirmed': return { background: '#d1fae5', color: '#059669' }; // Green
-        case 'cancelled': return { background: '#fee2e2', color: '#dc2626' }; // Red
-        case 'pending': return { background: '#ffedd5', color: '#ea580c' }; // Orange
-        default: return { background: '#f1f5f9', color: '#64748b' }; // Gray
+        case 'confirmed': return { className: 'status-confirmed' };
+        case 'cancelled': return { className: 'status-cancelled' };
+        case 'pending': return { className: 'status-pending' };
+        default: return { className: 'status-checked-out' };
     }
 };
 
