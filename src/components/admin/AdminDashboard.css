@@ -1,7 +1,8 @@
 /* AdminDashboard.css - Premium Glassmorphism Theme */
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
 
-:root {
+/* SCOPED ROOT VARIABLES & BASE STYLES */
+.admin-layout {
     /* Core Palette - Deep Space Dark */
     --bg-body: #0B0B0F;
     /* Almost black */
@@ -57,9 +58,8 @@
     --radius-md: 12px;
 
     --backdrop-blur: blur(20px);
-}
 
-body {
+    /* Moved from body to .admin-layout */
     background-color: var(--bg-body);
     /* Subtle mesh gradient background */
     background-image:
@@ -71,16 +71,15 @@ body {
     /* Modern, geometric font */
     margin: 0;
     -webkit-font-smoothing: antialiased;
-}
 
-/* Layout */
-.admin-layout {
+    /* Layout properties */
     display: flex;
     min-height: 100vh;
+    width: 100%;
 }
 
 /* Glass Sidebar */
-.admin-sidebar {
+.admin-layout .admin-sidebar {
     width: 290px;
     background: var(--bg-sidebar);
     backdrop-filter: var(--backdrop-blur);
@@ -93,9 +92,11 @@ body {
     padding: 30px 24px;
     box-sizing: border-box;
     z-index: 50;
+    left: 0;
+    top: 0;
 }
 
-.sidebar-header {
+.admin-layout .sidebar-header {
     margin-bottom: 50px;
     display: flex;
     align-items: center;
@@ -105,7 +106,7 @@ body {
     width: 100%;
 }
 
-.sidebar-toggle {
+.admin-layout .sidebar-toggle {
     width: 32px;
     height: 32px;
     border-radius: 50%;
@@ -122,12 +123,12 @@ body {
     flex-shrink: 0;
 }
 
-.sidebar-toggle:hover {
+.admin-layout .sidebar-toggle:hover {
     background: rgba(255, 255, 255, 0.2);
     color: var(--text-main);
 }
 
-.sidebar-brand {
+.admin-layout .sidebar-brand {
     font-size: 1.6rem;
     font-weight: 700;
     color: var(--text-main);
@@ -137,7 +138,7 @@ body {
     letter-spacing: -0.5px;
 }
 
-.sidebar-brand::before {
+.admin-layout .sidebar-brand::before {
     content: "B";
     display: flex;
     align-items: center;
@@ -152,21 +153,21 @@ body {
     box-shadow: 0 8px 16px rgba(99, 102, 241, 0.3);
 }
 
-.sidebar-brand span {
+.admin-layout .sidebar-brand span {
     background: linear-gradient(to right, #fff, #94a3b8);
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
 }
 
-.sidebar-nav {
+.admin-layout .sidebar-nav {
     flex: 1;
     display: flex;
     flex-direction: column;
     gap: 12px;
 }
 
-.nav-item {
+.admin-layout .nav-item {
     display: flex;
     align-items: center;
     gap: 16px;
@@ -184,13 +185,13 @@ body {
     transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-.nav-item:hover {
+.admin-layout .nav-item:hover {
     color: var(--text-main);
     background: rgba(255, 255, 255, 0.05);
     transform: translateX(5px);
 }
 
-.nav-item.active {
+.admin-layout .nav-item.active {
     background: linear-gradient(90deg, rgba(99, 102, 241, 0.15) 0%, rgba(99, 102, 241, 0.05) 100%);
     color: #818CF8;
     /* Lighter indigo */
@@ -198,66 +199,66 @@ body {
     box-shadow: 0 0 15px rgba(99, 102, 241, 0.1);
 }
 
-.sidebar-footer {
+.admin-layout .sidebar-footer {
     padding-top: 20px;
     border-top: 1px solid var(--border-glass);
 }
 
 /* Main Content */
-.admin-main {
+.admin-layout .admin-main {
     flex: 1;
     margin-left: 290px;
     padding: 50px;
-    max-width: 1600px;
+    max-width: 100%;
     width: calc(100% - 290px);
     transition: margin-left 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), width 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-.admin-main.expanded {
+.admin-layout .admin-main.expanded {
     margin-left: 90px;
     width: calc(100% - 90px);
 }
 
 /* Collapsed Sidebar */
-.admin-sidebar {
+.admin-layout .admin-sidebar {
     transition: width 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-.admin-sidebar.collapsed {
+.admin-layout .admin-sidebar.collapsed {
     width: 90px;
     padding: 30px 15px;
     align-items: center;
 }
 
-.admin-sidebar.collapsed .sidebar-header {
+.admin-layout .admin-sidebar.collapsed .sidebar-header {
     justify-content: center;
     padding-left: 0;
     flex-direction: column;
     gap: 20px;
 }
 
-.admin-sidebar.collapsed .sidebar-brand {
+.admin-layout .admin-sidebar.collapsed .sidebar-brand {
     justify-content: center;
 }
 
-.admin-sidebar.collapsed .nav-item {
+.admin-layout .admin-sidebar.collapsed .nav-item {
     justify-content: center;
     padding: 16px;
 }
 
-.admin-sidebar.collapsed .nav-item span {
+.admin-layout .admin-sidebar.collapsed .nav-item span {
     display: none;
 }
 
 /* Header */
-.main-header {
+.admin-layout .main-header {
     display: flex;
     justify-content: space-between;
     align-items: flex-end;
     margin-bottom: 50px;
 }
 
-.page-title h1 {
+.admin-layout .page-title h1 {
     font-size: 2.5rem;
     font-weight: 700;
     color: var(--text-main);
@@ -265,20 +266,20 @@ body {
     letter-spacing: -1px;
 }
 
-.page-title p {
+.admin-layout .page-title p {
     color: var(--text-muted);
     font-size: 1.05rem;
     font-weight: 300;
 }
 
-.header-actions {
+.admin-layout .header-actions {
     display: flex;
     gap: 16px;
     align-items: center;
 }
 
 /* Glassy Inputs */
-.filter-bar {
+.admin-layout .filter-bar {
     background: rgba(20, 20, 22, 0.5);
     backdrop-filter: blur(10px);
     padding: 6px 8px;
@@ -291,8 +292,8 @@ body {
     box-shadow: var(--shadow-sm);
 }
 
-.date-input,
-select {
+.admin-layout .date-input,
+.admin-layout select {
     background: rgba(255, 255, 255, 0.05);
     /* Slightly more visible background */
     border: 1px solid var(--border-glass);
@@ -306,21 +307,21 @@ select {
     transition: all 0.2s;
 }
 
-.date-input:hover,
-select:hover {
+.admin-layout .date-input:hover,
+.admin-layout select:hover {
     background: rgba(255, 255, 255, 0.08);
     border-color: rgba(255, 255, 255, 0.2);
 }
 
-.date-input:focus,
-select:focus {
+.admin-layout .date-input:focus,
+.admin-layout select:focus {
     background: rgba(255, 255, 255, 0.1);
     border-color: var(--primary);
     box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
 }
 
 /* Fix for Select Dropdown Options in Dark Mode */
-option {
+.admin-layout option {
     background-color: #1a1a1f;
     /* Dark background matching theme */
     color: var(--text-main);
@@ -328,7 +329,7 @@ option {
 }
 
 /* Form Styling */
-.form-label {
+.admin-layout .form-label {
     display: block;
     margin-bottom: 8px;
     font-weight: 500;
@@ -336,7 +337,7 @@ option {
     color: var(--text-muted);
 }
 
-.meal-plan-section {
+.admin-layout .meal-plan-section {
     background: rgba(255, 255, 255, 0.03);
     /* Glassy dark background */
     padding: 24px;
@@ -345,7 +346,7 @@ option {
     margin-top: 20px;
 }
 
-.meal-row {
+.admin-layout .meal-row {
     display: flex;
     align-items: center;
     margin-bottom: 15px;
@@ -354,14 +355,14 @@ option {
     border-bottom: 1px solid var(--border-glass);
 }
 
-.meal-row:last-child {
+.admin-layout .meal-row:last-child {
     border-bottom: none;
     margin-bottom: 0;
     padding-bottom: 0;
 }
 
 /* Premium Buttons */
-.btn-primary {
+.admin-layout .btn-primary {
     background: var(--primary-gradient);
     color: white;
     padding: 12px 28px;
@@ -377,13 +378,13 @@ option {
     gap: 10px;
 }
 
-.btn-primary:hover {
+.admin-layout .btn-primary:hover {
     transform: translateY(-2px) scale(1.02);
     box-shadow: 0 15px 30px -5px rgba(99, 102, 241, 0.5);
     filter: brightness(1.1);
 }
 
-.btn-secondary {
+.admin-layout .btn-secondary {
     background: rgba(255, 255, 255, 0.08);
     backdrop-filter: blur(10px);
     color: var(--text-main);
@@ -395,12 +396,12 @@ option {
     font-weight: 500;
 }
 
-.btn-secondary:hover {
+.admin-layout .btn-secondary:hover {
     background: rgba(255, 255, 255, 0.12);
     border-color: rgba(255, 255, 255, 0.1);
 }
 
-.btn-danger {
+.admin-layout .btn-danger {
     background: rgba(239, 68, 68, 0.15);
     color: #F87171;
     padding: 12px;
@@ -410,20 +411,20 @@ option {
     transition: all 0.2s;
 }
 
-.btn-danger:hover {
+.admin-layout .btn-danger:hover {
     background: rgba(239, 68, 68, 0.25);
     box-shadow: 0 0 15px rgba(239, 68, 68, 0.2);
 }
 
 /* Glassy Stat Cards */
-.stats-grid {
+.admin-layout .stats-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
     gap: 24px;
     margin-bottom: 40px;
 }
 
-.stat-card {
+.admin-layout .stat-card {
     background: var(--bg-card);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
@@ -437,14 +438,14 @@ option {
     box-shadow: var(--shadow-sm);
 }
 
-.stat-card:hover {
+.admin-layout .stat-card:hover {
     transform: translateY(-5px);
     background: rgba(40, 40, 45, 0.7);
     border-color: var(--border-highlight);
     box-shadow: var(--shadow-lg);
 }
 
-.stat-icon {
+.admin-layout .stat-icon {
     width: 64px;
     height: 64px;
     border-radius: 20px;
@@ -458,38 +459,38 @@ option {
 }
 
 /* Specific glows for stat icons */
-.stat-card:nth-child(1) .stat-icon {
+.admin-layout .stat-card:nth-child(1) .stat-icon {
     background: rgba(16, 185, 129, 0.15);
     color: #34D399;
     box-shadow: 0 0 20px rgba(16, 185, 129, 0.2);
 }
 
-.stat-card:nth-child(2) .stat-icon {
+.admin-layout .stat-card:nth-child(2) .stat-icon {
     background: rgba(56, 189, 248, 0.15);
     color: #38BDF8;
     box-shadow: 0 0 20px rgba(56, 189, 248, 0.2);
 }
 
-.stat-card:nth-child(3) .stat-icon {
+.admin-layout .stat-card:nth-child(3) .stat-icon {
     background: rgba(99, 102, 241, 0.15);
     color: #818CF8;
     box-shadow: 0 0 20px rgba(99, 102, 241, 0.2);
 }
 
-.stat-card:nth-child(4) .stat-icon {
+.admin-layout .stat-card:nth-child(4) .stat-icon {
     background: rgba(245, 158, 11, 0.15);
     color: #FBBF24;
     box-shadow: 0 0 20px rgba(245, 158, 11, 0.2);
 }
 
-.stat-card:nth-child(5) .stat-icon {
+.admin-layout .stat-card:nth-child(5) .stat-icon {
     background: rgba(244, 63, 94, 0.15);
     color: #FB7185;
     box-shadow: 0 0 20px rgba(244, 63, 94, 0.2);
 }
 
 
-.stat-content h3 {
+.admin-layout .stat-content h3 {
     font-size: 0.9rem;
     font-weight: 500;
     color: var(--text-muted);
@@ -498,7 +499,7 @@ option {
     letter-spacing: 0.5px;
 }
 
-.stat-content .value {
+.admin-layout .stat-content .value {
     font-size: 2rem;
     font-weight: 700;
     color: var(--text-main);
@@ -506,7 +507,7 @@ option {
     text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
 }
 
-.stat-content .subtitle {
+.admin-layout .stat-content .subtitle {
     display: inline-block;
     font-size: 0.75rem;
     margin-top: 8px;
@@ -517,7 +518,7 @@ option {
 }
 
 /* Glass Panels */
-.card-panel {
+.admin-layout .card-panel {
     background: var(--bg-card);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
@@ -531,7 +532,7 @@ option {
     /* For shine effects if added */
 }
 
-.card-panel h3 {
+.admin-layout .card-panel h3 {
     font-size: 1.3rem;
     font-weight: 600;
     margin: 0 0 30px 0;
@@ -542,12 +543,12 @@ option {
 }
 
 /* Charts */
-.chart-wrapper {
+.admin-layout .chart-wrapper {
     width: 100%;
     margin-top: 10px;
 }
 
-.chart-container {
+.admin-layout .chart-container {
     display: flex;
     align-items: flex-end;
     justify-content: space-between;
@@ -561,7 +562,7 @@ option {
     background-size: 100% 60px;
 }
 
-.chart-bar-group {
+.admin-layout .chart-bar-group {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -575,11 +576,11 @@ option {
     transition: transform 0.2s;
 }
 
-.chart-bar-group:hover {
+.admin-layout .chart-bar-group:hover {
     transform: scale(1.05) translateY(-5px);
 }
 
-.chart-bar-track {
+.admin-layout .chart-bar-track {
     width: 20px;
     /* Thinner elegant bars */
     height: 100%;
@@ -593,7 +594,7 @@ option {
     backdrop-filter: blur(2px);
 }
 
-.chart-bar-fill {
+.admin-layout .chart-bar-fill {
     width: 100%;
     border-radius: 6px;
     position: relative;
@@ -601,7 +602,7 @@ option {
 }
 
 /* Tooltip */
-.chart-tooltip {
+.admin-layout .chart-tooltip {
     position: absolute;
     bottom: 100%;
     left: 50%;
@@ -623,12 +624,12 @@ option {
     margin-bottom: 12px;
 }
 
-.chart-bar-group:hover .chart-tooltip {
+.admin-layout .chart-bar-group:hover .chart-tooltip {
     opacity: 1;
     transform: translateX(-50%) translateY(-5px);
 }
 
-.chart-label {
+.admin-layout .chart-label {
     position: absolute;
     bottom: -35px;
     font-size: 0.75rem;
@@ -638,14 +639,14 @@ option {
     width: 100%;
 }
 
-.chart-legend {
+.admin-layout .chart-legend {
     display: flex;
     justify-content: center;
     gap: 30px;
     margin-top: 30px;
 }
 
-.legend-item {
+.admin-layout .legend-item {
     display: flex;
     align-items: center;
     gap: 10px;
@@ -654,7 +655,7 @@ option {
     font-weight: 500;
 }
 
-.legend-dot {
+.admin-layout .legend-dot {
     width: 10px;
     height: 10px;
     border-radius: 50%;
@@ -663,7 +664,7 @@ option {
 }
 
 /* Tables */
-.table-container {
+.admin-layout .table-container {
     border-radius: var(--radius-lg);
     border: 1px solid var(--border-glass);
     overflow: hidden;
@@ -671,13 +672,13 @@ option {
     /* Slightly darker inner bg */
 }
 
-.admin-table {
+.admin-layout .admin-table {
     width: 100%;
     border-collapse: separate;
     border-spacing: 0;
 }
 
-.admin-table th {
+.admin-layout .admin-table th {
     background: rgba(255, 255, 255, 0.03);
     color: var(--text-muted);
     font-weight: 600;
@@ -688,7 +689,7 @@ option {
     border-bottom: 1px solid var(--border-glass);
 }
 
-.admin-table td {
+.admin-layout .admin-table td {
     padding: 20px 24px;
     border-bottom: 1px solid var(--border-glass);
     color: var(--text-main);
@@ -697,12 +698,12 @@ option {
     transition: background 0.2s;
 }
 
-.admin-table tr:hover td {
+.admin-layout .admin-table tr:hover td {
     background: rgba(255, 255, 255, 0.03);
 }
 
 /* Badges */
-.status-badge {
+.admin-layout .status-badge {
     padding: 6px 14px;
     border-radius: 20px;
     font-size: 0.8rem;
@@ -712,26 +713,26 @@ option {
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 }
 
-.status-confirmed,
-.status-booked {
+.admin-layout .status-confirmed,
+.admin-layout .status-booked {
     background: rgba(16, 185, 129, 0.15);
     color: #34D399;
     border: 1px solid rgba(16, 185, 129, 0.3);
 }
 
-.status-pending {
+.admin-layout .status-pending {
     background: rgba(245, 158, 11, 0.15);
     color: #FBBF24;
     border: 1px solid rgba(245, 158, 11, 0.3);
 }
 
-.status-cancelled {
+.admin-layout .status-cancelled {
     background: rgba(239, 68, 68, 0.15);
     color: #F87171;
     border: 1px solid rgba(239, 68, 68, 0.3);
 }
 
-.status-checked-out {
+.admin-layout .status-checked-out {
     background: rgba(148, 163, 184, 0.15);
     color: #CBD5E1;
     border: 1px solid rgba(148, 163, 184, 0.3);
@@ -750,7 +751,7 @@ option {
     }
 }
 
-.admin-main {
+.admin-layout .admin-main {
     animation: fadeIn 0.6s ease-out;
 }
 
@@ -760,7 +761,7 @@ option {
         flex-direction: column;
     }
 
-    .admin-sidebar {
+    .admin-layout .admin-sidebar {
         width: 100%;
         height: auto;
         position: relative;
@@ -772,33 +773,38 @@ option {
         background: rgba(20, 20, 22, 0.9);
     }
 
-    .sidebar-header {
+    .admin-layout .sidebar-header {
         margin-bottom: 0;
     }
 
-    .sidebar-brand span {
+    .admin-layout .sidebar-brand span {
         font-size: 1.2rem;
     }
 
-    .nav-item span {
+    .admin-layout .nav-item span {
         display: none;
     }
 
-    .nav-item {
+    .admin-layout .nav-item {
         width: auto;
         justify-content: center;
         padding: 10px;
     }
 
-    .admin-main {
+    .admin-layout .admin-main {
         margin-left: 0;
         width: 100%;
         padding: 20px;
     }
 
-    .main-header {
+    .admin-layout .main-header {
         flex-direction: column;
         align-items: flex-start;
         gap: 20px;
+    }
+
+    .admin-layout .header-actions {
+        width: 100%;
+        flex-wrap: wrap;
     }
 }
