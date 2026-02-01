@@ -1,143 +1,242 @@
 import { useEffect, useRef } from 'react';
+import { gsap } from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
-const amenities = [
+gsap.registerPlugin(ScrollTrigger);
+
+const amenityData = [
     {
-        icon: (
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
-                <polyline points="14 2 14 8 20 8" />
-                <path d="M8 13h2" />
-                <path d="M8 17h2" />
-                <path d="M14 13h2" />
-                <path d="M14 17h2" />
-            </svg>
-        ),
-        title: 'Mountain Views',
-        description: 'Wake up to breathtaking panoramic views of the Himalayan mountains every morning.'
+        title: "Mountain Views",
+        desc: "Panoramic 180° Himalayas",
+        icon: "🏔️",
+        bg: "/view.jpg", // Assuming we have this or similar, else we use color
+        colSpan: 2,
+        rowSpan: 2,
+        type: "feature"
     },
     {
-        icon: (
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M5 12.55a11 11 0 0 1 14.08 0" />
-                <path d="M1.42 9a16 16 0 0 1 19.38 0" />
-                <path d="M8.53 16.11a6 6 0 0 1 6.95 0" />
-                <path d="M12 20h.01" />
-            </svg>
-        ),
-        title: 'Free WiFi',
-        description: 'Stay connected with complimentary high-speed internet throughout your stay.'
+        title: "High-Speed WiFi",
+        desc: "Starlink-grade connectivity",
+        icon: "📶",
+        colSpan: 1,
+        rowSpan: 1,
+        type: "standard"
     },
     {
-        icon: (
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M3 7v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7" />
-                <path d="M3 7l9-5 9 5" />
-                <path d="M12 14h.01" />
-            </svg>
-        ),
-        title: 'Private Rooms',
-        description: 'Comfortable, clean, and well-furnished private rooms for a peaceful rest.'
+        title: "Private Suites",
+        desc: "Soundproof luxury",
+        icon: "🛏️",
+        colSpan: 1,
+        rowSpan: 1,
+        type: "standard"
     },
     {
-        icon: (
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="10" r="3" />
-                <path d="M12 21.7C17.3 17 20 13 20 10a8 8 0 1 0-16 0c0 3 2.7 7 8 11.7z" />
-            </svg>
-        ),
-        title: 'Local Experiences',
-        description: 'Discover local culture with guided tours to monasteries, markets, and nature trails.'
+        title: "Farm to Table",
+        desc: "Organic local meals",
+        icon: "🥗",
+        colSpan: 1,
+        rowSpan: 1,
+        type: "standard"
     },
+    {
+        title: "Guided Tours",
+        desc: "Expert local guides",
+        icon: "trekking", // Placeholder for SVG check later
+        colSpan: 1,
+        rowSpan: 1,
+        type: "standard"
+    }
 ];
 
 const Amenities = () => {
+    const sectionRef = useRef(null);
+
+    useEffect(() => {
+        const ctx = gsap.context(() => {
+            gsap.from(".bento-item", {
+                scrollTrigger: {
+                    trigger: sectionRef.current,
+                    start: "top 70%",
+                },
+                y: 30,
+                opacity: 0,
+                duration: 0.8,
+                stagger: 0.1,
+                ease: "power2.out"
+            });
+        }, sectionRef);
+        return () => ctx.revert();
+    }, []);
+
     return (
-        <section id="amenities" className="amenities-section" style={{ background: '#f0f0f3', padding: '100px 20px' }}>
-            <div className="container" style={{ maxWidth: '1200px', margin: '0 auto' }}>
-                <div className="section-header" style={{ textAlign: 'center', marginBottom: '60px' }}>
-                    <h2 style={{ fontSize: '2.5rem', color: '#1a1a1a', fontWeight: '800', marginBottom: '15px', letterSpacing: '-0.5px' }}>What This Place Offers</h2>
-                    <p style={{ fontSize: '1.1rem', color: '#666' }}>Everything you need for a comfortable and memorable mountain retreat</p>
+        <section id="amenities" ref={sectionRef} style={{ background: '#f5f5f7', padding: '120px 0' }}>
+            <div className="container">
+                <div style={{ textAlign: 'center', marginBottom: '60px' }}>
+                    <h2 style={{ fontSize: '3rem', fontWeight: '700', marginBottom: '15px' }}>
+                        Everything you need.
+                    </h2>
+                    <p style={{ fontSize: '1.2rem', color: '#86868b' }}>
+                        Designed for comfort, curated for experience.
+                    </p>
                 </div>
 
-                <div className="neumorphic-grid">
-                    {amenities.map((amenity, index) => (
-                        <div key={index} className="neumorphic-card">
-                            <div className="medal-icon">
-                                {amenity.icon}
-                            </div>
-                            <h3>{amenity.title}</h3>
-                            <p>{amenity.description}</p>
+                <div className="bento-grid">
+                    {/* 1. Large Feature Card - Views */}
+                    <div className="bento-item feature-card">
+                        <div className="bento-content">
+                            <span className="bento-icon">🏔️</span>
+                            <h3>The View.</h3>
+                            <p>Wake up to the majestic Kanchenjunga.<br />Unobstructed. Unforgettable.</p>
                         </div>
-                    ))}
+                        {/* Abstract Gradient Background since we might not have a specific image ready */}
+                        <div className="bento-bg-gradient"></div>
+                    </div>
+
+                    {/* 2. Standard Card - WiFi */}
+                    <div className="bento-item standard-card">
+                        <span className="bento-icon-large">📶</span>
+                        <h3>Ultra-Fast WiFi</h3>
+                        <p>Stream 4K from the clouds.</p>
+                    </div>
+
+                    {/* 3. Standard Card - Private Rooms */}
+                    <div className="bento-item standard-card">
+                        <span className="bento-icon-large">🛏️</span>
+                        <h3>Cozy Suites</h3>
+                        <p>Heated blankets included.</p>
+                    </div>
+
+                    {/* 4. Wide Card - Food */}
+                    <div className="bento-item wide-card">
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                            <span className="bento-icon-large">🥗</span>
+                            <div>
+                                <h3>Organic Kitchen</h3>
+                                <p>Fresh ingredients from our garden.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* 5. Standard Card - Security */}
+                    <div className="bento-item standard-card">
+                        <span className="bento-icon-large">🛡️</span>
+                        <h3>24/7 Security</h3>
+                        <p>Peace of mind guaranteed.</p>
+                    </div>
                 </div>
             </div>
 
             <style>{`
-                .neumorphic-grid {
+                .bento-grid {
                     display: grid;
-                    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-                    gap: 30px;
+                    grid-template-columns: repeat(3, 1fr);
+                    grid-auto-rows: 250px;
+                    gap: 20px;
+                    max-width: 1000px;
+                    margin: 0 auto;
                 }
 
-                .neumorphic-card {
-                    background: #f0f0f3;
-                    border-radius: 20px;
+                .bento-item {
+                    background: #ffffff;
+                    border-radius: 30px; /* Apple Radius */
                     padding: 30px;
-                    box-shadow: 
-                        10px 10px 20px #aeaec0,
-                        -10px -10px 20px #ffffff;
-                    transition: transform 0.3s ease;
+                    position: relative;
+                    overflow: hidden;
+                    transition: transform 0.3s ease, box-shadow 0.3s ease;
+                    box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+                }
+
+                .bento-item:hover {
+                    transform: scale(1.02);
+                    box-shadow: 0 20px 40px rgba(0,0,0,0.08); /* Apple Hover Shadow */
+                    z-index: 2;
+                }
+
+                /* Feature Card (Span 2x2) */
+                .feature-card {
+                    grid-column: span 2;
+                    grid-row: span 2;
                     display: flex;
                     flex-direction: column;
-                    align-items: flex-start;
-                    height: 100%;
+                    justify-content: flex-end;
+                    color: white;
+                }
+                
+                .bento-bg-gradient {
+                    position: absolute;
+                    top: 0; left: 0; right: 0; bottom: 0;
+                    background: linear-gradient(135deg, #0071e3 0%, #00c6fb 100%);
+                    z-index: 1;
+                }
+                
+                .feature-card .bento-content {
+                    position: relative;
+                    z-index: 2;
                 }
 
-                .neumorphic-card:hover {
-                    transform: translateY(-5px);
+                .feature-card h3 {
+                    font-size: 2.5rem;
+                    font-weight: 700;
+                    margin-bottom: 10px;
                 }
 
-                .medal-icon {
-                    width: 50px;
-                    height: 50px;
-                    border-radius: 50%;
-                    background: #f0f0f3;
-                    box-shadow: 
-                        5px 5px 10px #aeaec0,
-                        -5px -5px 10px #ffffff;
+                .feature-card p {
+                    font-size: 1.1rem;
+                    opacity: 0.9;
+                }
+
+                /* Standard Card (1x1) */
+                .standard-card {
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: space-between;
+                }
+
+                .standard-card h3 {
+                    font-size: 1.25rem;
+                    font-weight: 600;
+                    margin-bottom: 5px;
+                    color: #1d1d1f;
+                }
+
+                .standard-card p {
+                    font-size: 0.95rem;
+                    color: #86868b;
+                }
+
+                .bento-icon-large {
+                    font-size: 3rem;
+                    margin-bottom: 10px;
+                    display: block;
+                }
+
+                /* Wide Card (Span 2x1) */
+                .wide-card {
+                    grid-column: span 2;
                     display: flex;
                     align-items: center;
-                    justify-content: center;
-                    margin-bottom: 25px;
-                    border: 2px solid rgba(255,255,255,0.2);
                 }
 
-                .medal-icon svg {
-                    width: 24px;
-                    height: 24px;
-                    color: #555;
-                    stroke-width: 2px;
-                }
-
-                .neumorphic-card h3 {
-                    font-size: 1.25rem;
-                    color: #1a1a1a;
-                    margin-bottom: 12px;
+                .wide-card h3 {
+                    font-size: 1.5rem;
                     font-weight: 700;
-                    letter-spacing: -0.02em;
+                    color: #1d1d1f;
                 }
 
-                .neumorphic-card p {
-                    font-size: 0.95rem;
-                    color: #666;
-                    line-height: 1.6;
-                    margin: 0;
+                .wide-card p {
+                    color: #86868b;
                 }
 
-                @media (max-width: 768px) {
-                    .neumorphic-grid {
+                /* Responsive */
+                @media (max-width: 900px) {
+                    .bento-grid {
                         grid-template-columns: 1fr;
-                        gap: 40px;
+                        grid-auto-rows: auto;
+                    }
+                    .feature-card, .wide-card {
+                        grid-column: span 1;
+                        grid-row: span 1;
+                        min-height: 300px;
                     }
                 }
             `}</style>

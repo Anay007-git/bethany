@@ -1,0 +1,266 @@
+/* Apple Style Overrides for Booking Form */
+
+/* Main Container - Award-Winning Background */
+.booking-section {
+    background: linear-gradient(135deg, #f5f5f7 0%, #e8e8ed 50%, #f0f0f5 100%);
+    padding: 100px 20px;
+    position: relative;
+    /* Mesh Gradient Overlay */
+    background-image:
+        radial-gradient(circle at 15% 30%, rgba(0, 113, 227, 0.08) 0%, transparent 25%),
+        radial-gradient(circle at 85% 70%, rgba(88, 86, 214, 0.08) 0%, transparent 25%),
+        radial-gradient(circle at 50% 100%, rgba(52, 199, 89, 0.06) 0%, transparent 30%);
+}
+
+.booking-container {
+    max-width: 950px;
+    margin: 0 auto;
+    background: transparent;
+    box-shadow: none;
+}
+
+/* Two-column balanced layout */
+.booking-single-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+    align-items: stretch;
+}
+
+/* Override for both columns to ensure same sizing */
+.col-search,
+.col-cart {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Make the cards inside fill available height */
+.col-search .booking-step-card,
+.col-cart .booking-step-card {
+    flex: 1;
+}
+
+/* Common Card Style - Premium Glassmorphism */
+.booking-step-card {
+    background: rgba(255, 255, 255, 0.65);
+    backdrop-filter: blur(40px) saturate(180%);
+    -webkit-backdrop-filter: blur(40px) saturate(180%);
+    border-radius: 32px;
+    padding: 36px;
+    box-shadow:
+        0 4px 6px rgba(0, 0, 0, 0.02),
+        0 12px 24px rgba(0, 0, 0, 0.04),
+        inset 0 1px 0 rgba(255, 255, 255, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    margin-bottom: 0;
+    transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.booking-step-card:hover {
+    transform: translateY(-4px);
+    box-shadow:
+        0 8px 16px rgba(0, 0, 0, 0.04),
+        0 24px 48px rgba(0, 0, 0, 0.08),
+        inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    background: rgba(255, 255, 255, 0.8);
+}
+
+/* Inputs (iPad Style) */
+.apple-input-group {
+    margin-bottom: 24px;
+    /* Better spacing */
+}
+
+.apple-input-group label {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 700;
+    /* Bolder */
+    color: #86868b;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-left: 4px;
+    /* Align with input curve */
+}
+
+.apple-input {
+    width: 100%;
+    background: rgba(245, 245, 247, 0.8);
+    /* Slight translucency */
+    border: 1px solid transparent;
+    border-radius: 12px;
+    padding: 16px 20px;
+    /* More inward padding */
+    font-size: 1.1rem;
+    color: #1d1d1f;
+    font-weight: 500;
+    outline: none;
+    transition: all 0.2s ease;
+}
+
+.apple-input:focus {
+    background: white;
+    border-color: rgba(0, 113, 227, 0.3);
+    box-shadow: 0 0 0 4px rgba(0, 113, 227, 0.15);
+}
+
+/* Buttons */
+.apple-btn {
+    background: #0071e3;
+    color: white;
+    padding: 16px 32px;
+    /* Plump button */
+    border-radius: 980px;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 1.1rem;
+    box-shadow: 0 4px 15px rgba(0, 113, 227, 0.3);
+}
+
+.apple-btn:hover {
+    background: #0077ED;
+    transform: scale(1.02);
+    box-shadow: 0 8px 25px rgba(0, 113, 227, 0.4);
+}
+
+/* Room Card Overrides */
+.room-card-detailed {
+    border: 1px solid rgba(0, 0, 0, 0.05) !important;
+    background: rgba(255, 255, 255, 0.6) !important;
+    backdrop-filter: blur(10px) !important;
+    border-radius: 24px !important;
+    box-shadow: none !important;
+    transition: all 0.3s ease !important;
+}
+
+.room-card-detailed:hover {
+    background: white !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05) !important;
+}
+
+.room-card-detailed.selected {
+    background: white !important;
+    box-shadow: 0 0 0 3px #0071e3, 0 10px 40px rgba(0, 113, 227, 0.15) !important;
+}
+
+/* Meal Stepper Overrides */
+.meal-stepper-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50% !important;
+    background: white;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+/* Animation */
+@keyframes slideUpFade {
+    from {
+        transform: translateY(20px) scale(0.98);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0) scale(1);
+        opacity: 1;
+    }
+}
+
+.animate-enter {
+    animation: slideUpFade 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* ===== RESPONSIVE BREAKPOINTS ===== */
+
+/* Tablet */
+@media (max-width: 900px) {
+    .booking-section {
+        padding: 60px 20px;
+    }
+
+    .booking-container {
+        max-width: 100%;
+        padding: 0 8px;
+    }
+
+    .booking-single-row {
+        grid-template-columns: 1fr;
+        gap: 24px;
+    }
+
+    .booking-step-card {
+        padding: 28px;
+        border-radius: 24px;
+    }
+
+    /* Fix section headings */
+    .col-search h3,
+    .col-cart h3 {
+        padding-left: 4px;
+    }
+}
+
+/* Mobile */
+@media (max-width: 600px) {
+    .booking-section {
+        padding: 48px 16px;
+    }
+
+    .booking-container {
+        padding: 0 4px;
+    }
+
+    .section-header h2 {
+        font-size: 2rem !important;
+        padding: 0 8px;
+    }
+
+    .section-header p {
+        padding: 0 8px;
+    }
+
+    .booking-step-card {
+        padding: 24px 20px;
+        border-radius: 20px;
+    }
+
+    .apple-input {
+        padding: 14px 16px;
+        font-size: 1rem;
+    }
+
+    .apple-btn {
+        padding: 14px 24px;
+        font-size: 1rem;
+        width: 100%;
+    }
+
+    /* Hide particles on mobile for performance */
+    .booking-section>div[aria-hidden="true"] {
+        display: none;
+    }
+}
+
+/* Small Mobile */
+@media (max-width: 400px) {
+    .booking-section {
+        padding: 40px 12px;
+    }
+
+    .booking-step-card {
+        padding: 20px 16px;
+        border-radius: 16px;
+    }
+
+    .apple-input-group label {
+        font-size: 0.75rem;
+    }
+
+    .col-search h3,
+    .col-cart h3 {
+        font-size: 1rem;
+    }
+}

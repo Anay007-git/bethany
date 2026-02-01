@@ -2,28 +2,31 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
 :root {
-  /* Apple Colors */
+  /* Apple Colors - Updated for 2026 Pro Look */
   --apple-blue: #0071e3;
   --apple-blue-hover: #0077ED;
   --apple-dark: #1d1d1f;
+  /* Main Text */
   --apple-gray: #86868b;
+  /* Secondary Text */
   --apple-light-gray: #f5f5f7;
+  /* Section Backgrounds */
   --apple-white: #ffffff;
-  --apple-background: #000000;
-  /* For hero sections */
-
-  /* Shadows */
-  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.04);
-  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.08);
-  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.12);
+  --apple-border: #d2d2d7;
 
   /* Metrics */
   --nav-height: 48px;
-  /* Appears smaller, blurred */
-  --container-width: 1040px;
-  /* Tighter container for readability */
-  --border-radius: 18px;
-  --border-radius-lg: 28px;
+  --container-width: 980px;
+  /* Tighter, more readable */
+  --radius-sm: 12px;
+  --radius-md: 20px;
+  --radius-lg: 30px;
+  /* Standard Apple Card Radius */
+
+  /* Shadows */
+  --shadow-sm: 0 4px 6px rgba(0, 0, 0, 0.02);
+  --shadow-card: 0 10px 30px rgba(0, 0, 0, 0.04);
+  --shadow-hover: 0 20px 40px rgba(0, 0, 0, 0.08);
 }
 
 * {
@@ -667,30 +670,41 @@ section {
 
 /* ===== REVIEWS ===== */
 .reviews {
-  background: var(--airbnb-background);
-  padding: 80px 0;
+  background: var(--apple-light-gray);
+  padding: 100px 24px;
+}
+
+.reviews .section-header {
+  margin-bottom: 48px;
+}
+
+.reviews .section-header h2 {
+  font-size: clamp(2rem, 4vw, 3rem);
+  font-weight: 700;
+  color: var(--apple-dark);
+  letter-spacing: -0.02em;
 }
 
 .reviews-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 32px;
-  margin-top: 40px;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 24px;
+  margin-top: 32px;
 }
 
 .review-card {
-  background: var(--airbnb-white);
-  padding: 24px;
-  border-radius: var(--border-radius);
-  box-shadow: var(--shadow-sm);
-  transition: transform 0.2s;
-  border: 1px solid var(--airbnb-light-gray);
+  background: white;
+  padding: 28px;
+  border-radius: 20px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  border: 1px solid rgba(0, 0, 0, 0.04);
   height: 100%;
 }
 
 .review-card:hover {
   transform: translateY(-4px);
-  box-shadow: var(--shadow-md);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.08);
 }
 
 .review-header {

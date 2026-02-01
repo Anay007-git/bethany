@@ -2,8 +2,10 @@ import { useState, useEffect } from 'react';
 import Calendar from 'react-calendar'; // Import Calendar
 import ImageLightbox from './ImageLightbox'; // Import Shared Lightbox
 import TiltCard from './3d/TiltCard'; // Import 3D Tilt Card
+import FloatingParticles from './FloatingParticles'; // Award-winning particles
 import { SupabaseService } from '../services/SupabaseService'; // Supabase Service
 import './Calendar.css'; // Import Custom Styles
+import './BookingForm.css'; // Apple Design Overrides
 
 // Room data is now fetched from Supabase via SupabaseService.getRooms()
 
@@ -303,8 +305,6 @@ const BookingForm = ({ onToast }) => {
                 SupabaseService.getAllBookings()
             ]);
 
-            console.log('Google Sheet Bookings:', sheetRes.bookings);
-            console.log('Supabase Bookings:', supabaseData);
 
             // Normalize Supabase Data to match Sheet structure for frontend logic
             // Supabase returns: { check_in, check_out, room_ids: [{id, name}], status: 'booked' }
@@ -349,12 +349,11 @@ const BookingForm = ({ onToast }) => {
             // Merge Unique Bookings
             const allBookings = [...sheetFormatted, ...supabaseFormatted];
 
-            console.log('FINAL MERGED BOOKINGS:', allBookings);
 
             setExistingBookings(allBookings);
 
         } catch (error) {
-            console.log('Could not fetch existing bookings:', error);
+            // Silent fail - bookings will show as available
         } finally {
             setIsLoadingBookings(false);
         }
@@ -975,23 +974,43 @@ const BookingForm = ({ onToast }) => {
     const showCapacityWarning = formData.selectedRooms.length > 0 && capacityDifference > 0;
 
     return (
-        <section id="booking" className="booking">
-            <div className="container" style={{ maxWidth: '1280px', margin: '0 auto', padding: '20px' }}>
-                <div className="section-header" style={{ textAlign: 'center', marginBottom: '30px' }}>
-                    <h2>Book Your Stay</h2>
-                    <p>Select multiple rooms for your perfect family getaway</p>
+        <section id="booking" className="booking-section" style={{ position: 'relative', overflow: 'hidden' }}>
+            {/* Floating Particles Background */}
+            <FloatingParticles count={12} colors={['#0071e3', '#5856d6', '#34c759']} />
+
+            <div className="booking-container" style={{ position: 'relative', zIndex: 1 }}>
+                {/* Apple-Style Section Header */}
+                <div className="section-header" style={{ textAlign: 'center', marginBottom: '60px' }}>
+                    <h2 style={{
+                        fontSize: 'clamp(2.5rem, 5vw, 4rem)',
+                        fontWeight: '800',
+                        letterSpacing: '-0.03em',
+                        color: '#1d1d1f',
+                        marginBottom: '16px',
+                        lineHeight: '1.1'
+                    }}>
+                        Book Your Stay
+                    </h2>
+                    <p style={{
+                        fontSize: 'clamp(1.1rem, 2vw, 1.4rem)',
+                        color: '#86868b',
+                        fontWeight: '500',
+                        maxWidth: '500px',
+                        margin: '0 auto'
+                    }}>
+                        Your mountain sanctuary awaits
+                    </p>
                 </div>
 
-                {/* Single Row Layout: Calendar | Rooms | Cart */}
-                <div className="booking-single-row" style={{ display: 'flex', gap: '25px', alignItems: 'flex-start', flexWrap: 'wrap', justifyContent: 'center' }}>
+                {/* Single Row Layout: Plan Your Stay | Checkout Details */}
+                <div className="booking-single-row">
 
-                    {/* COL 1: Calendar */}
                     {/* COL 1: Date & Search Panel */}
-                    <div className="col-search" style={{ flex: '0 0 300px', maxWidth: '320px', position: 'relative', zIndex: 100 }}>
+                    <div className="col-search" style={{ position: 'relative', zIndex: 100 }}>
                         <h3 style={{ fontSize: '1.2rem', marginBottom: '15px', paddingBottom: '10px', borderBottom: '1px solid #eee' }}>1. Plan Your Stay</h3>
 
                         {/* Search Card */}
-                        <div className="search-card" style={{ background: 'white', padding: '20px', borderRadius: '16px', boxShadow: '0 10px 30px rgba(0,0,0,0.08)', border: '1px solid rgba(0,0,0,0.02)' }}>
+                        <div className="booking-step-card">
 
                             {/* Date Picker Trigger - Split Layout */}
                             <div className="form-group" style={{ marginBottom: '25px', position: 'relative' }}>
@@ -1000,38 +1019,28 @@ const BookingForm = ({ onToast }) => {
 
                                     {/* Check-in Box */}
                                     <div
-                                        className="date-box"
+                                        className="apple-select-trigger"
                                         onClick={() => { setShowCalendar(true); setShowRoomPicker(false); }}
-                                        style={{
-                                            background: '#f8f9fa', padding: '15px', borderRadius: '12px', border: '1px solid #e9ecef',
-                                            cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: '8px',
-                                            transition: 'all 0.2s ease', position: 'relative'
-                                        }}
                                     >
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#7f8c8d' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#86868b' }}>
                                             <span style={{ fontSize: '1.2rem' }}>📅</span>
                                             <span style={{ fontSize: '0.8rem', fontWeight: 'bold' }}>Check-in</span>
                                         </div>
-                                        <div style={{ fontSize: '1rem', fontWeight: '700', color: '#2c3e50' }}>
+                                        <div style={{ fontSize: '1rem', fontWeight: '700', color: '#1d1d1f' }}>
                                             {formData.checkIn ? new Date(formData.checkIn).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'}
                                         </div>
                                     </div>
 
                                     {/* Check-out Box */}
                                     <div
-                                        className="date-box"
+                                        className="apple-select-trigger"
                                         onClick={() => { setShowCalendar(true); setShowRoomPicker(false); }}
-                                        style={{
-                                            background: '#f8f9fa', padding: '15px', borderRadius: '12px', border: '1px solid #e9ecef',
-                                            cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: '8px',
-                                            transition: 'all 0.2s ease'
-                                        }}
                                     >
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#7f8c8d' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#86868b' }}>
                                             <span style={{ fontSize: '1.2rem' }}>📅</span>
                                             <span style={{ fontSize: '0.8rem', fontWeight: 'bold' }}>Check-out</span>
                                         </div>
-                                        <div style={{ fontSize: '1rem', fontWeight: '700', color: '#2c3e50' }}>
+                                        <div style={{ fontSize: '1rem', fontWeight: '700', color: '#1d1d1f' }}>
                                             {formData.checkOut ? new Date(formData.checkOut).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'}
                                         </div>
                                     </div>
@@ -1041,70 +1050,54 @@ const BookingForm = ({ onToast }) => {
 
                             {/* Room Picker Trigger */}
                             <div className="form-group" style={{ marginBottom: '25px', position: 'relative' }}>
-                                <label style={{ fontWeight: '700', marginBottom: '12px', display: 'block', color: '#2c3e50', fontSize: '0.85rem', letterSpacing: '1px', textTransform: 'uppercase' }}>ROOMS</label>
+                                <label style={{ fontWeight: '700', marginBottom: '12px', display: 'block', color: '#86868b', fontSize: '0.85rem', letterSpacing: '0.5px', textTransform: 'uppercase', marginLeft: '4px' }}>ROOMS</label>
                                 <div
-                                    className="room-trigger"
+                                    className={`apple-select-trigger ${showRoomPicker ? 'active' : ''}`}
                                     onClick={() => { setShowRoomPicker(!showRoomPicker); setShowCalendar(false); }}
-                                    style={{
-                                        padding: '16px',
-                                        borderRadius: '12px',
-                                        background: '#f8f9fa',
-                                        border: '1px solid #e9ecef',
-                                        cursor: 'pointer',
-                                        display: 'flex',
-                                        justifyContent: 'space-between',
-                                        alignItems: 'center',
-                                        transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                                        boxShadow: showRoomPicker ? '0 0 0 3px rgba(52, 152, 219, 0.2)' : 'none',
-                                        borderColor: showRoomPicker ? '#3498db' : '#e9ecef'
-                                    }}
                                 >
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
                                         <span style={{ fontSize: '1.4rem' }}>🛏️</span>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                                            <span style={{ fontSize: '1rem', fontWeight: '700', color: '#2c3e50' }}>
+                                            <span style={{ fontSize: '1rem', fontWeight: '700', color: '#1d1d1f' }}>
                                                 {formData.selectedRooms.length > 0 ? `${formData.selectedRooms.length} Room${formData.selectedRooms.length > 1 ? 's' : ''} Selected` : 'Select Rooms'}
                                             </span>
-                                            <span style={{ fontSize: '0.75rem', color: '#7f8c8d' }}>
+                                            <span style={{ fontSize: '0.75rem', color: '#86868b' }}>
                                                 {formData.selectedRooms.length > 0 ? formData.selectedRooms.map(r => r.name).join(', ') : 'Tap to browse available rooms'}
                                             </span>
                                         </div>
                                     </div>
-                                    <span style={{ fontSize: '0.8rem', color: '#95a5a6' }}>{showRoomPicker ? '▲' : '▼'}</span>
+                                    <span style={{ fontSize: '0.8rem', color: '#86868b' }}>{showRoomPicker ? '▲' : '▼'}</span>
                                 </div>
                             </div>
 
                             {/* Guest Selector */}
                             <div className="form-group" style={{ marginBottom: '10px' }}>
-                                <label style={{ fontWeight: '700', marginBottom: '12px', display: 'block', color: '#2c3e50', fontSize: '0.85rem', letterSpacing: '1px', textTransform: 'uppercase' }}>GUESTS</label>
+                                <label style={{ fontWeight: '700', marginBottom: '12px', display: 'block', color: '#86868b', fontSize: '0.85rem', letterSpacing: '0.5px', textTransform: 'uppercase', marginLeft: '4px' }}>GUESTS</label>
                                 <div style={{ position: 'relative' }}>
-                                    <div style={{ position: 'absolute', left: '15px', top: '50%', transform: 'translateY(-50%)', fontSize: '1.2rem', pointerEvents: 'none' }}>👥</div>
-                                    <select
-                                        name="guests"
-                                        value={formData.guests}
-                                        onChange={handleChange}
-                                        style={{
-                                            width: '100%',
-                                            padding: '16px 15px 16px 50px', // Left padding for icon
-                                            borderRadius: '12px',
-                                            border: '1px solid #e9ecef',
-                                            fontSize: '1rem',
-                                            fontWeight: '500',
-                                            color: '#2c3e50',
-                                            backgroundColor: '#f8f9fa',
-                                            cursor: 'pointer',
-                                            outline: 'none',
-                                            appearance: 'none',
-                                            backgroundImage: `url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%2395a5a6%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E")`,
-                                            backgroundRepeat: 'no-repeat',
-                                            backgroundPosition: 'right 15px center',
-                                            backgroundSize: '10px auto'
-                                        }}
-                                    >
-                                        {[...Array(15)].map((_, i) => (
-                                            <option key={i} value={i + 1}>{i + 1} Guest{i > 0 ? 's' : ''}</option>
-                                        ))}
-                                    </select>
+                                    <div className="apple-select-trigger">
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                                            <span style={{ fontSize: '1.2rem' }}>👥</span>
+                                            <span style={{ fontSize: '1rem', fontWeight: '500', color: '#1d1d1f' }}>
+                                                {formData.guests} Guest{formData.guests > 1 ? 's' : ''}
+                                            </span>
+                                        </div>
+                                        {/* Invisible Select overlay for functionality without rewriting logic */}
+                                        <select
+                                            name="guests"
+                                            value={formData.guests}
+                                            onChange={handleChange}
+                                            style={{
+                                                position: 'absolute',
+                                                top: 0, left: 0, width: '100%', height: '100%',
+                                                opacity: 0, cursor: 'pointer'
+                                            }}
+                                        >
+                                            {[...Array(15)].map((_, i) => (
+                                                <option key={i} value={i + 1}>{i + 1} Guest{i > 0 ? 's' : ''}</option>
+                                            ))}
+                                        </select>
+                                        <span style={{ fontSize: '0.8rem', color: '#86868b' }}>▼</span>
+                                    </div>
                                 </div>
                             </div>
                             {formData.guests > 4 && (
@@ -1124,10 +1117,10 @@ const BookingForm = ({ onToast }) => {
 
 
                     {/* COL 3: Cart & Checkout */}
-                    <div className="col-cart" style={{ flex: '1 1 300px', maxWidth: '350px' }}>
+                    <div className="col-cart">
                         <h3 style={{ fontSize: '1.2rem', marginBottom: '15px', paddingBottom: '10px', borderBottom: '1px solid #eee' }}>2. Booking Details</h3>
 
-                        <div className="cart-card" style={{ background: 'white', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 20px rgba(0,0,0,0.08)', position: 'sticky', top: '20px' }}>
+                        <div className="booking-step-card" style={{ position: 'sticky', top: '20px' }}>
                             {/* Cart Items */}
                             <div className="selected-rooms-summary" style={{ marginBottom: '15px' }}>
                                 <h4 style={{ fontSize: '0.95rem', color: '#34495e', marginBottom: '8px' }}>Selected Rooms:</h4>
@@ -1255,15 +1248,70 @@ const BookingForm = ({ onToast }) => {
 
                             {/* Checkout Form */}
                             <form onSubmit={handleSubmit} className="checkout-form">
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
-                                    <input type="text" name="name" value={formData.name} onChange={handleChange} placeholder="Name" required style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ddd', fontSize: '0.9rem' }} />
-                                    <input type="tel" name="phone" value={formData.phone} onChange={handleChange} placeholder="Phone" required style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ddd', fontSize: '0.9rem' }} />
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+                                    <div className="apple-input-group">
+                                        <label>Full Name</label>
+                                        <input
+                                            type="text"
+                                            name="name"
+                                            value={formData.name}
+                                            onChange={handleChange}
+                                            placeholder="John Appleseed"
+                                            required
+                                            className="apple-input"
+                                        />
+                                    </div>
+                                    <div className="apple-input-group">
+                                        <label>Phone Number</label>
+                                        <input
+                                            type="tel"
+                                            name="phone"
+                                            value={formData.phone}
+                                            onChange={handleChange}
+                                            placeholder="+91 98765 43210"
+                                            required
+                                            className="apple-input"
+                                        />
+                                    </div>
                                 </div>
-                                <input type="email" name="email" value={formData.email} onChange={handleChange} placeholder="Email" required style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ddd', marginBottom: '10px', fontSize: '0.9rem' }} />
-                                <textarea name="message" value={formData.message} onChange={handleChange} placeholder="Message" rows="2" style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ddd', marginBottom: '15px', fontSize: '0.9rem' }} />
 
-                                <button type="submit" disabled={isSubmitting || formData.selectedRooms.length === 0 || showCapacityWarning} style={{ width: '100%', padding: '14px', background: isSubmitting || formData.selectedRooms.length === 0 || showCapacityWarning ? '#bdc3c7' : '#3498db', color: 'white', border: 'none', borderRadius: '12px', fontSize: '1.1rem', fontWeight: '800', cursor: isSubmitting || formData.selectedRooms.length === 0 || showCapacityWarning ? 'not-allowed' : 'pointer', transition: 'all 0.3s', boxShadow: '0 4px 15px rgba(52, 152, 219, 0.4)' }}>
-                                    {showCapacityWarning ? 'Select More Rooms' : (isSubmitting ? 'Processing...' : 'Confirm Request')}
+                                <div className="apple-input-group" style={{ marginBottom: '20px' }}>
+                                    <label>Email Address</label>
+                                    <input
+                                        type="email"
+                                        name="email"
+                                        value={formData.email}
+                                        onChange={handleChange}
+                                        placeholder="john@example.com"
+                                        required
+                                        className="apple-input"
+                                    />
+                                </div>
+
+                                <div className="apple-input-group" style={{ marginBottom: '30px' }}>
+                                    <label>Special Requests (Optional)</label>
+                                    <textarea
+                                        name="message"
+                                        value={formData.message}
+                                        onChange={handleChange}
+                                        placeholder="Note..."
+                                        rows="3"
+                                        className="apple-input"
+                                        style={{ resize: 'vertical' }}
+                                    />
+                                </div>
+
+                                <button
+                                    type="submit"
+                                    disabled={isSubmitting || formData.selectedRooms.length === 0 || showCapacityWarning}
+                                    className="apple-btn"
+                                    style={{
+                                        width: '100%',
+                                        opacity: isSubmitting || formData.selectedRooms.length === 0 || showCapacityWarning ? 0.6 : 1,
+                                        cursor: isSubmitting || formData.selectedRooms.length === 0 || showCapacityWarning ? 'not-allowed' : 'pointer'
+                                    }}
+                                >
+                                    {showCapacityWarning ? 'Select More Rooms' : (isSubmitting ? 'Processing Request...' : 'Confirm Request')}
                                 </button>
                             </form>
 

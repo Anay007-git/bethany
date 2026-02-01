@@ -1,0 +1,103 @@
+/* AppleHero Responsive Styles - Apple-Style Mobile */
+
+/* Base Hero Responsive Adjustments */
+.hero-content {
+    padding: 20px;
+}
+
+/* Tablet Breakpoint */
+@media (max-width: 768px) {
+
+    /* Fix viewport height on mobile browsers */
+    section[style*="height: 100vh"] {
+        height: 100dvh !important;
+        min-height: -webkit-fill-available;
+    }
+
+    .hero-content {
+        bottom: auto !important;
+        top: 50% !important;
+        left: 50% !important;
+        transform: translate(-50%, -50%) !important;
+        padding: 24px !important;
+        width: 90% !important;
+        max-width: 400px !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        text-align: center !important;
+    }
+
+    .hero-title {
+        font-size: clamp(3rem, 12vw, 5rem) !important;
+        margin-bottom: 8px !important;
+        text-align: center !important;
+    }
+
+    .hero-subtitle {
+        font-size: clamp(1rem, 3.5vw, 1.4rem) !important;
+        margin-bottom: 28px !important;
+        text-align: center !important;
+        opacity: 0.9;
+    }
+
+    /* Button container - centered stack */
+    .hero-content>div:last-child {
+        flex-direction: column !important;
+        gap: 10px !important;
+        width: 100% !important;
+        align-items: center !important;
+        padding: 0 !important;
+    }
+
+    .hero-btn {
+        width: 100% !important;
+        max-width: 260px !important;
+        padding: 14px 36px !important;
+        font-size: 1rem !important;
+        text-align: center !important;
+        display: flex !important;
+        justify-content: center !important;
+    }
+}
+
+/* Mobile Breakpoint - Small phones */
+@media (max-width: 480px) {
+    .hero-content {
+        width: 95% !important;
+        padding: 16px !important;
+    }
+
+    .hero-title {
+        font-size: clamp(2.5rem, 14vw, 4rem) !important;
+        margin-bottom: 6px !important;
+    }
+
+    .hero-subtitle {
+        font-size: 1rem !important;
+        margin-bottom: 24px !important;
+    }
+
+    .hero-btn {
+        max-width: 240px !important;
+        padding: 12px 28px !important;
+        font-size: 0.95rem !important;
+    }
+}
+
+/* Video Controls - Top right on mobile */
+@media (max-width: 768px) {
+
+    /* Move controls to top right, near navbar */
+    section>div[style*="bottom: 40px"] {
+        bottom: auto !important;
+        top: 70px !important;
+        right: 12px !important;
+        gap: 8px !important;
+    }
+
+    section>div[style*="bottom: 40px"] button {
+        width: 36px !important;
+        height: 36px !important;
+    }
+}
