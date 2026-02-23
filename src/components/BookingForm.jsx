@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Calendar from 'react-calendar'; // Import Calendar
 import ImageLightbox from './ImageLightbox'; // Import Shared Lightbox
 import TiltCard from './3d/TiltCard'; // Import 3D Tilt Card
@@ -193,6 +193,7 @@ const BookingForm = ({ onToast }) => {
     // Coupon State
     const [couponCode, setCouponCode] = useState('');
     const [discount, setDiscount] = useState(0);
+    const discountRef = useRef(0); // Ref to avoid stale closure in handleSubmit
     const [isCouponApplied, setIsCouponApplied] = useState(false);
     const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
     const [couponDetails, setCouponDetails] = useState(null);
@@ -659,6 +660,7 @@ const BookingForm = ({ onToast }) => {
         if (name === 'phone' && isCouponApplied) {
             setIsCouponApplied(false);
             setDiscount(0);
+            discountRef.current = 0;
             setCouponCode('');
             onToast('Phone number changed. Please re-apply coupon.', 'info');
         }
@@ -706,6 +708,7 @@ const BookingForm = ({ onToast }) => {
         setIsApplyingCoupon(true);
         // Reset
         setDiscount(0);
+        discountRef.current = 0;
         setIsCouponApplied(false);
 
         // Check if it's the legacy coupon (optional: keep backward compatibility or migrate completely)
@@ -746,13 +749,16 @@ const BookingForm = ({ onToast }) => {
             const total = roomPriceTotal + mealPriceTotal;
             if (discountAmount > total) discountAmount = total;
 
-            setDiscount(Math.round(discountAmount));
+            const roundedDiscount = Math.round(discountAmount);
+            setDiscount(roundedDiscount);
+            discountRef.current = roundedDiscount; // Keep ref in sync
             setIsCouponApplied(true);
             setCouponDetails(coupon); // Store details for UI
-            onToast(`🎉 Coupon Applied! Saved ₹${Math.round(discountAmount)}`, 'success');
+            onToast(`🎉 Coupon Applied! Saved ₹${roundedDiscount}`, 'success');
         } else {
             onToast(res.error || 'Invalid Coupon Code', 'error');
             setDiscount(0);
+            discountRef.current = 0;
             setIsCouponApplied(false);
             setCouponDetails(null);
         }
@@ -878,7 +884,8 @@ const BookingForm = ({ onToast }) => {
             }
 
             // 2. Format Data for Google Sheets
-            const finalTotal = totalPrice - discount; // Use discounted total
+            const currentDiscount = discountRef.current; // Use ref to avoid stale closure
+            const finalTotal = totalPrice - currentDiscount; // Use discounted total
 
             const formDataObj = new FormData();
             formDataObj.append('checkIn', formData.checkIn);
@@ -935,13 +942,13 @@ const BookingForm = ({ onToast }) => {
 
                 console.log('PhonePe Payment Debug:', {
                     totalPrice,
-                    discount,
+                    discount: currentDiscount,
                     finalTotal,
                     amountInPaise,
                     amountInRupees: finalTotal
                 });
 
-                const paymentMessage = discount > 0
+                const paymentMessage = currentDiscount > 0
                     ? `Bethany Homestay (${numberOfNights} nights) - ₹${totalPrice} less ₹${discount} discount = ₹${finalTotal}`
                     : `Stay at Bethany Homestay for ${numberOfNights} nights.`;
 
@@ -1243,7 +1250,7 @@ const BookingForm = ({ onToast }) => {
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#15803d', fontSize: '0.9rem' }}>
                                             <span>✅ <strong>{couponCode}</strong> applied!</span>
                                             <button
-                                                onClick={() => { setIsCouponApplied(false); setDiscount(0); setCouponCode(''); }}
+                                                onClick={() => { setIsCouponApplied(false); setDiscount(0); discountRef.current = 0; setCouponCode(''); }}
                                                 style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '0.8rem', textDecoration: 'underline' }}
                                             >
                                                 Remove
