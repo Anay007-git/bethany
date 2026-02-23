@@ -40,8 +40,8 @@ const PaymentStatus = () => {
                     // Trigger email confirmation
                     try {
                         const bookingRes = await SupabaseService.getBookingById(orderId);
-                        if (bookingRes.success && bookingRes.booking) {
-                            await SupabaseService.sendBookingConfirmation(bookingRes.booking);
+                        if (bookingRes.success && bookingRes.data) {
+                            await SupabaseService.sendBookingConfirmation(bookingRes.data);
                         }
                     } catch (e) {
                         console.error('Email confirmation trigger failed:', e);
@@ -52,6 +52,21 @@ const PaymentStatus = () => {
                     isPolling = false;
                     // Update Supabase to cancelled due to failure
                     await SupabaseService.updateBookingStatus(orderId, 'cancelled');
+
+                    // Trigger cancellation email
+                    try {
+                        const bookingRes = await SupabaseService.getBookingById(orderId);
+                        if (bookingRes.success && bookingRes.data) {
+                            await SupabaseService.sendBookingConfirmation({
+                                ...bookingRes.data,
+                                status: 'cancelled',
+                                cancellation_reason: 'Payment failed or was declined'
+                            });
+                        }
+                    } catch (e) {
+                        console.error('Cancellation email trigger failed:', e);
+                    }
+
                     setStatus('failed');
                     setErrorMessage('Your payment was declined or failed.');
                 } else {
