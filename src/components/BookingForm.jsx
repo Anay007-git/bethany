@@ -948,8 +948,11 @@ const BookingForm = ({ onToast }) => {
                     amountInRupees: finalTotal
                 });
 
+                // Temporary debug alert - remove after confirming
+                alert(`DEBUG: Sending ₹${finalTotal} to PhonePe (Total: ₹${totalPrice}, Discount: ₹${currentDiscount})`);
+
                 const paymentMessage = currentDiscount > 0
-                    ? `Bethany Homestay (${numberOfNights} nights) - ₹${totalPrice} less ₹${discount} discount = ₹${finalTotal}`
+                    ? `Bethany Homestay (${numberOfNights} nights) - ₹${totalPrice} less ₹${currentDiscount} discount = ₹${finalTotal}`
                     : `Stay at Bethany Homestay for ${numberOfNights} nights.`;
 
                 const initiateRes = await fetch('/api/payment/initiate', {
