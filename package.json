@@ -18,6 +18,7 @@
     "jspdf": "^4.0.0",
     "mailtrap": "^4.4.0",
     "nodemailer": "^7.0.12",
+    "pg-sdk-node": "^2.0.2",
     "react": "^19.2.0",
     "react-barcode": "^1.6.1",
     "react-calendar": "^6.0.0",

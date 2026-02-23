@@ -8,6 +8,7 @@ import AdminLogin from './components/admin/AdminLogin';
 import BillSearch from './components/bill/BillSearch';
 import BillView from './components/bill/BillView';
 import IcalExport from './pages/IcalExport';
+import PaymentStatus from './pages/PaymentStatus';
 import './index.css';
 
 function App() {
@@ -23,6 +24,7 @@ function App() {
         <Route path="/my-bill" element={<BillSearch />} />
         <Route path="/bill/:bookingId" element={<BillView />} />
         <Route path="/ical/:roomId" element={<IcalExport />} />
+        <Route path="/payment-status" element={<PaymentStatus />} />
       </Routes>
     </Router>
   );

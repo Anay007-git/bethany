@@ -356,11 +356,11 @@ const BookingForm = ({ onToast }) => {
             // Merge Unique Bookings
             const allBookings = [...sheetFormatted, ...supabaseFormatted];
 
-
             setExistingBookings(allBookings);
 
         } catch (error) {
-            // Silent fail - bookings will show as available
+            // Quietly fall back to Supabase data if Google Sheets throws CORS or 404
+            console.warn("Failed to fetch legacy Google Sheets bookings. Defaulting to Supabase.", error);
         } finally {
             setIsLoadingBookings(false);
         }
@@ -917,7 +917,7 @@ const BookingForm = ({ onToast }) => {
 
             const bookingId = supabaseResult.booking.id;
 
-            // Step B: Send to Google Sheets (Now with Booking ID)
+            // Log pending booking to Google Sheets
             formDataObj.append('bookingId', bookingId);
             formDataObj.append('status', 'Pending');
 
@@ -927,51 +927,58 @@ const BookingForm = ({ onToast }) => {
                 mode: 'no-cors'
             }).catch(err => console.error('Sheet Submission Error:', err));
 
-            // Step B-2: Trigger Email Confirmation (Background)
-            SupabaseService.sendBookingConfirmation({
-                id: bookingId,
-                guests: {
-                    full_name: formData.name,
-                    email: formData.email,
-                    phone: formData.phone
-                },
-                check_in: formData.checkIn,
-                check_out: formData.checkOut,
-                total_price: finalTotal,
-                room_ids: formData.selectedRooms.map(r => ({ name: r.name }))
-            }).catch(err => console.error('Email Trigger Failed:', err));
+            // Initiate PhonePe Payment
+            try {
+                const protocol = window.location.protocol;
+                const host = window.location.host;
+                const amountInPaise = Math.round(finalTotal * 100);
 
-            // Step C: Success UI
-            setBookingDetails({
-                ...formData,
-                roomNames: selectedRoomNames,
-                totalPrice,
-                bookingId: bookingId
-            });
+                const initiateRes = await fetch('/api/payment/initiate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        merchantOrderId: bookingId,
+                        amount: amountInPaise,
+                        phone: formData.phone,
+                        redirectUrl: `${protocol}//${host}/payment-status?id=${bookingId}`,
+                        message: `Stay at Bethany Homestay for ${numberOfNights} nights.`
+                    })
+                });
 
-            // Increment Coupon Usage if applied
-            if (isCouponApplied && couponCode) {
-                await SupabaseService.incrementCouponUsage(couponCode.toUpperCase());
-            }
+                const initiateData = await initiateRes.json();
 
-            setShowSuccessModal(true);
-            setFormData({
-                name: '', email: '', phone: '', checkIn: '', checkOut: '',
-                guests: '1', selectedRooms: [], message: '',
-                mealSelection: {
-                    breakfast: { veg: 0, nonVeg: 0 },
-                    lunch: { veg: 0, nonVeg: 0 },
-                    dinner: { veg: 0, nonVeg: 0 }
+                // If PhonePe pg-sdk-node creates a valid StandardCheckoutPayResponse,
+                // it usually contains redirectUrl at the root.
+                // However, the standard `client.pay()` response from `pg-sdk-node` typically 
+                // matches the standard PhonePe API format, which might nest redirectUrl or return it directly depending on the object parsing.
+                // The snippet given in the prompt says: 
+                // `client.pay(request).then((response)=> { const checkoutPageUrl = response.redirectUrl; })`
+                // AND "The function returns a StandardCheckoutPayResponse object with the following properties: redirect_url"
+                // So let's handle both `redirectUrl` and `redirect_url`.
+
+                const redirectUrl = initiateData.redirectUrl || initiateData.redirect_url;
+
+                if (initiateRes.ok && redirectUrl) {
+                    window.location.href = redirectUrl;
+                    return;
+                } else {
+                    console.error("Payment Initiation Failed:", initiateData);
+                    onToast(initiateData.error || "Failed to initiate payment gateway. Please try again later.", 'error');
+                    setIsSubmitting(false);
+                    return;
                 }
-            });
-            setTotalPrice(0); setRoomPriceTotal(0); setMealPriceTotal(0); setNumberOfNights(0);
-            fetchExistingBookings();
+            } catch (err) {
+                console.error("Payment Error:", err);
+                onToast("Payment gateway connection error.", "error");
+                setIsSubmitting(false);
+                return;
+            }
 
         } catch (error) {
             console.error('Booking error:', error);
             onToast('Failed to send booking request. Please try again.', 'error');
         } finally {
-            setIsSubmitting(false);
+            if (!formData.bookingId) setIsSubmitting(false); // only disable if we aren't redirecting
         }
     };
 
