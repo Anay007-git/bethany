@@ -22,6 +22,8 @@ export default async function handler(req, res) {
             .message(message || "Payment for Bethany Homestay")
             .build();
 
+        console.log('PhonePe SDK Request:', { merchantOrderId, amount, amountInRupees: amount / 100, message });
+
         const response = await client.pay(request);
 
         return res.status(200).json(response);

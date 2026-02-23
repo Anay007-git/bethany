@@ -933,6 +933,18 @@ const BookingForm = ({ onToast }) => {
                 const host = window.location.host;
                 const amountInPaise = Math.round(finalTotal * 100);
 
+                console.log('PhonePe Payment Debug:', {
+                    totalPrice,
+                    discount,
+                    finalTotal,
+                    amountInPaise,
+                    amountInRupees: finalTotal
+                });
+
+                const paymentMessage = discount > 0
+                    ? `Bethany Homestay (${numberOfNights} nights) - ₹${totalPrice} less ₹${discount} discount = ₹${finalTotal}`
+                    : `Stay at Bethany Homestay for ${numberOfNights} nights.`;
+
                 const initiateRes = await fetch('/api/payment/initiate', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -941,7 +953,7 @@ const BookingForm = ({ onToast }) => {
                         amount: amountInPaise,
                         phone: formData.phone,
                         redirectUrl: `${protocol}//${host}/payment-status?id=${bookingId}`,
-                        message: `Stay at Bethany Homestay for ${numberOfNights} nights.`
+                        message: paymentMessage
                     })
                 });
 
