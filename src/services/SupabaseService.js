@@ -94,6 +94,48 @@ export const SupabaseService = {
         }
     },
 
+    // 1.3 Send Payment Failed Email (Edge Function)
+    async sendPaymentFailedEmail(bookingData) {
+        try {
+            console.log("Triggering Payment Failed Email Function...");
+            const { data, error } = await supabase.functions.invoke('send-payment-failed-email', {
+                body: { booking: bookingData }
+            });
+
+            if (error) {
+                console.error("Supabase Function Error:", error);
+                return { success: false, error };
+            }
+
+            console.log("Payment Failed Email Function Response:", data);
+            return { success: true, data };
+
+        } catch (err) {
+            console.error("Payment Failed Email Invocation Failed:", err);
+            return { success: false, error: err };
+        }
+    },
+
+    // 1.4 Get Full Booking Details (Used by PaymentStatus to trigger emails)
+    async getBookingById(bookingId) {
+        try {
+            const { data, error } = await supabase
+                .from('bookings')
+                .select(`
+                    *,
+                    guests ( full_name, email, phone )
+                `)
+                .eq('id', bookingId)
+                .single();
+
+            if (error) throw error;
+            return { success: true, data };
+        } catch (error) {
+            console.error('Error fetching booking by ID:', error);
+            return { success: false, error };
+        }
+    },
+
     // 1.5 Create Invoice
     async createInvoice({ bookingId, items, total }) {
         try {

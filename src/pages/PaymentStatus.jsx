@@ -35,15 +35,25 @@ const PaymentStatus = () => {
                 if (state === 'COMPLETED' || state === 'SUCCESS') {
                     isPolling = false;
                     // Provide dual-write safety: update Supabase directly from frontend as well
-                    // This now handles sending the confirmation email automatically via the updated service
                     await SupabaseService.updateBookingStatus(orderId, 'confirmed');
+
+                    // Fetch the full booking details to send the email
+                    const bookingRes = await SupabaseService.getBookingById(orderId);
+                    if (bookingRes.success && bookingRes.data) {
+                        await SupabaseService.sendBookingConfirmation(bookingRes.data);
+                    }
 
                     setStatus('success');
                 } else if (state === 'FAILED') {
                     isPolling = false;
                     // Update Supabase to cancelled due to failure
-                    // This now handles sending the cancellation email automatically via the updated service
                     await SupabaseService.updateBookingStatus(orderId, 'cancelled');
+
+                    // Fetch the full booking details to send the declined email
+                    const bookingRes = await SupabaseService.getBookingById(orderId);
+                    if (bookingRes.success && bookingRes.data) {
+                        await SupabaseService.sendPaymentFailedEmail(bookingRes.data);
+                    }
 
                     setStatus('failed');
                     setErrorMessage('Your payment was declined or failed.');
