@@ -317,6 +317,17 @@ export const SupabaseService = {
                 }).catch(err => console.error('Sheet Sync Error:', err));
             }
 
+            // 4. Trigger Email Notification on Status Change
+            if (['confirmed', 'booked', 'cancelled'].includes(newStatus.toLowerCase())) {
+                // Ensure booking object has updated status before sending to email edge function
+                const updatedBookingForEmail = {
+                    ...booking,
+                    status: newStatus
+                };
+                // Fire and forget email trigger
+                SupabaseService.sendBookingConfirmation(updatedBookingForEmail).catch(err => console.error("Auto Email Failed:", err));
+            }
+
             return { success: true, data };
         } catch (error) {
             console.error('Update Status Error:', error);
