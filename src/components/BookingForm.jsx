@@ -289,9 +289,6 @@ const BookingForm = ({ onToast }) => {
     const [showSuccessModal, setShowSuccessModal] = useState(false);
     const [bookingDetails, setBookingDetails] = useState(null);
 
-    // Google Sheets Web App URL (Apps Script deployment)
-    const GOOGLE_SHEETS_URL = 'https://script.google.com/macros/s/AKfycbwCh7e84B44r49_S84abs7DfNyu6V8IV6umuQUNYH6qRmtGDIVKzXWR4EXD8yFrLFNksw/exec';
-
     // Fetch existing bookings for availability check
     useEffect(() => {
         fetchExistingBookings();
@@ -307,18 +304,10 @@ const BookingForm = ({ onToast }) => {
     const fetchExistingBookings = async () => {
         setIsLoadingBookings(true);
         try {
-            // Parallel Fetch: Google Sheets (Legacy/Primary) & Supabase (Modern/Sync)
-            // Note: Google Sheets may 404 or return opaque no-cors responses.
-            // We swallow those gracefully here so the frontend relies on Supabase data without throwing console terrors.
-            const [sheetRes, supabaseData] = await Promise.all([
-                fetch(`${GOOGLE_SHEETS_URL}?action=getBookings`, { mode: 'no-cors' })
-                    .then(() => ({ bookings: [] })) // no-cors opaque response can't be parsed as JSON anyway
-                    .catch(() => ({ bookings: [] })),
-                SupabaseService.getAllBookings()
-            ]);
+            // Fetch: Supabase (Modern/Sync)
+            const supabaseData = await SupabaseService.getAllBookings();
 
-
-            // Normalize Supabase Data to match Sheet structure for frontend logic
+            // Normalize Supabase Data for frontend logic
             // Supabase returns: { check_in, check_out, room_ids: [{id, name}], status: 'booked' }
             // Frontend expects: { checkIn: 'YYYY-MM-DD', checkOut: 'YYYY-MM-DD', roomType: 'Carmel, Room 2', status: 'Booked' }
 
@@ -355,17 +344,10 @@ const BookingForm = ({ onToast }) => {
                 };
             });
 
-            // Format Sheet Data (assuming it returns { bookings: [{ checkIn, checkOut, roomType... }] })
-            const sheetFormatted = sheetRes.bookings || [];
-
-            // Merge Unique Bookings
-            const allBookings = [...sheetFormatted, ...supabaseFormatted];
-
-            setExistingBookings(allBookings);
+            setExistingBookings(supabaseFormatted);
 
         } catch (error) {
-            // Quietly fall back to Supabase data if Google Sheets throws CORS or 404
-            console.warn("Failed to fetch legacy Google Sheets bookings. Defaulting to Supabase.", error);
+            console.error("Failed to fetch Supabase bookings.", error);
         } finally {
             setIsLoadingBookings(false);
         }

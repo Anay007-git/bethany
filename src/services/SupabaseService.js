@@ -293,30 +293,6 @@ export const SupabaseService = {
 
             if (error) throw error;
 
-            // 3. Update Google Sheet (Fire and Forget)
-            // 3. Update Google Sheet (Fire and Forget)
-            if (booking && booking.guests && booking.guests.email) {
-                const GOOGLE_SHEETS_URL = 'https://script.google.com/macros/s/AKfycbwCh7e84B44r49_S84abs7DfNyu6V8IV6umuQUNYH6qRmtGDIVKzXWR4EXD8yFrLFNksw/exec';
-
-                // Format date as YYYY-MM-DD
-                const dateStr = booking.check_in;
-
-                // Use FormData to send in Body (like BookingForm)
-                const formData = new FormData();
-                formData.append('action', 'updateStatus');
-                formData.append('bookingId', bookingId);
-                formData.append('email', booking.guests.email);
-                formData.append('checkIn', dateStr);
-                formData.append('status', newStatus);
-
-                // Use no-cors to avoid browser blocking the request (opaque response is fine)
-                fetch(GOOGLE_SHEETS_URL, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    body: formData
-                }).catch(err => console.error('Sheet Sync Error:', err));
-            }
-
             // 4. Trigger Email Notification on Status Change
             if (['confirmed', 'booked', 'cancelled'].includes(newStatus.toLowerCase())) {
                 // Ensure booking object has updated status before sending to email edge function
