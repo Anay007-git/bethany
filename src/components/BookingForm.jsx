@@ -308,10 +308,12 @@ const BookingForm = ({ onToast }) => {
         setIsLoadingBookings(true);
         try {
             // Parallel Fetch: Google Sheets (Legacy/Primary) & Supabase (Modern/Sync)
+            // Note: Google Sheets may 404 or return opaque no-cors responses.
+            // We swallow those gracefully here so the frontend relies on Supabase data without throwing console terrors.
             const [sheetRes, supabaseData] = await Promise.all([
                 fetch(`${GOOGLE_SHEETS_URL}?action=getBookings`, { mode: 'no-cors' })
-                    .then(res => res.json())
-                    .catch(err => ({ bookings: [] })),
+                    .then(() => ({ bookings: [] })) // no-cors opaque response can't be parsed as JSON anyway
+                    .catch(() => ({ bookings: [] })),
                 SupabaseService.getAllBookings()
             ]);
 
