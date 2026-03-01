@@ -26,6 +26,13 @@ export default async function handler(req, res) {
             const transactionId = payload.data.transactionId;
             const amount = payload.data.amount / 100; // convert paisa to string/number
 
+            // 1. Fetch booking to send email later
+            const { data: booking } = await supabase
+                .from('bookings')
+                .select('*, guests(*)')
+                .eq('id', merchantOrderId)
+                .single();
+
             // 1. Update Booking Status to confirmed
             const { error: bookingError } = await supabase
                 .from('bookings')
@@ -34,6 +41,13 @@ export default async function handler(req, res) {
 
             if (bookingError) {
                 console.error("Booking update error:", bookingError);
+            } else if (booking && booking.status !== 'confirmed') {
+                // 1.5 Send Email Notification (Only if not already confirmed by frontend)
+                await supabase.functions.invoke('send-booking-email', {
+                    body: {
+                        booking: { ...booking, status: 'confirmed' }
+                    }
+                }).catch(err => console.error("Webhook Email Failed:", err));
             }
 
             // 2. Insert Payment Record

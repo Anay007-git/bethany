@@ -35,37 +35,15 @@ const PaymentStatus = () => {
                 if (state === 'COMPLETED' || state === 'SUCCESS') {
                     isPolling = false;
                     // Provide dual-write safety: update Supabase directly from frontend as well
+                    // This now handles sending the confirmation email automatically via the updated service
                     await SupabaseService.updateBookingStatus(orderId, 'confirmed');
-
-                    // Trigger email confirmation
-                    try {
-                        const bookingRes = await SupabaseService.getBookingById(orderId);
-                        if (bookingRes.success && bookingRes.data) {
-                            await SupabaseService.sendBookingConfirmation(bookingRes.data);
-                        }
-                    } catch (e) {
-                        console.error('Email confirmation trigger failed:', e);
-                    }
 
                     setStatus('success');
                 } else if (state === 'FAILED') {
                     isPolling = false;
                     // Update Supabase to cancelled due to failure
+                    // This now handles sending the cancellation email automatically via the updated service
                     await SupabaseService.updateBookingStatus(orderId, 'cancelled');
-
-                    // Trigger cancellation email
-                    try {
-                        const bookingRes = await SupabaseService.getBookingById(orderId);
-                        if (bookingRes.success && bookingRes.data) {
-                            await SupabaseService.sendBookingConfirmation({
-                                ...bookingRes.data,
-                                status: 'cancelled',
-                                cancellation_reason: 'Payment failed or was declined'
-                            });
-                        }
-                    } catch (e) {
-                        console.error('Cancellation email trigger failed:', e);
-                    }
 
                     setStatus('failed');
                     setErrorMessage('Your payment was declined or failed.');
