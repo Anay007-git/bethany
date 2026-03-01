@@ -284,9 +284,14 @@ const BookingForm = ({ onToast }) => {
     const [isLoadingBookings, setIsLoadingBookings] = useState(false);
     const [totalPrice, setTotalPrice] = useState(0);
     const [roomPriceTotal, setRoomPriceTotal] = useState(0);
+    const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+
+    // Modal States
+    const [showPaymentModal, setShowPaymentModal] = useState(false);
+    const [paymentModalData, setPaymentModalData] = useState(null);
+    const [showSuccessModal, setShowSuccessModal] = useState(false);
     const [mealPriceTotal, setMealPriceTotal] = useState(0);
     const [numberOfNights, setNumberOfNights] = useState(0);
-    const [showSuccessModal, setShowSuccessModal] = useState(false);
     const [bookingDetails, setBookingDetails] = useState(null);
 
     // Fetch existing bookings for availability check
@@ -910,47 +915,33 @@ const BookingForm = ({ onToast }) => {
                     amountInRupees: finalTotal
                 });
 
-                // Temporary debug alert - remove after confirming
-                alert(`DEBUG: Sending ₹${finalTotal} to PhonePe(Total: ₹${totalPrice}, Discount: ₹${currentDiscount})`);
-
-                const paymentMessage = currentDiscount > 0
-                    ? `Bethany Homestay(${numberOfNights} nights) - ₹${totalPrice} less ₹${currentDiscount} discount = ₹${finalTotal}`
-                    : `Stay at Bethany Homestay for ${numberOfNights} nights.`;
-
-                const initiateRes = await fetch('/api/payment/initiate', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        merchantOrderId: bookingId,
-                        amount: amountInPaise,
-                        phone: formData.phone,
-                        redirectUrl: `${protocol}//${host}/payment-status?id=${bookingId}`,
-                        message: paymentMessage
-                    })
+                console.log('PhonePe Payment request ready:', {
+                    totalPrice,
+                    discount: currentDiscount,
+                    finalTotal,
+                    amountInPaise,
+                    amountInRupees: finalTotal
                 });
 
-                const initiateData = await initiateRes.json();
+                const paymentMessage = currentDiscount > 0
+                    ? `Bethany Homestay (${numberOfNights} nights) - ₹${totalPrice} less ₹${currentDiscount} discount = ₹${finalTotal}`
+                    : `Stay at Bethany Homestay for ${numberOfNights} nights.`;
 
-                // If PhonePe pg-sdk-node creates a valid StandardCheckoutPayResponse,
-                // it usually contains redirectUrl at the root.
-                // However, the standard `client.pay()` response from `pg-sdk-node` typically 
-                // matches the standard PhonePe API format, which might nest redirectUrl or return it directly depending on the object parsing.
-                // The snippet given in the prompt says: 
-                // `client.pay(request).then((response)=> { const checkoutPageUrl = response.redirectUrl; })`
-                // AND "The function returns a StandardCheckoutPayResponse object with the following properties: redirect_url"
-                // So let's handle both `redirectUrl` and `redirect_url`.
+                // Show the clean confirmation modal instead of an alert or immediate redirect
+                setPaymentModalData({
+                    bookingId,
+                    amountInPaise,
+                    finalTotal,
+                    totalPrice,
+                    currentDiscount,
+                    numberOfNights,
+                    phone: formData.phone,
+                    paymentMessage,
+                    redirectUrl: `${protocol}//${host}/payment-status?id=${bookingId}`
+                });
+                setShowPaymentModal(true);
+                return; // Wait for user to confirm in the modal
 
-                const redirectUrl = initiateData.redirectUrl || initiateData.redirect_url;
-
-                if (initiateRes.ok && redirectUrl) {
-                    window.location.href = redirectUrl;
-                    return;
-                } else {
-                    console.error("Payment Initiation Failed:", initiateData);
-                    onToast(initiateData.error || "Failed to initiate payment gateway. Please try again later.", 'error');
-                    setIsSubmitting(false);
-                    return;
-                }
             } catch (err) {
                 console.error("Payment Error:", err);
                 onToast("Payment gateway connection error.", "error");
@@ -1676,6 +1667,90 @@ const BookingForm = ({ onToast }) => {
                                     style={{ background: '#e67e22', color: 'white', border: 'none', padding: '12px 40px', borderRadius: '30px', fontWeight: 'bold', cursor: 'pointer', fontSize: '1rem', boxShadow: '0 4px 15px rgba(230, 126, 34, 0.3)' }}
                                 >
                                     Confirm Meals
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )
+            }
+
+            {/* 4. Payment Confirmation Modal (PhonePe Pre-Flight) */}
+            {
+                showPaymentModal && paymentModalData && (
+                    <div className="picker-modal-overlay" style={{ zIndex: 99999 }}>
+                        <div className="picker-modal-content" style={{ maxWidth: '450px', textAlign: 'center', padding: '40px 30px' }}>
+                            <div style={{ width: '80px', height: '80px', background: '#e8f5e9', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px auto' }}>
+                                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#2e7d32" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <rect x="2" y="5" width="20" height="14" rx="2" />
+                                    <line x1="2" y1="10" x2="22" y2="10" />
+                                </svg>
+                            </div>
+
+                            <h3 style={{ fontSize: '1.8rem', color: '#1d1d1f', marginBottom: '10px', fontWeight: '800', letterSpacing: '-0.02em' }}>
+                                Confirm Payment
+                            </h3>
+
+                            <p style={{ color: '#86868b', fontSize: '1rem', marginBottom: '30px', lineHeight: 1.5 }}>
+                                You are about to proceed to the secure PhonePe gateway to complete your booking.
+                            </p>
+
+                            <div style={{ background: '#f5f5f7', borderRadius: '16px', padding: '20px', marginBottom: '30px', textAlign: 'left' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '0.95rem' }}>
+                                    <span style={{ color: '#515154' }}>Total Cost:</span>
+                                    <span style={{ fontWeight: '600', color: '#1d1d1f' }}>₹{paymentModalData.totalPrice.toLocaleString('en-IN')}</span>
+                                </div>
+                                {paymentModalData.currentDiscount > 0 && (
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '0.95rem', color: '#e67e22' }}>
+                                        <span>Loyalty Discount:</span>
+                                        <span style={{ fontWeight: '600' }}>-₹{paymentModalData.currentDiscount.toLocaleString('en-IN')}</span>
+                                    </div>
+                                )}
+                                <div style={{ height: '1px', background: '#d2d2d7', margin: '15px 0' }}></div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.2rem', fontWeight: '800' }}>
+                                    <span style={{ color: '#1d1d1f' }}>Final Amount:</span>
+                                    <span style={{ color: '#2e7d32' }}>₹{paymentModalData.finalTotal.toLocaleString('en-IN')}</span>
+                                </div>
+                            </div>
+
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                <button
+                                    onClick={handleProceedToPayment}
+                                    disabled={isProcessingPayment}
+                                    style={{
+                                        background: '#2e7d32',
+                                        color: '#fff',
+                                        border: 'none',
+                                        padding: '16px',
+                                        borderRadius: '12px',
+                                        fontSize: '1.1rem',
+                                        fontWeight: '600',
+                                        cursor: isProcessingPayment ? 'not-allowed' : 'pointer',
+                                        opacity: isProcessingPayment ? 0.7 : 1,
+                                        transition: 'all 0.2s',
+                                        boxShadow: '0 4px 15px rgba(46, 125, 50, 0.3)'
+                                    }}
+                                >
+                                    {isProcessingPayment ? 'Redirecting...' : `Pay ₹${paymentModalData.finalTotal.toLocaleString('en-IN')}`}
+                                </button>
+
+                                <button
+                                    onClick={() => {
+                                        setShowPaymentModal(false);
+                                        setIsSubmitting(false);
+                                    }}
+                                    disabled={isProcessingPayment}
+                                    style={{
+                                        background: 'transparent',
+                                        color: '#86868b',
+                                        border: '1px solid #d2d2d7',
+                                        padding: '14px',
+                                        borderRadius: '12px',
+                                        fontSize: '1rem',
+                                        fontWeight: '600',
+                                        cursor: isProcessingPayment ? 'not-allowed' : 'pointer',
+                                    }}
+                                >
+                                    Cancel
                                 </button>
                             </div>
                         </div>
