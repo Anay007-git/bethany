@@ -901,59 +901,89 @@ const BookingForm = ({ onToast }) => {
 
             const bookingId = supabaseResult.booking.id;
 
-            // Initiate PhonePe Payment
-            try {
-                const protocol = window.location.protocol;
-                const host = window.location.host;
-                const amountInPaise = Math.round(finalTotal * 100);
+            // Set up Payment Data
+            const protocol = window.location.protocol;
+            const host = window.location.host;
+            const amountInPaise = Math.round(finalTotal * 100);
 
-                console.log('PhonePe Payment Debug:', {
-                    totalPrice,
-                    discount: currentDiscount,
-                    finalTotal,
-                    amountInPaise,
-                    amountInRupees: finalTotal
-                });
+            console.log('PhonePe Payment Debug:', {
+                totalPrice,
+                discount: currentDiscount,
+                finalTotal,
+                amountInPaise,
+                amountInRupees: finalTotal
+            });
 
-                console.log('PhonePe Payment request ready:', {
-                    totalPrice,
-                    discount: currentDiscount,
-                    finalTotal,
-                    amountInPaise,
-                    amountInRupees: finalTotal
-                });
+            console.log('PhonePe Payment request ready:', {
+                totalPrice,
+                discount: currentDiscount,
+                finalTotal,
+                amountInPaise,
+                amountInRupees: finalTotal
+            });
 
-                const paymentMessage = currentDiscount > 0
-                    ? `Bethany Homestay (${numberOfNights} nights) - ₹${totalPrice} less ₹${currentDiscount} discount = ₹${finalTotal}`
-                    : `Stay at Bethany Homestay for ${numberOfNights} nights.`;
+            const paymentMessage = currentDiscount > 0
+                ? `Bethany Homestay (${numberOfNights} nights) - ₹${totalPrice} less ₹${currentDiscount} discount = ₹${finalTotal}`
+                : `Stay at Bethany Homestay for ${numberOfNights} nights.`;
 
-                // Show the clean confirmation modal instead of an alert or immediate redirect
-                setPaymentModalData({
-                    bookingId,
-                    amountInPaise,
-                    finalTotal,
-                    totalPrice,
-                    currentDiscount,
-                    numberOfNights,
-                    phone: formData.phone,
-                    paymentMessage,
-                    redirectUrl: `${protocol}//${host}/payment-status?id=${bookingId}`
-                });
-                setShowPaymentModal(true);
-                return; // Wait for user to confirm in the modal
-
-            } catch (err) {
-                console.error("Payment Error:", err);
-                onToast("Payment gateway connection error.", "error");
-                setIsSubmitting(false);
-                return;
-            }
+            // Show the clean confirmation modal instead of an alert or immediate redirect
+            setPaymentModalData({
+                bookingId,
+                amountInPaise,
+                finalTotal,
+                totalPrice,
+                currentDiscount,
+                numberOfNights,
+                phone: formData.phone,
+                paymentMessage,
+                redirectUrl: `${protocol}//${host}/payment-status?id=${bookingId}`
+            });
+            setShowPaymentModal(true);
+            return; // Wait for user to confirm in the modal
 
         } catch (error) {
             console.error('Booking error:', error);
             onToast('Failed to send booking request. Please try again.', 'error');
         } finally {
             if (!formData.bookingId) setIsSubmitting(false); // only disable if we aren't redirecting
+        }
+    };
+
+    const handleProceedToPayment = async () => {
+        if (!paymentModalData) return;
+
+        setIsProcessingPayment(true);
+        try {
+            const initiateRes = await fetch('/api/payment/initiate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    merchantOrderId: paymentModalData.bookingId,
+                    amount: paymentModalData.amountInPaise,
+                    phone: paymentModalData.phone,
+                    redirectUrl: paymentModalData.redirectUrl,
+                    message: paymentModalData.paymentMessage
+                })
+            });
+
+            const initiateData = await initiateRes.json();
+            const redirectUrl = initiateData.redirectUrl || initiateData.redirect_url;
+
+            if (initiateRes.ok && redirectUrl) {
+                window.location.href = redirectUrl;
+            } else {
+                console.error("Payment Initiation Failed:", initiateData);
+                onToast(initiateData.error || "Failed to initiate payment gateway. Please try again later.", 'error');
+                setIsProcessingPayment(false);
+                setShowPaymentModal(false);
+                setIsSubmitting(false);
+            }
+        } catch (err) {
+            console.error("Payment Error:", err);
+            onToast("Payment gateway connection error.", "error");
+            setIsProcessingPayment(false);
+            setShowPaymentModal(false);
+            setIsSubmitting(false);
         }
     };
 
