@@ -29,10 +29,9 @@ const AdminDashboard = ({ onLogout }) => {
     });
     const [statusFilter, setStatusFilter] = useState('all');
 
-    // Offline Booking Form State
     const [offlineForm, setOfflineForm] = useState({
         name: '', phone: '', email: 'offline@bethany.com',
-        checkIn: '', checkOut: '', room: '', guests: 1, price: 0, discount: 0,
+        checkIn: '', checkOut: '', selectedRooms: [], guests: 1, price: 0, discount: 0,
         mealSelection: {
             breakfast: { veg: 0, nonVeg: 0 },
             lunch: { veg: 0, nonVeg: 0 },
@@ -173,7 +172,7 @@ const AdminDashboard = ({ onLogout }) => {
 
     // Auto-Calculate Price Effect
     useEffect(() => {
-        if (offlineForm.checkIn && offlineForm.checkOut && offlineForm.room) {
+        if (offlineForm.checkIn && offlineForm.checkOut && offlineForm.selectedRooms && offlineForm.selectedRooms.length > 0) {
             const start = new Date(offlineForm.checkIn);
             const end = new Date(offlineForm.checkOut);
 
@@ -202,8 +201,11 @@ const AdminDashboard = ({ onLogout }) => {
                 let d = new Date(start);
                 d.setDate(start.getDate() + i);
 
-                const roomPrice = Number(getSeasonalRoomPrice(d, offlineForm.room)) || 0;
-                total += roomPrice;
+                let dailyRoomTotal = 0;
+                for (const roomId of offlineForm.selectedRooms) {
+                    dailyRoomTotal += Number(getSeasonalRoomPrice(d, roomId)) || 0;
+                }
+                total += dailyRoomTotal;
                 total += dailyMealCost;
             }
 
@@ -213,7 +215,7 @@ const AdminDashboard = ({ onLogout }) => {
 
             setOfflineForm(prev => ({ ...prev, price: total }));
         }
-    }, [offlineForm.checkIn, offlineForm.checkOut, offlineForm.room, offlineForm.mealSelection, offlineForm.discount, rooms]);
+    }, [offlineForm.checkIn, offlineForm.checkOut, offlineForm.selectedRooms, offlineForm.mealSelection, offlineForm.discount, rooms]);
 
     const handleStatusChange = async (bookingId, newStatus) => {
         const booking = allBookings.find(b => b.id === bookingId);
@@ -325,9 +327,9 @@ const AdminDashboard = ({ onLogout }) => {
 
     const handleOfflineSubmit = async (e) => {
         e.preventDefault();
-        if (!offlineForm.room) return alert('Select a room');
+        if (!offlineForm.selectedRooms || offlineForm.selectedRooms.length === 0) return alert('Select at least one room');
 
-        const selectedRoomObj = rooms.find(r => r.id === offlineForm.room);
+        const selectedRoomObjs = rooms.filter(r => offlineForm.selectedRooms.includes(r.id));
 
         // Format Meals String
         const ms = offlineForm.mealSelection;
@@ -352,18 +354,20 @@ const AdminDashboard = ({ onLogout }) => {
         const nights = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
 
         // Room line item
-        if (selectedRoomObj && nights > 0) {
-            let roomTotal = 0;
-            for (let i = 0; i < nights; i++) {
-                let d = new Date(start);
-                d.setDate(start.getDate() + i);
-                roomTotal += getSeasonalRoomPrice(d, selectedRoomObj.id);
-            }
-            invoiceItems.push({
-                description: `${selectedRoomObj.name} (${nights} Nights)`,
-                quantity: 1,
-                unit_price: roomTotal,
-                total: roomTotal
+        if (selectedRoomObjs.length > 0 && nights > 0) {
+            selectedRoomObjs.forEach(selectedRoomObj => {
+                let roomTotal = 0;
+                for (let i = 0; i < nights; i++) {
+                    let d = new Date(start);
+                    d.setDate(start.getDate() + i);
+                    roomTotal += getSeasonalRoomPrice(d, selectedRoomObj.id);
+                }
+                invoiceItems.push({
+                    description: `${selectedRoomObj.name} (${nights} Nights)`,
+                    quantity: 1,
+                    unit_price: roomTotal,
+                    total: roomTotal
+                });
             });
         }
 
@@ -405,7 +409,7 @@ const AdminDashboard = ({ onLogout }) => {
             checkOut: offlineForm.checkOut,
             guests: offlineForm.guests,
             totalPrice: offlineForm.price,
-            selectedRooms: [selectedRoomObj],
+            selectedRooms: selectedRoomObjs,
             meals: mealString,
             message: 'Manual Booking by Admin',
             source: 'offline',
@@ -429,7 +433,7 @@ const AdminDashboard = ({ onLogout }) => {
 
             setOfflineForm({
                 name: '', phone: '', email: 'offline@bethany.com',
-                checkIn: '', checkOut: '', room: '', guests: 1, price: 0, discount: 0,
+                checkIn: '', checkOut: '', selectedRooms: [], guests: 1, price: 0, discount: 0,
                 mealSelection: { breakfast: { veg: 0, nonVeg: 0 }, lunch: { veg: 0, nonVeg: 0 }, dinner: { veg: 0, nonVeg: 0 } }
             });
             loadData();
@@ -1391,22 +1395,51 @@ const AdminDashboard = ({ onLogout }) => {
                             </div>
 
                             <div>
-                                <label className="form-label">Room Selection</label>
-                                <select
-                                    value={offlineForm.room}
-                                    onChange={e => setOfflineForm({ ...offlineForm, room: e.target.value })}
-                                    required
-                                    className="date-input"
-                                    style={{ width: '100%' }}
-                                >
-                                    <option value="">Select Room</option>
-                                    {rooms.map(r => <option key={r.id} value={r.id}>{r.name} (Max: {r.capacity})</option>)}
-                                </select>
-                                {offlineForm.room && offlineForm.checkIn && offlineForm.checkOut && (
-                                    <div style={{ marginTop: '8px', fontSize: '0.85rem', fontWeight: '600', color: isRoomAvailable(offlineForm.room, offlineForm.checkIn, offlineForm.checkOut) ? 'var(--success)' : 'var(--danger)' }}>
-                                        {isRoomAvailable(offlineForm.room, offlineForm.checkIn, offlineForm.checkOut) ? '✅ Room Available' : '❌ Room Already Booked'}
-                                    </div>
-                                )}
+                                <label className="form-label" style={{ marginBottom: '10px', display: 'block' }}>Room Selection</label>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'minmax(200px, 1fr) minmax(200px, 1fr)', gap: '15px' }}>
+                                    {rooms.map(r => {
+                                        const isSelected = offlineForm.selectedRooms.includes(r.id);
+                                        const isAvail = (offlineForm.checkIn && offlineForm.checkOut) ? isRoomAvailable(r.id, offlineForm.checkIn, offlineForm.checkOut) : true;
+                                        return (
+                                            <div
+                                                key={r.id}
+                                                onClick={() => {
+                                                    if (!isAvail && !isSelected) return; // Prevent selecting unavailable room
+                                                    setOfflineForm(prev => {
+                                                        const isNowSelected = !isSelected;
+                                                        let newRooms = isNowSelected
+                                                            ? [...prev.selectedRooms, r.id]
+                                                            : prev.selectedRooms.filter(id => id !== r.id);
+                                                        return { ...prev, selectedRooms: newRooms };
+                                                    });
+                                                }}
+                                                style={{
+                                                    padding: '12px 16px',
+                                                    border: `2px solid ${isSelected ? 'var(--primary)' : 'var(--border-color)'}`,
+                                                    borderRadius: '8px',
+                                                    cursor: (!isAvail && !isSelected) ? 'not-allowed' : 'pointer',
+                                                    opacity: (!isAvail && !isSelected) ? 0.5 : 1,
+                                                    background: isSelected ? 'var(--bg-highlight)' : 'transparent',
+                                                    display: 'flex',
+                                                    justifyContent: 'space-between',
+                                                    alignItems: 'center',
+                                                    boxShadow: isSelected ? '0 4px 6px rgba(0,0,0,0.05)' : 'none',
+                                                    transition: 'all 0.2s'
+                                                }}
+                                            >
+                                                <div>
+                                                    <div style={{ fontWeight: '600', color: isSelected ? 'var(--primary)' : 'var(--text-main)' }}>{r.name}</div>
+                                                    <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '4px' }}>Max: {r.capacity} Guests</div>
+                                                </div>
+                                                {offlineForm.checkIn && offlineForm.checkOut && (
+                                                    <div style={{ fontSize: '0.8rem', fontWeight: 'bold', color: isAvail ? 'var(--success)' : 'var(--danger)' }}>
+                                                        {isAvail ? '✅ Avail' : '❌ Booked'}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
                             </div>
 
                             <div className="meal-plan-section">
