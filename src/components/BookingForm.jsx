@@ -309,7 +309,9 @@ const BookingForm = ({ onToast }) => {
         try {
             // Parallel Fetch: Google Sheets (Legacy/Primary) & Supabase (Modern/Sync)
             const [sheetRes, supabaseData] = await Promise.all([
-                fetch(`${GOOGLE_SHEETS_URL}?action=getBookings`).then(res => res.json()).catch(err => ({ bookings: [] })),
+                fetch(`${GOOGLE_SHEETS_URL}?action=getBookings`, { mode: 'no-cors' })
+                    .then(res => res.json())
+                    .catch(err => ({ bookings: [] })),
                 SupabaseService.getAllBookings()
             ]);
 
