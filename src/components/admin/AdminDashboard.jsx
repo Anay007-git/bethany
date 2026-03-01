@@ -1394,7 +1394,7 @@ const AdminDashboard = ({ onLogout }) => {
                                 <label className="form-label">Room Selection</label>
                                 <select
                                     value={offlineForm.room}
-                                    onChange={e => setOfflineForm({ ...offlineForm, room: parseInt(e.target.value) || '' })}
+                                    onChange={e => setOfflineForm({ ...offlineForm, room: e.target.value })}
                                     required
                                     className="date-input"
                                     style={{ width: '100%' }}
