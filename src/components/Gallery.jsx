@@ -160,7 +160,7 @@ const Gallery = () => {
                                         loop
                                         playsInline
                                         ref={el => {
-                                            if (el) isActive ? el.play() : el.pause();
+                                            if (el) isActive ? el.play().catch(() => { /* ignore */ }) : el.pause();
                                         }}
                                         style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                                     />

@@ -77,6 +77,15 @@ const AppleHero = () => {
         };
     }, []);
 
+    useEffect(() => {
+        if (videoRef.current) {
+            videoRef.current.play().catch(e => {
+                console.log("AppleHero video autoplay interrupted:", e);
+                setIsPlaying(false);
+            });
+        }
+    }, []);
+
     // Button Style Helper
     const ControlButton = ({ onClick, children, label }) => (
         <button
@@ -117,7 +126,6 @@ const AppleHero = () => {
             {/* Video Background */}
             <video
                 ref={videoRef}
-                autoPlay
                 muted={isMuted}
                 loop
                 playsInline

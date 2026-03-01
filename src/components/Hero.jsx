@@ -31,11 +31,16 @@ const Hero = () => {
         if (element) element.scrollIntoView({ behavior: 'smooth' });
     };
 
-    const scrollToAbout = (e) => {
-        e.preventDefault();
-        const element = document.getElementById('about');
-        if (element) element.scrollIntoView({ behavior: 'smooth' });
-    };
+    const heroVideoRef = useRef(null);
+
+    useEffect(() => {
+        if (heroVideoRef.current) {
+            heroVideoRef.current.play().catch(e => {
+                // Ignore AbortError caused by power saving mode or user interaction policies
+                console.log("Video autoplay interrupted:", e);
+            });
+        }
+    }, []);
 
     // GSAP Intro & Parallax
     useEffect(() => {
@@ -90,7 +95,7 @@ const Hero = () => {
             {/* Video Background */}
             <div className="hero-video-background" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 0 }}>
                 <video
-                    autoPlay
+                    ref={heroVideoRef}
                     loop
                     muted
                     playsInline
