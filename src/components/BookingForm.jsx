@@ -869,23 +869,9 @@ const BookingForm = ({ onToast }) => {
                 });
             }
 
-            // 2. Format Data for Google Sheets
+            // 2. Format Data
             const currentDiscount = discountRef.current; // Use ref to avoid stale closure
             const finalTotal = totalPrice - currentDiscount; // Use discounted total
-
-            const formDataObj = new FormData();
-            formDataObj.append('checkIn', formData.checkIn);
-            formDataObj.append('checkOut', formData.checkOut);
-            formDataObj.append('guests', formData.guests);
-            formDataObj.append('roomType', selectedRoomNames);
-            formDataObj.append('name', formData.name);
-            formDataObj.append('email', formData.email);
-            formDataObj.append('phone', formData.phone);
-            formDataObj.append('message', finalMessage);
-            formDataObj.append('totalPrice', finalTotal); // Send Discounted Price
-            formDataObj.append('meals', mealDetails);
-            formDataObj.append('pricePerNight', Math.round(roomPriceTotal / numberOfNights));
-            formDataObj.append('numberOfNights', numberOfNights);
 
             // Step A: Create in Supabase
             const supabaseResult = await SupabaseService.createBooking({
@@ -910,16 +896,6 @@ const BookingForm = ({ onToast }) => {
 
             const bookingId = supabaseResult.booking.id;
 
-            // Log pending booking to Google Sheets
-            formDataObj.append('bookingId', bookingId);
-            formDataObj.append('status', 'Pending');
-
-            fetch(GOOGLE_SHEETS_URL, {
-                method: 'POST',
-                body: formDataObj,
-                mode: 'no-cors'
-            }).catch(err => console.error('Sheet Submission Error:', err));
-
             // Initiate PhonePe Payment
             try {
                 const protocol = window.location.protocol;
@@ -935,10 +911,10 @@ const BookingForm = ({ onToast }) => {
                 });
 
                 // Temporary debug alert - remove after confirming
-                alert(`DEBUG: Sending ₹${finalTotal} to PhonePe (Total: ₹${totalPrice}, Discount: ₹${currentDiscount})`);
+                alert(`DEBUG: Sending ₹${finalTotal} to PhonePe(Total: ₹${totalPrice}, Discount: ₹${currentDiscount})`);
 
                 const paymentMessage = currentDiscount > 0
-                    ? `Bethany Homestay (${numberOfNights} nights) - ₹${totalPrice} less ₹${currentDiscount} discount = ₹${finalTotal}`
+                    ? `Bethany Homestay(${numberOfNights} nights) - ₹${totalPrice} less ₹${currentDiscount} discount = ₹${finalTotal}`
                     : `Stay at Bethany Homestay for ${numberOfNights} nights.`;
 
                 const initiateRes = await fetch('/api/payment/initiate', {
