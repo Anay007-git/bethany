@@ -491,7 +491,6 @@ const BookingForm = ({ onToast }) => {
             setRoomPriceTotal(totalRoomCost);
             setMealPriceTotal(totalMealCost);
             setTotalPrice(totalRoomCost + totalMealCost);
-
         } else {
             setNumberOfNights(0);
             setTotalPrice(0);
@@ -499,6 +498,53 @@ const BookingForm = ({ onToast }) => {
             setMealPriceTotal(0);
         }
     }, [formData.checkIn, formData.checkOut, formData.selectedRooms, formData.guests, formData.addMeals, formData.mealSelection]);
+
+    // Re-calculate discount when total changes (if coupon is applied)
+    useEffect(() => {
+        if (isCouponApplied && couponDetails) {
+            const total = roomPriceTotal + mealPriceTotal;
+            let newDiscount = 0;
+            const type = (couponDetails.discount_type || '').toLowerCase().trim();
+
+            if (type === 'percentage') {
+                newDiscount = Math.round((total * couponDetails.discount_value) / 100);
+            } else {
+                newDiscount = couponDetails.discount_value;
+            }
+
+            if (newDiscount > total) newDiscount = total;
+
+            setDiscount(newDiscount);
+            discountRef.current = newDiscount;
+            console.log('Auto-recalculated Discount:', newDiscount);
+        }
+    }, [roomPriceTotal, mealPriceTotal, isCouponApplied, couponDetails]);
+
+    // Automatic Loyalty Check
+    useEffect(() => {
+        const checkLoyalty = async () => {
+            const cleanPhone = formData.phone.replace(/\D/g, '');
+            if (cleanPhone.length >= 10 && !isCouponApplied) {
+                const isReturning = await SupabaseService.checkReturningCustomer(cleanPhone);
+                if (isReturning) {
+                    onToast("Welcome back! A 5% loyalty discount has been applied.", "success");
+                    // Mock a loyalty coupon structure
+                    const loyaltyCoupon = {
+                        code: 'LOYALTY5',
+                        discount_type: 'percentage',
+                        discount_value: 5,
+                        description: 'Returning Customer Discount'
+                    };
+                    setCouponDetails(loyaltyCoupon);
+                    setCouponCode('LOYALTY5');
+                    setIsCouponApplied(true);
+                }
+            }
+        };
+
+        const timer = setTimeout(checkLoyalty, 1000); // Debounce
+        return () => clearTimeout(timer);
+    }, [formData.phone, isCouponApplied]);
 
     // Helper for Local YYYY-MM-DD
     const getLocalYMD = (date) => {
@@ -648,6 +694,7 @@ const BookingForm = ({ onToast }) => {
         const { name, value, type, checked } = e.target;
 
         // Reset coupon if phone changes to prevent abuse
+        /* 
         if (name === 'phone' && isCouponApplied) {
             setIsCouponApplied(false);
             setDiscount(0);
@@ -655,6 +702,7 @@ const BookingForm = ({ onToast }) => {
             setCouponCode('');
             onToast('Phone number changed. Please re-apply coupon.', 'info');
         }
+        */
 
         if (name.startsWith('meal_')) {
             // format: meal_breakfast_veg
