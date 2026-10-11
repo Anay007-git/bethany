@@ -46,22 +46,31 @@ const BillSearch = () => {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            background: '#f8fafc',
-            fontFamily: "'Inter', sans-serif"
+            background: 'var(--himalaya-ivory)',
+            padding: '20px'
         }}>
             <div style={{
                 background: 'white',
-                padding: '2rem',
-                borderRadius: '12px',
-                boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
+                padding: '2.5rem',
+                borderRadius: 'var(--radius-lg)',
+                boxShadow: 'var(--shadow-card)',
                 width: '100%',
-                maxWidth: '400px'
+                maxWidth: '440px',
+                border: '1px solid var(--border-subtle)'
             }}>
-                <h2 style={{ textAlign: 'center', color: '#1e293b', marginBottom: '1.5rem' }}>View Your Bill</h2>
+                <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
+                    <span style={{ fontSize: '2.2rem' }}>🧾</span>
+                    <h2 style={{ fontFamily: 'var(--font-serif)', color: 'var(--himalaya-forest-dark)', fontSize: '2rem', marginTop: '8px' }}>
+                        Find Your Bill
+                    </h2>
+                    <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>
+                        Enter the phone number registered during your reservation.
+                    </p>
+                </div>
 
                 <form onSubmit={handleSearch}>
-                    <div style={{ marginBottom: '1rem' }}>
-                        <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', color: '#64748b' }}>
+                    <div style={{ marginBottom: '1.25rem' }}>
+                        <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--himalaya-grey)' }}>
                             Registered Mobile Number
                         </label>
                         <input
@@ -80,7 +89,7 @@ const BillSearch = () => {
                             padding: '0.75rem',
                             background: '#fee2e2',
                             color: '#dc2626',
-                            borderRadius: '6px',
+                            borderRadius: 'var(--radius-xs)',
                             marginBottom: '1rem',
                             fontSize: '0.9rem'
                         }}>
@@ -91,11 +100,21 @@ const BillSearch = () => {
                     <button
                         type="submit"
                         className="btn-primary"
-                        style={{ width: '100%', justifyContent: 'center' }}
+                        style={{ width: '100%', justifyContent: 'center', padding: '13px' }}
                         disabled={loading}
                     >
-                        {loading ? 'Processing...' : 'Find Bill'}
+                        {loading ? 'Searching Ledger...' : 'Find My Bill & Voucher'}
                     </button>
+
+                    <div style={{ marginTop: '16px', textAlign: 'center' }}>
+                        <button
+                            type="button"
+                            onClick={() => navigate('/')}
+                            style={{ background: 'none', border: 'none', color: 'var(--himalaya-grey)', cursor: 'pointer', fontSize: '0.88rem', textDecoration: 'underline' }}
+                        >
+                            ← Return to Bethany Homestay
+                        </button>
+                    </div>
                 </form>
 
                 {bookings.length > 0 && (

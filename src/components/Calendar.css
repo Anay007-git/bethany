@@ -1,39 +1,23 @@
-/* Custom Calendar Styles - Apple iOS Style */
+/* ===== HIMALAYAN BOUTIQUE CALENDAR STYLES ===== */
+
 .react-calendar {
     width: 100%;
     max-width: 100%;
-    background: white;
-    border: none;
-    border-radius: 24px;
-    /* Larger iOS radius */
-    font-family: 'Inter', sans-serif;
-    line-height: 1.125em;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
-    /* Soft diffuse shadow */
-    margin-bottom: 30px;
+    background: #FFFFFF;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    font-family: var(--font-sans);
+    line-height: 1.25em;
+    box-shadow: var(--shadow-card);
+    margin-bottom: 24px;
     padding: 20px;
-}
-
-.react-calendar--doubleView {
-    width: 800px;
-}
-
-.react-calendar--doubleView .react-calendar__viewContainer {
-    display: flex;
-    margin: -1em;
-    gap: 2em;
-    /* Spacing between months */
-}
-
-.react-calendar--doubleView .react-calendar__viewContainer>* {
-    width: 50%;
-    margin: 0;
 }
 
 .react-calendar button {
     margin: 0;
     border: 0;
     outline: none;
+    font-family: inherit;
 }
 
 .react-calendar button:enabled:hover {
@@ -42,436 +26,117 @@
 
 .react-calendar__navigation {
     display: flex;
-    height: 50px;
-    margin-bottom: 1em;
+    height: 48px;
+    margin-bottom: 12px;
 }
 
 .react-calendar__navigation button {
     min-width: 44px;
     background: none;
-    font-size: 1.2rem;
-    /* Larger Title */
+    font-size: 1.15rem;
     font-weight: 700;
-    color: #1d1d1f;
-    /* Apple Dark */
+    color: var(--himalaya-forest-dark);
+    font-family: var(--font-serif);
+    border-radius: var(--radius-xs);
+    transition: background-color 0.2s ease;
 }
 
 .react-calendar__navigation button:disabled {
-    background-color: transparent;
-    opacity: 0.3;
+    opacity: 0.35;
 }
 
 .react-calendar__navigation button:enabled:hover,
 .react-calendar__navigation button:enabled:focus {
-    background-color: #f5f5f7;
-    border-radius: 50%;
-    /* Circular hover */
+    background-color: var(--himalaya-beige-light);
 }
 
 .react-calendar__month-view__weekdays {
     text-align: center;
     text-transform: uppercase;
-    font-weight: 600;
-    font-size: 0.7em;
-    color: #86868b;
-    /* Apple Gray */
+    font-weight: 700;
+    font-size: 0.76rem;
+    letter-spacing: 0.08em;
+    color: var(--himalaya-grey);
     margin-bottom: 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border-subtle);
 }
 
-.react-calendar__month-view__weekdays__weekday {
-    padding: 0.5em;
+.react-calendar__month-view__weekdays__weekday abbr {
+    text-decoration: none;
 }
 
-.react-calendar__month-view__weekNumbers .react-calendar__tile {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.75em;
-    font-weight: bold;
-}
-
-.react-calendar__month-view__days__day--weekend {
-    color: #ff3b30;
-    /* Apple Red */
-}
-
-/* Base Tile Style */
-.react-calendar__tile {
-    max-width: 100%;
-    padding: 10px;
-    background: none;
-    text-align: center;
-    line-height: 16px;
-    min-height: 80px;
+.react-calendar__month-view__days__day {
+    padding: 8px 4px !important;
+    position: relative;
+    height: 52px;
     display: flex;
     flex-direction: column;
+    align-items: center;
     justify-content: flex-start;
-    align-items: center;
-    position: relative;
-    border-radius: 12px;
-    /* Smooth corners */
-    transition: all 0.2s cubic-bezier(0.25, 1, 0.5, 1);
-    font-weight: 500;
-}
-
-.react-calendar__tile>abbr {
+    border-radius: var(--radius-xs);
+    font-size: 0.92rem;
     font-weight: 600;
-    margin-bottom: 6px;
-    font-size: 1rem;
+    color: var(--text-main);
+    transition: all 0.15s ease;
 }
 
-/* Hover effects */
-.react-calendar__tile:enabled:hover,
-.react-calendar__tile:enabled:focus {
-    background-color: #f5f5f7;
-    transform: scale(1.05);
-    /* iOS-like interaction */
+.react-calendar__month-view__days__day:enabled:hover {
+    background-color: var(--himalaya-beige-light) !important;
 }
 
-/* Today */
 .react-calendar__tile--now {
-    background: transparent;
-    color: #0071e3;
-    font-weight: 800;
+    background: rgba(184, 107, 66, 0.08) !important;
+    color: var(--himalaya-terracotta) !important;
+    border: 1px dashed var(--himalaya-terracotta) !important;
 }
 
-.react-calendar__tile--now abbr {
-    background: rgba(0, 113, 227, 0.1);
-    color: #0071e3;
-    width: 28px;
-    height: 28px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
+.react-calendar__tile--active {
+    background: var(--himalaya-forest) !important;
+    color: #FFFFFF !important;
 }
 
-/* Selected Range */
-.react-calendar__tile--active,
-.react-calendar__tile--range,
 .react-calendar__tile--rangeStart,
 .react-calendar__tile--rangeEnd {
-    background: #0071e3 !important;
-    /* Apple Blue */
-    color: white !important;
-    border-radius: 0;
-    box-shadow: 0 4px 12px rgba(0, 113, 227, 0.3);
+    background: var(--himalaya-forest) !important;
+    color: #FFFFFF !important;
+    border-radius: var(--radius-xs) !important;
 }
 
-.react-calendar__tile--rangeStart {
-    border-top-left-radius: 12px;
-    border-bottom-left-radius: 12px;
+.react-calendar__tile--rangeBetween {
+    background: rgba(35, 72, 59, 0.12) !important;
+    color: var(--himalaya-forest-dark) !important;
 }
 
-.react-calendar__tile--rangeEnd {
-    border-top-right-radius: 12px;
-    border-bottom-right-radius: 12px;
-}
-
-/* Middle of range - slightly lighter blue if desired, or same */
-.react-calendar__tile--range {
-    background: #e1f5fe !important;
-    /* Lighter blue for the middle */
-    color: #2980b9 !important;
-}
-
-/* Re-force active/start/end to be dark blue */
-.react-calendar__tile--active,
-.react-calendar__tile--rangeStart,
-.react-calendar__tile--rangeEnd {
-    background: #3498db !important;
-    color: white !important;
-}
-
-.react-calendar__tile--active:enabled:hover,
-.react-calendar__tile--active:enabled:focus {
-    background: #2980b9 !important;
-}
-
-/* High Season Styling */
-.season-high {
-    background-color: rgba(231, 76, 60, 0.05);
-    border-bottom: 2px solid rgba(231, 76, 60, 0.3);
-}
-
-.season-high .price-tag {
-    color: #c0392b;
-    font-weight: 700;
-}
-
-/* Low/Normal Season Styling */
-.season-low {
-    background-color: rgba(46, 204, 113, 0.05);
-    border-bottom: 2px solid rgba(46, 204, 113, 0.3);
-}
-
-.season-low .price-tag {
-    color: #27ae60;
-    font-weight: 600;
-}
-
-/* Price Tag in Calendar */
-/* Price Tag in Calendar */
-.price-tag {
-    font-size: 0.7rem;
-    font-weight: 700;
-    margin-top: auto;
-    color: #34495e;
-}
-
-.season-high .price-tag {
-    color: #c0392b;
-}
-
-.season-low .price-tag {
-    color: #27ae60;
-}
-
-/* Holiday Indication */
 .tile-content {
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
     width: 100%;
-    height: 100%;
+    margin-top: 2px;
+}
+
+.price-tag {
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: var(--himalaya-forest);
+    line-height: 1;
 }
 
 .holiday-name {
-    font-size: 0.55rem;
-    color: #e67e22;
+    font-size: 0.6rem;
+    color: var(--himalaya-terracotta);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 44px;
     font-weight: 700;
-    background: rgba(255, 255, 255, 0.9);
-    padding: 1px 2px;
-    border-radius: 4px;
-    width: 100%;
-    white-space: normal;
-    /* Allow wrapping */
-    word-wrap: break-word;
-    line-height: 1;
-    margin-top: 2px;
-    text-align: center;
 }
 
-.holiday-date {
-    background: #fff8e1 !important;
-    /* Gentle amber background for holidays */
-    border: 1px solid #ffd54f !important;
+.season-high {
+    border-top: 2px solid var(--himalaya-terracotta);
 }
 
-.holiday-date:hover {
-    background: #ffe082 !important;
-}
-
-/* Legend Styles */
-.calendar-legend {
-    display: flex;
-    gap: 15px;
-    margin-top: 10px;
-    font-size: 0.85rem;
-    justify-content: center;
-}
-
-.legend-item {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
-
-.legend-dot {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-}
-
-/* --- Mobile Responsiveness --- */
-@media screen and (max-width: 1024px) {
-    .booking-single-row {
-        gap: 20px !important;
-    }
-
-    .col-calendar,
-    .col-rooms,
-    .col-cart {
-        flex: 1 1 45% !important;
-        /* Two Columns on Tablet */
-        max-width: none !important;
-    }
-}
-
-@media screen and (max-width: 768px) {
-    .booking-single-row {
-        flex-direction: column !important;
-        gap: 25px !important;
-    }
-
-    .col-calendar,
-    .col-rooms,
-    .col-cart,
-    .col-search {
-        flex: 1 1 100% !important;
-        width: 100% !important;
-        max-width: 100% !important;
-        min-width: 0 !important;
-    }
-
-    /* Adjust Room List Scroll for Mobile */
-    .rooms-scroll-container {
-        /* Remove fixed height on mobile to allow natural page scroll */
-        max-height: none !important;
-        overflow-y: visible !important;
-        padding-right: 0 !important;
-    }
-
-    .rooms-list-vertical {
-        gap: 25px !important;
-    }
-
-    .react-calendar__tile {
-        min-height: 60px;
-        /* Slightly shorter tiles on mobile */
-        padding: 5px;
-    }
-
-    .react-calendar__navigation button {
-        min-width: 30px;
-        font-size: 1rem;
-    }
-
-    .section-header h2 {
-        font-size: 1.8rem;
-    }
-
-    .section-header p {
-        font-size: 0.95rem;
-    }
-}
-
-/* Animations */
-@keyframes fadeInDown {
-    from {
-        opacity: 0;
-        transform: translateY(-10px);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-/* Popover Specific Overrides */
-.calendar-popup .react-calendar {
-    width: 300px;
-    margin-bottom: 0;
-    border: none;
-    box-shadow: none;
-}
-
-
-.calendar-popup .react-calendar__navigation {
-    margin-bottom: 0.5em;
-}
-
-/* Room Popup Overrides */
-.room-popup {
-    width: 400px;
-}
-
-@media screen and (max-width: 480px) {
-    .room-popup {
-        width: 300px !important;
-    }
-
-    .room-container-styled {
-        max-height: 70vh !important;
-    }
-}
-
-/* --- Generic Centered Modal --- */
-.picker-modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    background: rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(4px);
-    z-index: 2000;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    animation: fadeIn 0.3s ease-out;
-}
-
-.picker-modal-content {
-    background: white;
-    padding: 20px;
-    border-radius: 16px;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-    max-width: 90vw;
-    max-height: 90vh;
-    overflow-y: auto;
-    animation: scaleUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-    position: relative;
-}
-
-/* Specific Widths */
-.calendar-modal {
-    width: 400px;
-}
-
-.room-modal {
-    width: 500px;
-}
-
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-    }
-
-    to {
-        opacity: 1;
-    }
-}
-
-@keyframes scaleUp {
-    from {
-        transform: scale(0.95);
-        opacity: 0;
-    }
-
-    to {
-        transform: scale(1);
-        opacity: 1;
-    }
-}
-
-@media screen and (max-width: 768px) {
-
-    .calendar-modal,
-    .room-modal {
-        width: 95vw;
-        padding: 15px;
-    }
-}
-
-/* FIX: Ensure selected holidays turn Blue (Active) instead of staying Yellow */
-.react-calendar__tile--active.holiday-date,
-.react-calendar__tile--active.holiday-date:enabled:hover,
-.react-calendar__tile--active.holiday-date:enabled:focus {
-    background: #3498db !important;
-    border-color: #3498db !important;
-    color: white !important;
-}
-
-/* Make the "Holiday Name" tag look good on the Blue background */
-.react-calendar__tile--active.holiday-date .holiday-name {
-    background: rgba(255, 255, 255, 0.25);
-    color: white;
-}
-
-.react-calendar__tile--active.holiday-date .price-tag {
-    color: white !important;
+.season-low {
+    border-top: 2px solid var(--himalaya-forest-light);
 }

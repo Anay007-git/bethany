@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, Link } from 'react-router-dom';
 import logoImg from '../assets/title-bar.jpeg';
 
 const Navbar = () => {
@@ -10,7 +10,7 @@ const Navbar = () => {
 
   useEffect(() => {
     const handleScroll = () => {
-      setScrolled(window.scrollY > 50);
+      setScrolled(window.scrollY > 40);
     };
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
@@ -23,52 +23,65 @@ const Navbar = () => {
       if (element) {
         setTimeout(() => {
           element.scrollIntoView({ behavior: 'smooth' });
-        }, 100); // Small delay to ensure render
+        }, 120);
       }
-      // Clear state
       window.history.replaceState({}, document.title);
     }
   }, [location]);
 
   const scrollToSection = (e, sectionId) => {
     e.preventDefault();
+    setMobileMenuOpen(false);
     if (location.pathname === '/') {
       const element = document.getElementById(sectionId);
       if (element) {
         element.scrollIntoView({ behavior: 'smooth' });
-        setMobileMenuOpen(false);
       }
     } else {
-      setMobileMenuOpen(false);
       navigate('/', { state: { scrollTo: sectionId } });
     }
   };
 
   return (
     <>
-      <nav className={`navbar ${scrolled ? 'scrolled' : ''} ${mobileMenuOpen ? 'mobile-open' : ''}`}>
+      <header className={`navbar ${scrolled ? 'scrolled' : ''}`}>
         <div className="container">
-          <a href="/" className="navbar-logo">
-            <img src={logoImg} alt="Bethany Homestay Logo" className="navbar-logo-img" />
-            <span>BETHANY HOMESTAY</span>
+          <a href="/" className="navbar-logo" onClick={(e) => { e.preventDefault(); navigate('/'); }}>
+            <img src={logoImg} alt="Bethany Homestay Crest" className="navbar-logo-img" />
+            <div className="navbar-brand-text">
+              <span className="navbar-brand-title">Bethany Homestay</span>
+              <span className="navbar-brand-subtitle">Kalimpong · 1,250 m</span>
+            </div>
           </a>
 
-          <ul className="navbar-links">
-            <li><a href="/#about" onClick={(e) => scrollToSection(e, 'about')}>About</a></li>
-            <li><a href="/#amenities" onClick={(e) => scrollToSection(e, 'amenities')}>Feature</a></li>
-            <li><a href="/#gallery" onClick={(e) => scrollToSection(e, 'gallery')}>Gallery</a></li>
-            <li><a href="/#contact" onClick={(e) => scrollToSection(e, 'contact')}>Contact</a></li>
-          </ul>
+          <nav className="navbar-links" aria-label="Main Navigation">
+            <a href="/#about" onClick={(e) => scrollToSection(e, 'about')}>About</a>
+            <a href="/#rooms" onClick={(e) => scrollToSection(e, 'rooms')}>Suites</a>
+            <a href="/#amenities" onClick={(e) => scrollToSection(e, 'amenities')}>Experience</a>
+            <a href="/#gallery" onClick={(e) => scrollToSection(e, 'gallery')}>Gallery</a>
+            <a href="/#reviews" onClick={(e) => scrollToSection(e, 'reviews')}>Reviews</a>
+            <a href="/#contact" onClick={(e) => scrollToSection(e, 'contact')}>Contact</a>
+          </nav>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <a href="/#booking" className="navbar-cta" onClick={(e) => scrollToSection(e, 'booking')}>
-              Book Now
+          <div className="navbar-actions">
+            <Link to="/my-bill" className="navbar-bill-btn" title="View Booking & Bill">
+              <span>🧾</span>
+              <span>My Bill</span>
+            </Link>
+
+            <a
+              href="/#booking"
+              className="navbar-cta"
+              onClick={(e) => scrollToSection(e, 'booking')}
+            >
+              Reserve Stay
             </a>
 
             <button
               className={`mobile-menu-btn ${mobileMenuOpen ? 'active' : ''}`}
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              aria-label="Toggle menu"
+              aria-label="Toggle Navigation Menu"
+              aria-expanded={mobileMenuOpen}
             >
               <span></span>
               <span></span>
@@ -76,17 +89,36 @@ const Navbar = () => {
             </button>
           </div>
         </div>
-      </nav>
+      </header>
 
-      <div className={`mobile-nav ${mobileMenuOpen ? 'active' : ''}`}>
-        <div className="mobile-nav-content">
-          <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-            <li><a href="/#about" onClick={(e) => scrollToSection(e, 'about')}>About</a></li>
-            <li><a href="/#amenities" onClick={(e) => scrollToSection(e, 'amenities')}>Feature</a></li>
-            <li><a href="/#gallery" onClick={(e) => scrollToSection(e, 'gallery')}>Gallery</a></li>
-            <li><a href="/#booking" onClick={(e) => scrollToSection(e, 'booking')}>Book Now</a></li>
-            <li><a href="/#contact" onClick={(e) => scrollToSection(e, 'contact')}>Contact</a></li>
-          </ul>
+      {/* Mobile Slide-Over Drawer */}
+      <div className={`mobile-nav ${mobileMenuOpen ? 'active' : ''}`} aria-hidden={!mobileMenuOpen}>
+        <ul className="mobile-nav-links">
+          <li><a href="/#about" onClick={(e) => scrollToSection(e, 'about')}>About Property</a></li>
+          <li><a href="/#rooms" onClick={(e) => scrollToSection(e, 'rooms')}>Rooms & Suites</a></li>
+          <li><a href="/#amenities" onClick={(e) => scrollToSection(e, 'amenities')}>Amenities</a></li>
+          <li><a href="/#gallery" onClick={(e) => scrollToSection(e, 'gallery')}>Photo Gallery</a></li>
+          <li><a href="/#reviews" onClick={(e) => scrollToSection(e, 'reviews')}>Guest Reviews</a></li>
+          <li><a href="/#contact" onClick={(e) => scrollToSection(e, 'contact')}>Location & Contact</a></li>
+        </ul>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginTop: 'auto' }}>
+          <Link
+            to="/my-bill"
+            onClick={() => setMobileMenuOpen(false)}
+            className="btn-secondary"
+            style={{ width: '100%' }}
+          >
+            🧾 Lookup My Bill
+          </Link>
+          <a
+            href="/#booking"
+            onClick={(e) => scrollToSection(e, 'booking')}
+            className="btn-primary"
+            style={{ width: '100%' }}
+          >
+            Check Availability & Book
+          </a>
         </div>
       </div>
     </>

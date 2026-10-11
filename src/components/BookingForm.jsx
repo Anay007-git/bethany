@@ -271,6 +271,39 @@ const BookingForm = ({ onToast }) => {
         loadRooms();
     }, []);
 
+    // Listen for Hero quick search & Room Showcase selection events
+    useEffect(() => {
+        const handleQuickSearch = (e) => {
+            if (e.detail) {
+                setFormData(prev => ({
+                    ...prev,
+                    checkIn: e.detail.checkIn || prev.checkIn,
+                    checkOut: e.detail.checkOut || prev.checkOut,
+                    guests: e.detail.guests || prev.guests
+                }));
+            }
+        };
+
+        const handleSelectRoom = (e) => {
+            if (e.detail) {
+                const room = e.detail;
+                setFormData(prev => {
+                    const alreadySelected = prev.selectedRooms.some(r => r.id === room.id);
+                    if (alreadySelected) return prev;
+                    return { ...prev, selectedRooms: [...prev.selectedRooms, room] };
+                });
+            }
+        };
+
+        window.addEventListener('bethany:quickSearch', handleQuickSearch);
+        window.addEventListener('bethany:selectRoom', handleSelectRoom);
+
+        return () => {
+            window.removeEventListener('bethany:quickSearch', handleQuickSearch);
+            window.removeEventListener('bethany:selectRoom', handleSelectRoom);
+        };
+    }, []);
+
     const openLightbox = (images, index = 0) => {
         setLightboxState({ isOpen: true, images, index });
     };
@@ -1085,7 +1118,7 @@ const BookingForm = ({ onToast }) => {
                             {/* Date Picker Trigger - Split Layout */}
                             <div className="form-group" style={{ marginBottom: '25px', position: 'relative' }}>
                                 <label style={{ fontWeight: '700', marginBottom: '12px', display: 'block', color: '#2c3e50', fontSize: '0.85rem', letterSpacing: '1px', textTransform: 'uppercase' }}>DATES</label>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                                <div className="dates-grid">
 
                                     {/* Check-in Box */}
                                     <div
@@ -1318,10 +1351,11 @@ const BookingForm = ({ onToast }) => {
 
                             {/* Checkout Form */}
                             <form onSubmit={handleSubmit} className="checkout-form">
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+                                <div className="checkout-row">
                                     <div className="apple-input-group">
-                                        <label>Full Name</label>
+                                        <label htmlFor="booking-name">Full Name</label>
                                         <input
+                                            id="booking-name"
                                             type="text"
                                             name="name"
                                             value={formData.name}
@@ -1332,8 +1366,9 @@ const BookingForm = ({ onToast }) => {
                                         />
                                     </div>
                                     <div className="apple-input-group">
-                                        <label>Phone Number</label>
+                                        <label htmlFor="booking-phone">Phone Number</label>
                                         <input
+                                            id="booking-phone"
                                             type="tel"
                                             name="phone"
                                             value={formData.phone}
@@ -1345,9 +1380,10 @@ const BookingForm = ({ onToast }) => {
                                     </div>
                                 </div>
 
-                                <div className="apple-input-group" style={{ marginBottom: '20px' }}>
-                                    <label>Email Address</label>
+                                <div className="apple-input-group">
+                                    <label htmlFor="booking-email">Email Address</label>
                                     <input
+                                        id="booking-email"
                                         type="email"
                                         name="email"
                                         value={formData.email}
@@ -1358,16 +1394,16 @@ const BookingForm = ({ onToast }) => {
                                     />
                                 </div>
 
-                                <div className="apple-input-group" style={{ marginBottom: '30px' }}>
-                                    <label>Special Requests (Optional)</label>
+                                <div className="apple-input-group">
+                                    <label htmlFor="booking-message">Special Requests (Optional)</label>
                                     <textarea
+                                        id="booking-message"
                                         name="message"
                                         value={formData.message}
                                         onChange={handleChange}
                                         placeholder="Note..."
                                         rows="3"
                                         className="apple-input"
-                                        style={{ resize: 'vertical' }}
                                     />
                                 </div>
 
@@ -1375,11 +1411,6 @@ const BookingForm = ({ onToast }) => {
                                     type="submit"
                                     disabled={isSubmitting || formData.selectedRooms.length === 0 || showCapacityWarning}
                                     className="apple-btn"
-                                    style={{
-                                        width: '100%',
-                                        opacity: isSubmitting || formData.selectedRooms.length === 0 || showCapacityWarning ? 0.6 : 1,
-                                        cursor: isSubmitting || formData.selectedRooms.length === 0 || showCapacityWarning ? 'not-allowed' : 'pointer'
-                                    }}
                                 >
                                     {showCapacityWarning ? 'Select More Rooms' : (isSubmitting ? 'Processing Request...' : 'Confirm Request')}
                                 </button>

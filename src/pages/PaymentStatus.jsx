@@ -86,37 +86,56 @@ const PaymentStatus = () => {
             case 'pending':
                 return (
                     <div style={{ textAlign: 'center' }}>
-                        <div className="spinner" style={{ margin: '0 auto 20px', width: '50px', height: '50px', border: '5px solid #f3f3f3', borderTop: '5px solid #0071e3', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
-                        <h2 style={{ color: '#1d1d1f' }}>Verifying Payment...</h2>
-                        <p style={{ color: '#86868b' }}>Please wait while we confirm your transaction. Do not refresh this page.</p>
+                        <div className="spinner" style={{ margin: '0 auto 20px', width: '50px', height: '50px', border: '4px solid var(--himalaya-beige)', borderTop: '4px solid var(--himalaya-forest)', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
+                        <h2 style={{ color: 'var(--himalaya-forest-dark)', fontFamily: 'var(--font-serif)', fontSize: '2rem' }}>Verifying Transaction...</h2>
+                        <p style={{ color: 'var(--text-muted)' }}>Confirming reservation with PhonePe secure gateway. Please do not refresh.</p>
                         <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
                     </div>
                 );
             case 'success':
                 return (
                     <div style={{ textAlign: 'center' }}>
-                        <div style={{ fontSize: '4rem', marginBottom: '20px', color: '#34c759' }}>✅</div>
-                        <h2 style={{ color: '#1d1d1f', marginBottom: '15px' }}>Payment Successful!</h2>
-                        <p style={{ color: '#86868b', marginBottom: '30px' }}>Your booking has been confirmed. A confirmation email has been sent to you.</p>
-                        <button
-                            onClick={() => navigate('/')}
-                            style={{ padding: '12px 24px', background: '#0071e3', color: 'white', border: 'none', borderRadius: '8px', fontSize: '1.1rem', cursor: 'pointer', fontWeight: 'bold' }}
-                        >
-                            Return to Home
-                        </button>
+                        <div style={{ fontSize: '3.6rem', marginBottom: '16px' }}>🏔️</div>
+                        <h2 style={{ color: 'var(--himalaya-forest-dark)', fontFamily: 'var(--font-serif)', fontSize: '2.4rem', marginBottom: '12px' }}>
+                            Reservation Confirmed!
+                        </h2>
+                        <p style={{ color: 'var(--text-muted)', marginBottom: '24px', lineHeight: '1.6' }}>
+                            Your advance payment was successfully processed. A detailed confirmation voucher has been sent to your email.
+                        </p>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                            <button
+                                onClick={() => navigate(`/bill/${orderId}`)}
+                                className="btn-primary"
+                                style={{ width: '100%', padding: '14px' }}
+                            >
+                                🧾 View Official Bill & Voucher
+                            </button>
+                            <button
+                                onClick={() => navigate('/')}
+                                className="btn-secondary"
+                                style={{ width: '100%', padding: '13px' }}
+                            >
+                                Return to Bethany Homestay
+                            </button>
+                        </div>
                     </div>
                 );
             case 'failed':
                 return (
                     <div style={{ textAlign: 'center' }}>
-                        <div style={{ fontSize: '4rem', marginBottom: '20px', color: '#ff3b30' }}>❌</div>
-                        <h2 style={{ color: '#1d1d1f', marginBottom: '15px' }}>Payment Failed</h2>
-                        <p style={{ color: '#86868b', marginBottom: '30px' }}>{errorMessage}</p>
+                        <div style={{ fontSize: '3.6rem', marginBottom: '16px', color: '#B86B42' }}>⚠️</div>
+                        <h2 style={{ color: 'var(--himalaya-forest-dark)', fontFamily: 'var(--font-serif)', fontSize: '2.2rem', marginBottom: '12px' }}>
+                            Payment Incomplete
+                        </h2>
+                        <p style={{ color: 'var(--text-muted)', marginBottom: '28px', lineHeight: '1.6' }}>
+                            {errorMessage || 'The transaction could not be verified or was cancelled.'}
+                        </p>
                         <button
                             onClick={() => navigate('/')}
-                            style={{ padding: '12px 24px', background: '#e5e5ea', color: '#1d1d1f', border: 'none', borderRadius: '8px', fontSize: '1.1rem', cursor: 'pointer', fontWeight: 'bold' }}
+                            className="btn-primary"
+                            style={{ width: '100%', padding: '14px' }}
                         >
-                            Try Again
+                            Return & Retry Reservation
                         </button>
                     </div>
                 );
@@ -126,8 +145,8 @@ const PaymentStatus = () => {
     };
 
     return (
-        <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f5f5f7', padding: '20px' }}>
-            <div style={{ background: '#ffffff', padding: '50px', borderRadius: '20px', boxShadow: '0 10px 30px rgba(0,0,0,0.05)', maxWidth: '500px', width: '100%' }}>
+        <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--himalaya-ivory)', padding: '24px' }}>
+            <div style={{ background: '#FFFFFF', padding: '48px 36px', borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-card)', maxWidth: '480px', width: '100%', border: '1px solid var(--border-subtle)' }}>
                 {renderContent()}
             </div>
         </div>

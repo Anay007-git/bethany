@@ -2,6 +2,7 @@ import { useState } from 'react';
 import Navbar from '../components/Navbar';
 import AppleHero from '../components/AppleHero';
 import About from '../components/About';
+import RoomShowcase from '../components/RoomShowcase';
 import Amenities from '../components/Amenities';
 import Gallery from '../components/Gallery';
 import Reviews from '../components/Reviews';
@@ -30,10 +31,11 @@ function Home() {
             <main>
                 <AppleHero />
                 <About />
+                <RoomShowcase />
+                <Amenities />
                 <Gallery />
                 <BookingForm onToast={showToast} />
                 <Reviews />
-                <Amenities />
                 <Contact />
             </main>
             <Footer onOpenPolicy={openPolicy} />

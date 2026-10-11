@@ -1,0 +1,41 @@
+{
+  "expo": {
+    "name": "Bethany Homestay",
+    "slug": "bethany-homestay",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#162E25"
+    },
+    "scheme": "bethanyhomestay",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.bethanyhomestay.app",
+      "infoPlist": {
+        "UIBackgroundModes": ["remote-notification"]
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#162E25"
+      },
+      "package": "com.bethanyhomestay.app"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "supabaseUrl": "https://xiqtayqigrmxkvanxsmn.supabase.co",
+      "supabaseAnonKey": "sb_publishable_x_n8vRtkYzhN24mzv5VVKg_auI4sBtI",
+      "phonepeEnv": "PRODUCTION"
+    }
+  }
+}
