@@ -13,7 +13,17 @@ import { colors, radius, shadows } from '../theme';
 import { MobileSupabaseService } from '../services/SupabaseService';
 
 const PaymentHandoffScreen = ({ route, navigation }) => {
-    const { bookingPayload } = route.params;
+    const bookingPayload = route?.params?.bookingPayload || {
+        name: 'Guest',
+        phone: '',
+        email: '',
+        nights: 1,
+        selectedRooms: [],
+        roomTotal: 0,
+        mealTotal: 0,
+        discountAmount: 0,
+        finalTotal: 0
+    };
     const [loading, setLoading] = useState(false);
 
     const handleConfirmBooking = async () => {

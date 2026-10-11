@@ -19,7 +19,9 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.bethanyhomestay.app",
       "infoPlist": {
-        "UIBackgroundModes": ["remote-notification"]
+        "UIBackgroundModes": [
+          "remote-notification"
+        ]
       }
     },
     "android": {
@@ -35,7 +37,10 @@
     "extra": {
       "supabaseUrl": "https://xiqtayqigrmxkvanxsmn.supabase.co",
       "supabaseAnonKey": "sb_publishable_x_n8vRtkYzhN24mzv5VVKg_auI4sBtI",
-      "phonepeEnv": "PRODUCTION"
+      "phonepeEnv": "PRODUCTION",
+      "eas": {
+        "projectId": "69021ba3-9969-47eb-ab83-06a75556f674"
+      }
     }
   }
 }

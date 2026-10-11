@@ -5,8 +5,15 @@ import { colors } from '../theme';
 const SplashScreen = ({ navigation }) => {
     useEffect(() => {
         const timer = setTimeout(() => {
-            navigation.replace('MainTabs');
-        }, 1500);
+            if (navigation?.reset) {
+                navigation.reset({
+                    index: 0,
+                    routes: [{ name: 'MainTabs' }]
+                });
+            } else if (navigation?.replace) {
+                navigation.replace('MainTabs');
+            }
+        }, 1200);
         return () => clearTimeout(timer);
     }, [navigation]);
 

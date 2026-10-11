@@ -10,10 +10,12 @@ import {
 } from 'react-native';
 import { colors, radius, shadows } from '../theme';
 
+import { DEFAULT_ROOMS } from '../services/pricingService';
+
 const { width } = Dimensions.get('window');
 
 const RoomDetailScreen = ({ route, navigation }) => {
-    const { room } = route.params;
+    const room = route?.params?.room || DEFAULT_ROOMS[0];
     const [activeImageIndex, setActiveImageIndex] = useState(0);
 
     const handleScroll = (event) => {

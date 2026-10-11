@@ -2,7 +2,8 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Linking } from 'r
 import { colors, radius, shadows } from '../theme';
 
 const BookingConfirmationScreen = ({ route, navigation }) => {
-    const { booking, bookingPayload } = route.params;
+    const booking = route?.params?.booking || { id: 'BET-0000', check_in: '', check_out: '', guests_count: 2 };
+    const bookingPayload = route?.params?.bookingPayload || { finalTotal: 0, nights: 1 };
 
     const handleWhatsAppHost = () => {
         const text = encodeURIComponent(`Hello Mr. Wangchuck, I have booked Bethany Homestay (ID: ${booking.id.slice(0, 8)}). Looking forward to staying from ${booking.check_in} to ${booking.check_out}!`);
