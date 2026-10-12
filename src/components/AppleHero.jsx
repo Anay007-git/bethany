@@ -50,9 +50,14 @@ const AppleHero = () => {
 
     useEffect(() => {
         if (videoRef.current) {
-            videoRef.current.play().catch(() => {
-                setIsPlaying(false);
-            });
+            videoRef.current.defaultMuted = true;
+            videoRef.current.muted = true;
+            const playPromise = videoRef.current.play();
+            if (playPromise !== undefined) {
+                playPromise.catch(() => {
+                    setIsPlaying(false);
+                });
+            }
         }
     }, []);
 
@@ -64,9 +69,11 @@ const AppleHero = () => {
                     ref={videoRef}
                     autoPlay
                     loop
-                    muted={isMuted}
+                    muted
                     playsInline
+                    webkit-playsinline="true"
                     poster="/hero.jpg"
+                    preload="auto"
                     className="hero-video"
                 >
                     <source src="/hero-video.mp4" type="video/mp4" />

@@ -25,6 +25,21 @@
     height: 100%;
     object-fit: cover;
     object-position: center 35%;
+    pointer-events: none;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+/* Suppress iOS Safari native start-playback big play button overlay */
+.hero-video::-webkit-media-controls,
+.hero-video::-webkit-media-controls-start-playback-button,
+.hero-video::-webkit-media-controls-play-button,
+.hero-video::-webkit-media-controls-panel {
+    display: none !important;
+    -webkit-appearance: none !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
 }
 
 .hero-overlay {
@@ -293,49 +308,47 @@
 
 @media (max-width: 768px) {
     .himalayan-hero {
-        min-height: auto;
+        min-height: 100svh;
+        min-height: 100dvh;
         display: flex;
         flex-direction: column;
         justify-content: flex-start;
         align-items: center;
-        padding-top: calc(var(--nav-height) + 16px);
-        padding-bottom: 40px;
+        padding-top: calc(var(--nav-height) + 14px);
+        padding-bottom: 24px;
         overflow: visible;
+        box-sizing: border-box;
     }
 
     .hero-media-wrapper {
         overflow: hidden;
     }
 
+    /* Hide floating media buttons on mobile so they don't collide with card or bottom bar */
     .hero-media-controls {
-        top: auto;
-        bottom: 12px;
-        right: 14px;
-        z-index: 10;
-        gap: 8px;
-    }
-
-    .hero-control-btn {
-        width: 34px;
-        height: 34px;
-        font-size: 0.78rem;
+        display: none !important;
     }
 
     .hero-container {
         padding: 0 16px;
         width: 100%;
+        max-width: 440px;
         box-sizing: border-box;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        margin: auto 0;
     }
 
     .hero-header-content {
-        margin-bottom: 20px;
+        margin-bottom: 16px;
         width: 100%;
     }
 
     .hero-pill-badge {
-        font-size: clamp(0.68rem, 2.5vw, 0.76rem);
-        padding: 5px 12px;
-        margin-bottom: 12px;
+        font-size: clamp(0.66rem, 2.4vw, 0.74rem);
+        padding: 4px 12px;
+        margin-bottom: 10px;
         max-width: 100%;
         white-space: normal;
         text-align: center;
@@ -343,15 +356,15 @@
     }
 
     .hero-main-title {
-        font-size: clamp(1.8rem, 6.8vw, 2.35rem);
+        font-size: clamp(1.75rem, 6.2vw, 2.2rem);
         line-height: 1.15;
-        margin-bottom: 12px;
+        margin-bottom: 10px;
     }
 
     .hero-lead-text {
-        font-size: clamp(0.9rem, 3.2vw, 1.02rem);
-        line-height: 1.5;
-        margin-bottom: 16px;
+        font-size: clamp(0.88rem, 3vw, 0.98rem);
+        line-height: 1.48;
+        margin-bottom: 14px;
         padding: 0 4px;
     }
 
@@ -361,12 +374,12 @@
     }
 
     .feature-pill {
-        font-size: 0.75rem;
-        padding: 4px 10px;
+        font-size: 0.74rem;
+        padding: 4px 9px;
     }
 
     .hero-availability-card {
-        padding: 14px 14px;
+        padding: 12px 14px;
         border-radius: var(--radius-sm);
         width: 100%;
         box-sizing: border-box;
@@ -375,7 +388,7 @@
 
     .hero-search-form {
         grid-template-columns: 1fr 1fr;
-        gap: 10px;
+        gap: 8px;
         width: 100%;
     }
 
@@ -396,16 +409,20 @@
         margin-top: 2px;
     }
 
+    .search-field label {
+        font-size: 0.7rem;
+    }
+
     .search-field input,
     .search-field select {
         font-size: 16px !important;
-        height: 44px;
-        padding: 8px 10px;
+        height: 42px;
+        padding: 6px 10px;
     }
 
     .hero-search-btn {
-        height: 46px;
-        font-size: 0.95rem;
+        height: 44px;
+        font-size: 0.94rem;
     }
 }
 
