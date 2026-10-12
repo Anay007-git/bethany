@@ -2,7 +2,7 @@ import 'react-native-url-polyfill/auto';
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
 import { enableScreens } from 'react-native-screens';
 import AppNavigator from './src/navigation/AppNavigator';
 
@@ -60,7 +60,7 @@ class ErrorBoundary extends React.Component {
 export default function App() {
     return (
         <ErrorBoundary>
-            <SafeAreaProvider>
+            <SafeAreaProvider initialMetrics={initialWindowMetrics}>
                 <StatusBar style="light" />
                 <AppNavigator />
             </SafeAreaProvider>
