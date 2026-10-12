@@ -1,3 +1,4 @@
+import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Linking } from 'react-native';
 import { colors, radius, shadows } from '../theme';
 

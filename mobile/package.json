@@ -2,7 +2,7 @@
   "name": "bethany-homestay-mobile",
   "version": "1.0.0",
   "description": "Bethany Homestay Dedicated Android & iOS Mobile Application",
-  "main": "App.js",
+  "main": "expo/AppEntry.js",
   "scripts": {
     "start": "expo start",
     "android": "expo start --android",
