@@ -77,6 +77,9 @@ html {
   font-size: 16px;
   background-color: var(--bg-page);
   color: var(--text-main);
+  overflow-x: hidden;
+  max-width: 100vw;
+  width: 100%;
 }
 
 body {
@@ -87,6 +90,9 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
+  max-width: 100vw;
+  width: 100%;
+  position: relative;
 }
 
 /* Headings */
@@ -468,13 +474,17 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   flex-direction: column;
   padding: 30px 24px;
   transform: translateX(100%);
-  transition: transform var(--transition-normal);
+  visibility: hidden;
+  pointer-events: none;
+  transition: transform var(--transition-normal), visibility var(--transition-normal);
   border-top: 1px solid var(--border-subtle);
   overflow-y: auto;
 }
 
 .mobile-nav.active {
   transform: translateX(0);
+  visibility: visible;
+  pointer-events: auto;
 }
 
 .mobile-nav-links {
@@ -804,7 +814,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   border: 1px solid var(--border-medium);
   background-color: #FFFFFF;
   color: var(--text-main);
-  font-size: 0.96rem;
+  font-size: 16px; /* 16px prevents iOS Safari automatic zoom */
   transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
 }
 
@@ -877,10 +887,31 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   }
 }
 
-/* Mobile Navbar Optimization to Prevent Overlapping */
-@media (max-width: 580px) {
+/* Mobile Navbar Optimization to Prevent Overlapping & Bleed-through */
+@media (max-width: 640px) {
+  :root {
+    --nav-height: 64px;
+  }
+
+  .navbar {
+    height: var(--nav-height);
+    background: rgba(248, 246, 240, 0.98);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+  }
+
+  .navbar.scrolled {
+    height: var(--nav-height);
+    background: #F8F6F0;
+  }
+
   .navbar .container {
     gap: 8px;
+    padding: 0 16px;
+  }
+
+  .navbar-logo {
+    gap: 10px;
   }
 
   .navbar-brand-subtitle {
@@ -893,7 +924,12 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   }
 
   .navbar-brand-title {
-    font-size: 1.12rem;
+    font-size: 1.08rem;
+    letter-spacing: 0.03em;
+  }
+
+  .navbar-actions {
+    gap: 8px;
   }
 
   .navbar-bill-btn {
@@ -901,8 +937,9 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   }
 
   .navbar-cta {
-    padding: 8px 14px;
-    font-size: 0.85rem;
+    padding: 7px 12px;
+    font-size: 0.82rem;
+    white-space: nowrap;
   }
 }
 
