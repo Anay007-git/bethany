@@ -1,7 +1,0 @@
-# EAS Ignore for mobile subdirectory
-node_modules/
-.expo/
-dist/
-npm-debug.*
-yarn-debug.*
-yarn-error.*
