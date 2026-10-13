@@ -31,7 +31,11 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#F6F4E7"
       },
-      "package": "com.bethanyhomestay.app"
+      "package": "com.bethanyhomestay.app",
+      "versionCode": 1,
+      "permissions": [
+        "android.permission.INTERNET"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
