@@ -649,24 +649,45 @@ const AdminDashboard = ({ onLogout }) => {
         <div className="admin-layout">
             {/* Salesforce Lightning Left Navigation */}
             <aside className={`admin-sidebar ${isCollapsed ? 'collapsed' : ''}`}>
-                <div className="sidebar-header">
-                    <div className="sidebar-brand">
-                        <span className="brand-crest">🏡</span>
-                        {!isCollapsed && (
-                            <div className="brand-titles">
-                                <span className="brand-name">BETHANY</span>
-                                <span className="brand-badge">OPERATIONS CONSOLE</span>
+                <div className={`sidebar-header ${isCollapsed ? 'collapsed-header' : ''}`}>
+                    {!isCollapsed ? (
+                        <>
+                            <div className="sidebar-brand">
+                                <span className="brand-crest">🏡</span>
+                                <div className="brand-titles">
+                                    <span className="brand-name">BETHANY</span>
+                                    <span className="brand-badge">OPERATIONS CONSOLE</span>
+                                </div>
                             </div>
-                        )}
-                        {isCollapsed && <span className="brand-initial">B</span>}
-                    </div>
-                    <button
-                        className="sidebar-collapse-toggle"
-                        onClick={() => setIsCollapsed(!isCollapsed)}
-                        title={isCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
-                    >
-                        {isCollapsed ? '❯' : '❮'}
-                    </button>
+                            <button
+                                className="sidebar-collapse-toggle"
+                                onClick={() => setIsCollapsed(true)}
+                                title="Collapse Sidebar"
+                                aria-label="Collapse Sidebar"
+                            >
+                                ❮
+                            </button>
+                        </>
+                    ) : (
+                        <div className="sidebar-collapsed-header-inner">
+                            <button
+                                className="brand-crest-btn"
+                                onClick={() => setIsCollapsed(false)}
+                                title="Bethany Homestay (Click to Expand)"
+                                aria-label="Bethany Homestay (Click to Expand)"
+                            >
+                                🏡
+                            </button>
+                            <button
+                                className="sidebar-collapse-toggle collapsed-toggle"
+                                onClick={() => setIsCollapsed(false)}
+                                title="Expand Navigation Sidebar (☰)"
+                                aria-label="Expand Navigation Sidebar"
+                            >
+                                ☰
+                            </button>
+                        </div>
+                    )}
                 </div>
 
                 <div className="sidebar-scrollable">
@@ -775,7 +796,23 @@ const AdminDashboard = ({ onLogout }) => {
                 {/* Salesforce Global Utility Header */}
                 <div className="slds-global-header">
                     <div className="slds-global-header-left">
-                        <div className="slds-app-launcher" title="Salesforce App Launcher">
+                        <button
+                            className="slds-hamburger-btn"
+                            onClick={() => setIsCollapsed(!isCollapsed)}
+                            title={isCollapsed ? "Expand Navigation Sidebar (☰)" : "Collapse Navigation Sidebar (☰)"}
+                            aria-label="Toggle Navigation Sidebar"
+                        >
+                            <span></span>
+                            <span></span>
+                            <span></span>
+                        </button>
+                        <div
+                            className="slds-app-launcher"
+                            onClick={() => setIsCollapsed(!isCollapsed)}
+                            title={isCollapsed ? "Expand Navigation (9-dot Launcher)" : "Collapse Navigation (9-dot Launcher)"}
+                            role="button"
+                            tabIndex={0}
+                        >
                             <span></span><span></span><span></span>
                             <span></span><span></span><span></span>
                             <span></span><span></span><span></span>
@@ -915,73 +952,188 @@ const AdminDashboard = ({ onLogout }) => {
                         </div>
 
                         {/* Revenue Trends Chart */}
-                        <div className="card-panel">
-                            <h3>📈 Revenue Trends (Direct vs OTA)</h3>
-                            <div className="chart-wrapper">
-                                <div className="chart-container">
-                                    {monthlyData.map((data, i) => {
-                                        const maxVal = Math.max(...monthlyData.map(d => d.total)) || 1;
-                                        // Calculate percentages relative to max value for height
-                                        const directPct = (data.direct / maxVal) * 100;
-                                        const otaPct = (data.ota / maxVal) * 100;
-
-                                        return (
-                                            <div key={i} className="chart-bar-group">
-                                                <div className="chart-tooltip">
-                                                    Direct: ₹{(data.direct / 1000).toFixed(1)}k | OTA: ₹{(data.ota / 1000).toFixed(1)}k
-                                                </div>
-                                                <div className="chart-bar-track">
-                                                    {/* OTA Portion (Top) */}
-                                                    <div className="chart-bar-fill" style={{ height: `${otaPct}%`, background: 'var(--info-gradient)', opacity: 0.9 }}></div>
-                                                    <div style={{ height: '2px' }}></div> {/* Spacer */}
-                                                    {/* Direct Portion (Bottom) */}
-                                                    <div className="chart-bar-fill" style={{ height: `${directPct}%`, background: 'var(--success-gradient)' }}></div>
-                                                </div>
-                                                <span className="chart-label">{data.label.split(' ')[0]}</span>
-                                            </div>
-                                        );
-                                    })}
-                                    {monthlyData.length === 0 && <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', color: 'var(--text-muted)' }}>No revenue data available</div>}
+                        <div className="chart-card">
+                            <div className="chart-header">
+                                <div className="chart-title-wrap">
+                                    <h3>📈 Revenue Trends (Direct vs OTA)</h3>
+                                    <p className="chart-subtitle">Monthly direct folio revenue vs partner OTA distribution</p>
                                 </div>
                                 <div className="chart-legend">
-                                    <div className="legend-item"><div className="legend-dot" style={{ background: 'var(--success)' }}></div> Direct</div>
-                                    <div className="legend-item"><div className="legend-dot" style={{ background: 'var(--info)' }}></div> OTA (Est.)</div>
+                                    <div className="legend-item">
+                                        <div className="legend-dot bar-direct"></div>
+                                        <span>Direct Booking</span>
+                                    </div>
+                                    <div className="legend-item">
+                                        <div className="legend-dot bar-ota"></div>
+                                        <span>OTA (Partner Sync)</span>
+                                    </div>
                                 </div>
+                            </div>
+
+                            <div className="chart-body-wrapper">
+                                {(() => {
+                                    const maxRev = Math.max(...monthlyData.map(d => Math.max(d.direct, d.ota)), 10000);
+                                    const yTicks = [maxRev, Math.round(maxRev * 0.75), Math.round(maxRev * 0.5), Math.round(maxRev * 0.25), 0];
+
+                                    return (
+                                        <>
+                                            <div className="chart-y-axis">
+                                                {yTicks.map((val, idx) => (
+                                                    <span key={idx} className="chart-y-label">
+                                                        ₹{val >= 1000 ? `${(val / 1000).toFixed(val % 1000 === 0 ? 0 : 1)}k` : val}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                            <div className="chart-grid-lines">
+                                                {yTicks.map((_, idx) => (
+                                                    <div key={idx} className="chart-grid-line"></div>
+                                                ))}
+                                            </div>
+                                            <div className="chart-container">
+                                                {monthlyData.map((data, i) => {
+                                                    const directPct = Math.min(100, Math.round((data.direct / maxRev) * 100));
+                                                    const otaPct = Math.min(100, Math.round((data.ota / maxRev) * 100));
+
+                                                    return (
+                                                        <div key={i} className="chart-bar-group">
+                                                            <div className="chart-tooltip-hover">
+                                                                <strong>{data.label}</strong>
+                                                                <div>Direct: ₹{data.direct.toLocaleString('en-IN')}</div>
+                                                                <div>OTA: ₹{data.ota.toLocaleString('en-IN')}</div>
+                                                                <div>Total: ₹{(data.direct + data.ota).toLocaleString('en-IN')}</div>
+                                                            </div>
+
+                                                            <div className="chart-bars-paired">
+                                                                {/* Direct Bar */}
+                                                                <div className="chart-bar-col" title={`Direct: ₹${data.direct.toLocaleString('en-IN')}`}>
+                                                                    <span className="bar-val-badge">
+                                                                        ₹{(data.direct / 1000).toFixed(1)}k
+                                                                    </span>
+                                                                    <div className="chart-bar-track">
+                                                                        <div 
+                                                                            className={`chart-bar-fill bar-direct ${data.direct > 0 ? 'has-val' : ''}`} 
+                                                                            style={{ height: `${directPct}%` }}
+                                                                        ></div>
+                                                                    </div>
+                                                                </div>
+
+                                                                {/* OTA Bar */}
+                                                                <div className="chart-bar-col" title={`OTA: ₹${data.ota.toLocaleString('en-IN')}`}>
+                                                                    <span className="bar-val-badge">
+                                                                        {data.ota > 0 ? `₹${(data.ota / 1000).toFixed(1)}k` : '₹0'}
+                                                                    </span>
+                                                                    <div className="chart-bar-track">
+                                                                        <div 
+                                                                            className={`chart-bar-fill bar-ota ${data.ota > 0 ? 'has-val' : ''}`} 
+                                                                            style={{ height: `${otaPct}%` }}
+                                                                        ></div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+
+                                                            <span className="chart-x-label">{data.label.split(' ')[0]}</span>
+                                                        </div>
+                                                    );
+                                                })}
+                                                {monthlyData.length === 0 && (
+                                                    <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', color: 'var(--slds-text-weak)', fontSize: '13px', fontWeight: 600 }}>
+                                                        No revenue folio data found
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </>
+                                    );
+                                })()}
                             </div>
                         </div>
 
                         {/* Cancellation Trends Chart */}
-                        <div className="card-panel">
-                            <h3>📉 Booking Trends (Confirmed vs Cancelled)</h3>
-                            <div className="chart-wrapper">
-                                <div className="chart-container">
-                                    {cancellationData.map((data, i) => {
-                                        const maxVal = Math.max(...cancellationData.map(d => d.confirmed + d.cancelled)) || 1;
-                                        const confirmedPct = (data.confirmed / maxVal) * 100;
-                                        const cancelledPct = (data.cancelled / maxVal) * 100;
-
-                                        return (
-                                            <div key={i} className="chart-bar-group">
-                                                <div className="chart-tooltip">
-                                                    Confirmed: {data.confirmed} | Cancelled: {data.cancelled}
-                                                </div>
-                                                <div className="chart-bar-track">
-                                                    {/* Cancelled Portion (Top) */}
-                                                    <div className="chart-bar-fill" style={{ height: `${cancelledPct}%`, background: 'var(--danger-gradient)', opacity: 0.9 }}></div>
-                                                    <div style={{ height: '2px' }}></div> {/* Spacer */}
-                                                    {/* Confirmed Portion (Bottom) */}
-                                                    <div className="chart-bar-fill" style={{ height: `${confirmedPct}%`, background: 'var(--primary-gradient)' }}></div>
-                                                </div>
-                                                <span className="chart-label">{data.label.split(' ')[0]}</span>
-                                            </div>
-                                        );
-                                    })}
-                                    {cancellationData.length === 0 && <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', color: 'var(--text-muted)' }}>No booking data available</div>}
+                        <div className="chart-card">
+                            <div className="chart-header">
+                                <div className="chart-title-wrap">
+                                    <h3>📉 Booking Trends (Confirmed vs Cancelled)</h3>
+                                    <p className="chart-subtitle">Confirmed guest stays vs cancelled reservation requests</p>
                                 </div>
                                 <div className="chart-legend">
-                                    <div className="legend-item"><div className="legend-dot" style={{ background: 'var(--primary)' }}></div> Confirmed</div>
-                                    <div className="legend-item"><div className="legend-dot" style={{ background: 'var(--danger)' }}></div> Cancelled</div>
+                                    <div className="legend-item">
+                                        <div className="legend-dot bar-confirmed"></div>
+                                        <span>Confirmed Stays</span>
+                                    </div>
+                                    <div className="legend-item">
+                                        <div className="legend-dot bar-cancelled"></div>
+                                        <span>Cancelled Folios</span>
+                                    </div>
                                 </div>
+                            </div>
+
+                            <div className="chart-body-wrapper">
+                                {(() => {
+                                    const maxBookings = Math.max(...cancellationData.map(d => Math.max(d.confirmed, d.cancelled)), 5);
+                                    const yTicks = [maxBookings, Math.round(maxBookings * 0.75), Math.round(maxBookings * 0.5), Math.round(maxBookings * 0.25), 0];
+
+                                    return (
+                                        <>
+                                            <div className="chart-y-axis">
+                                                {yTicks.map((val, idx) => (
+                                                    <span key={idx} className="chart-y-label">{val}</span>
+                                                ))}
+                                            </div>
+                                            <div className="chart-grid-lines">
+                                                {yTicks.map((_, idx) => (
+                                                    <div key={idx} className="chart-grid-line"></div>
+                                                ))}
+                                            </div>
+                                            <div className="chart-container">
+                                                {cancellationData.map((data, i) => {
+                                                    const confirmedPct = Math.min(100, Math.round((data.confirmed / maxBookings) * 100));
+                                                    const cancelledPct = Math.min(100, Math.round((data.cancelled / maxBookings) * 100));
+
+                                                    return (
+                                                        <div key={i} className="chart-bar-group">
+                                                            <div className="chart-tooltip-hover">
+                                                                <strong>{data.label}</strong>
+                                                                <div>Confirmed: {data.confirmed}</div>
+                                                                <div>Cancelled: {data.cancelled}</div>
+                                                                <div>Total: {data.confirmed + data.cancelled}</div>
+                                                            </div>
+
+                                                            <div className="chart-bars-paired">
+                                                                {/* Confirmed Bar */}
+                                                                <div className="chart-bar-col" title={`Confirmed: ${data.confirmed}`}>
+                                                                    <span className="bar-val-badge">{data.confirmed}</span>
+                                                                    <div className="chart-bar-track">
+                                                                        <div 
+                                                                            className={`chart-bar-fill bar-confirmed ${data.confirmed > 0 ? 'has-val' : ''}`} 
+                                                                            style={{ height: `${confirmedPct}%` }}
+                                                                        ></div>
+                                                                    </div>
+                                                                </div>
+
+                                                                {/* Cancelled Bar */}
+                                                                <div className="chart-bar-col" title={`Cancelled: ${data.cancelled}`}>
+                                                                    <span className="bar-val-badge">{data.cancelled}</span>
+                                                                    <div className="chart-bar-track">
+                                                                        <div 
+                                                                            className={`chart-bar-fill bar-cancelled ${data.cancelled > 0 ? 'has-val' : ''}`} 
+                                                                            style={{ height: `${cancelledPct}%` }}
+                                                                        ></div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+
+                                                            <span className="chart-x-label">{data.label.split(' ')[0]}</span>
+                                                        </div>
+                                                    );
+                                                })}
+                                                {cancellationData.length === 0 && (
+                                                    <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', color: 'var(--slds-text-weak)', fontSize: '13px', fontWeight: 600 }}>
+                                                        No booking trend data found
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </>
+                                    );
+                                })()}
                             </div>
                         </div>
 
