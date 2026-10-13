@@ -163,6 +163,24 @@ const MyBookingsScreen = () => {
                 })}
             </View>
 
+            {/* Staff Operations Portal Access */}
+            <View style={{ paddingHorizontal: 16, marginTop: 16 }}>
+                <TouchableOpacity
+                    style={styles.staffPortalLink}
+                    onPress={() => navigation.navigate('AdminLogin')}
+                    activeOpacity={0.85}
+                >
+                    <View style={styles.staffPortalIconBox}>
+                        <Text style={{ fontSize: 16 }}>🔐</Text>
+                    </View>
+                    <View style={{ flex: 1, marginLeft: 12 }}>
+                        <Text style={styles.staffPortalLinkTitle}>Staff Operations Suite</Text>
+                        <Text style={styles.staffPortalLinkSub}>Live Folios · Tariff Engine · OTA Manager · CRM</Text>
+                    </View>
+                    <Text style={styles.staffPortalArrow}>→</Text>
+                </TouchableOpacity>
+            </View>
+
             <View style={{ height: 40 }} />
         </ScrollView>
     );
@@ -357,6 +375,39 @@ const styles = StyleSheet.create({
         fontSize: 10,
         fontWeight: '600',
         color: colors.textMain
+    },
+    staffPortalLink: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: colors.bgSurface,
+        padding: 16,
+        borderRadius: radius.md,
+        borderWidth: 1,
+        borderColor: 'rgba(197, 160, 89, 0.4)',
+        ...shadows.subtle
+    },
+    staffPortalIconBox: {
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        backgroundColor: 'rgba(197, 160, 89, 0.15)',
+        alignItems: 'center',
+        justifyContent: 'center'
+    },
+    staffPortalLinkTitle: {
+        fontSize: 13,
+        fontWeight: '800',
+        color: colors.forestDark
+    },
+    staffPortalLinkSub: {
+        fontSize: 10,
+        color: colors.textMuted,
+        marginTop: 1
+    },
+    staffPortalArrow: {
+        fontSize: 16,
+        fontWeight: '700',
+        color: colors.gold
     }
 });
 

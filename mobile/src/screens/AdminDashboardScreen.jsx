@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
     View,
     Text,
@@ -29,6 +29,7 @@ const AdminDashboardScreen = ({ navigation }) => {
         totalBookings: 0,
         pendingBookings: 0,
         confirmedBookings: 0,
+        cancelledBookings: 0,
         allBookings: []
     });
     const [rooms, setRooms] = useState([]);
@@ -39,6 +40,9 @@ const AdminDashboardScreen = ({ navigation }) => {
     // Filter & Search states
     const [statusFilter, setStatusFilter] = useState('all');
     const [searchQuery, setSearchQuery] = useState('');
+
+    // Booking Status Change Modal
+    const [statusModalBooking, setStatusModalBooking] = useState(null);
 
     // Room Editing Modal
     const [editingRoom, setEditingRoom] = useState(null);
@@ -67,6 +71,10 @@ const AdminDashboardScreen = ({ navigation }) => {
         dinnerVeg: 0,
         dinnerNonVeg: 0
     });
+
+    // CRM Filter States
+    const [crmTierFilter, setCrmTierFilter] = useState('all');
+    const [crmSearchQuery, setCrmSearchQuery] = useState('');
 
     // Coupon Creation Form
     const [newCouponCode, setNewCouponCode] = useState('');
@@ -146,27 +154,152 @@ const AdminDashboardScreen = ({ navigation }) => {
         ]);
     };
 
+    // Calculate OTA Revenue Estimate
+    const otaRevenue = useMemo(() => {
+        return (blockedDates || []).reduce((sum, d) => {
+            const room = rooms.find(r => r.id === d.room_id);
+            const avg = room ? ((room.price_low_season + room.price_high_season) / 2) : 3000;
+            return sum + avg;
+        }, 0);
+    }, [blockedDates, rooms]);
+
+    // Calculate Monthly Revenue Trends (Direct vs OTA)
+    const monthlyRevenueData = useMemo(() => {
+        const monthMap = {};
+
+        // Direct Bookings Revenue
+        (stats.allBookings || []).forEach(b => {
+            if (['booked', 'confirmed'].includes((b.status || '').toLowerCase())) {
+                const date = new Date(b.check_in);
+                if (isNaN(date.getTime())) return;
+                const key = `${date.toLocaleString('default', { month: 'short' })} ${date.getFullYear()}`;
+                if (!monthMap[key]) monthMap[key] = { direct: 0, ota: 0, label: key, sortDate: date.getTime() };
+                monthMap[key].direct += parseFloat(b.total_price || 0);
+            }
+        });
+
+        // OTA Revenue from Blocked Dates
+        (blockedDates || []).forEach(d => {
+            const date = new Date(d.blocked_date);
+            if (isNaN(date.getTime())) return;
+            const key = `${date.toLocaleString('default', { month: 'short' })} ${date.getFullYear()}`;
+            if (!monthMap[key]) monthMap[key] = { direct: 0, ota: 0, label: key, sortDate: date.getTime() };
+
+            const room = rooms.find(r => r.id === d.room_id);
+            const avgPrice = room ? ((room.price_low_season + room.price_high_season) / 2) : 3000;
+            monthMap[key].ota += avgPrice;
+        });
+
+        const list = Object.values(monthMap).sort((a, b) => a.sortDate - b.sortDate);
+        return list.map(item => ({
+            label: item.label,
+            direct: Math.round(item.direct),
+            ota: Math.round(item.ota),
+            total: Math.round(item.direct + item.ota)
+        }));
+    }, [stats.allBookings, blockedDates, rooms]);
+
+    // Calculate Booking Trends (Confirmed vs Cancelled)
+    const bookingTrendsData = useMemo(() => {
+        const monthMap = {};
+
+        (stats.allBookings || []).forEach(b => {
+            const date = new Date(b.check_in);
+            if (isNaN(date.getTime())) return;
+            const key = `${date.toLocaleString('default', { month: 'short' })} ${date.getFullYear()}`;
+            if (!monthMap[key]) monthMap[key] = { confirmed: 0, cancelled: 0, label: key, sortDate: date.getTime() };
+
+            const status = (b.status || '').toLowerCase();
+            if (['booked', 'confirmed'].includes(status)) {
+                monthMap[key].confirmed += 1;
+            } else if (status === 'cancelled') {
+                monthMap[key].cancelled += 1;
+            }
+        });
+
+        const list = Object.values(monthMap).sort((a, b) => a.sortDate - b.sortDate);
+        return list.map(item => ({
+            label: item.label,
+            confirmed: item.confirmed,
+            cancelled: item.cancelled,
+            total: item.confirmed + item.cancelled
+        }));
+    }, [stats.allBookings]);
+
+    // Salesforce Pipeline Counts
+    const pipelineCounts = useMemo(() => {
+        const all = stats.allBookings || [];
+        return {
+            all: all.length,
+            pending: all.filter(b => (b.status || '').toLowerCase() === 'pending').length,
+            confirmed: all.filter(b => (b.status || '').toLowerCase() === 'confirmed').length,
+            booked: all.filter(b => (b.status || '').toLowerCase() === 'booked').length,
+            cancelled: all.filter(b => (b.status || '').toLowerCase() === 'cancelled').length
+        };
+    }, [stats.allBookings]);
+
+    // Live Walk-In Ledger Calculation
+    const liveLedger = useMemo(() => {
+        if (!offlineCheckIn || !offlineCheckOut || offlineSelectedRooms.length === 0) {
+            return { nights: 0, roomTotal: 0, mealsTotal: 0, discount: 0, grandTotal: 0 };
+        }
+        const inD = new Date(offlineCheckIn);
+        const outD = new Date(offlineCheckOut);
+        const diff = outD - inD;
+        const nights = Math.max(1, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+        if (isNaN(nights) || nights <= 0) {
+            return { nights: 1, roomTotal: 0, mealsTotal: 0, discount: 0, grandTotal: 0 };
+        }
+
+        const selectedRoomObjects = rooms.filter(r => offlineSelectedRooms.includes(r.id));
+        const roomRatePerNight = selectedRoomObjects.reduce((sum, r) => sum + (parseFloat(r.price_high_season) || 3000), 0);
+        const roomTotal = roomRatePerNight * nights;
+
+        const mealsTotal =
+            (offlineMeals.breakfastVeg * 120 + offlineMeals.breakfastNonVeg * 150) +
+            (offlineMeals.lunchVeg * 200 + offlineMeals.lunchNonVeg * 250) +
+            (offlineMeals.dinnerVeg * 200 + offlineMeals.dinnerNonVeg * 250);
+
+        const discount = parseFloat(offlineDiscount) || 0;
+        const grandTotal = Math.max(0, roomTotal + mealsTotal - discount);
+
+        return { nights, roomRatePerNight, roomTotal, mealsTotal, discount, grandTotal };
+    }, [offlineCheckIn, offlineCheckOut, offlineSelectedRooms, offlineMeals, offlineDiscount, rooms]);
+
+    // Filtered CRM Guests
+    const maxCrmSpend = useMemo(() => {
+        return Math.max(...(crmGuests.map(g => g.totalSpend) || [1]), 10000);
+    }, [crmGuests]);
+
+    const filteredCrmGuests = useMemo(() => {
+        return crmGuests.filter(g => {
+            const matchesTier =
+                crmTierFilter === 'all' ||
+                (crmTierFilter === 'vip' && (g.loyaltyTier || '').includes('VIP')) ||
+                (crmTierFilter === 'returning' && (g.loyaltyTier || '').includes('Returning')) ||
+                (crmTierFilter === 'new' && (g.loyaltyTier || '').includes('First-Time'));
+
+            const q = crmSearchQuery.toLowerCase();
+            const matchesSearch =
+                !crmSearchQuery.trim() ||
+                (g.name || '').toLowerCase().includes(q) ||
+                (g.phone || '').includes(q) ||
+                (g.email || '').toLowerCase().includes(q);
+
+            return matchesTier && matchesSearch;
+        });
+    }, [crmGuests, crmTierFilter, crmSearchQuery]);
+
     // Update Booking Status
     const handleUpdateStatus = async (bookingId, newStatus) => {
-        Alert.alert(
-            'Confirm Status Change',
-            `Change reservation status to "${newStatus.toUpperCase()}"?`,
-            [
-                { text: 'Cancel', style: 'cancel' },
-                {
-                    text: 'Confirm',
-                    onPress: async () => {
-                        const res = await MobileSupabaseService.updateBookingStatus(bookingId, newStatus);
-                        if (res.success) {
-                            Alert.alert('Success', `Booking status updated to ${newStatus}.`);
-                            loadAllAdminData();
-                        } else {
-                            Alert.alert('Error', res.error || 'Failed to update booking status.');
-                        }
-                    }
-                }
-            ]
-        );
+        const res = await MobileSupabaseService.updateBookingStatus(bookingId, newStatus);
+        if (res.success) {
+            Alert.alert('Status Updated', `Booking status changed to "${newStatus.toUpperCase()}".`);
+            setStatusModalBooking(null);
+            loadAllAdminData();
+        } else {
+            Alert.alert('Error', res.error || 'Failed to update booking status.');
+        }
     };
 
     // WhatsApp Guest
@@ -245,29 +378,11 @@ const AdminDashboardScreen = ({ navigation }) => {
         }
 
         if (offlineSelectedRooms.length === 0) {
-            Alert.alert('Validation', 'Please select at least one room.');
+            Alert.alert('Validation', 'Please select at least one suite.');
             return;
         }
 
-        // Calculate nights
-        const inD = new Date(offlineCheckIn);
-        const outD = new Date(offlineCheckOut);
-        const diffTime = outD - inD;
-        const nights = Math.max(1, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
-
-        // Base room price
         const selectedRoomObjects = rooms.filter(r => offlineSelectedRooms.includes(r.id));
-        const roomTotal = selectedRoomObjects.reduce((sum, r) => sum + (parseFloat(r.price_high_season) || 3000), 0) * nights;
-
-        // Meal total
-        const mealsCost =
-            (offlineMeals.breakfastVeg * 120 + offlineMeals.breakfastNonVeg * 150) +
-            (offlineMeals.lunchVeg * 200 + offlineMeals.lunchNonVeg * 250) +
-            (offlineMeals.dinnerVeg * 200 + offlineMeals.dinnerNonVeg * 250);
-
-        const discountVal = parseFloat(offlineDiscount) || 0;
-        const grandTotal = Math.max(0, roomTotal + mealsCost - discountVal);
-
         const mealSummary = `Breakfast(V:${offlineMeals.breakfastVeg},NV:${offlineMeals.breakfastNonVeg}) | Lunch(V:${offlineMeals.lunchVeg},NV:${offlineMeals.lunchNonVeg}) | Dinner(V:${offlineMeals.dinnerVeg},NV:${offlineMeals.dinnerNonVeg})`;
 
         const bookingPayload = {
@@ -278,21 +393,20 @@ const AdminDashboardScreen = ({ navigation }) => {
             checkOut: offlineCheckOut,
             guests: offlineGuestsCount,
             selectedRooms: selectedRoomObjects,
-            totalPrice: grandTotal,
+            totalPrice: liveLedger.grandTotal,
             mealSummary,
             status: 'confirmed',
             notes: 'Walk-in booking created via Staff App',
             invoiceItems: [
-                { name: `Room Accommodations (${nights} Night${nights > 1 ? 's' : ''})`, amount: roomTotal },
-                { name: 'Organic Himalayan Meals', amount: mealsCost },
-                { name: 'Concierge Courtesy Discount', amount: -discountVal }
+                { name: `Room Accommodations (${liveLedger.nights} Nights)`, amount: liveLedger.roomTotal },
+                { name: 'Organic Himalayan Meals', amount: liveLedger.mealsTotal },
+                { name: 'Courtesy Discount', amount: -liveLedger.discount }
             ]
         };
 
         const res = await MobileSupabaseService.createAdminManualBooking(bookingPayload);
         if (res.success) {
             Alert.alert('Success', 'Walk-in reservation confirmed & saved to database!');
-            // Reset form
             setOfflineGuestName('');
             setOfflinePhone('');
             setOfflineEmail('');
@@ -378,7 +492,7 @@ const AdminDashboardScreen = ({ navigation }) => {
         return (
             <SafeAreaView style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color={colors.gold} />
-                <Text style={styles.loadingText}>Syncing Himalayan Sanctuary Database...</Text>
+                <Text style={styles.loadingText}>Syncing Himalayan Operations Database...</Text>
             </SafeAreaView>
         );
     }
@@ -389,10 +503,10 @@ const AdminDashboardScreen = ({ navigation }) => {
             <View style={styles.topBar}>
                 <View style={{ flex: 1 }}>
                     <View style={styles.staffBadge}>
-                        <Text style={styles.staffBadgeText}>🛡️ VERIFIED ADMIN SESSION</Text>
+                        <Text style={styles.staffBadgeText}>🛡️ VERIFIED ADMIN CONSOLE</Text>
                     </View>
-                    <Text style={styles.topBarTitle}>Bethany Concierge Suite</Text>
-                    <Text style={styles.topBarSub}>Staff: Namastehills (Administrator)</Text>
+                    <Text style={styles.topBarTitle}>Bethany Operations Console</Text>
+                    <Text style={styles.topBarSub}>Staff: Namastehills · Concierge Admin</Text>
                 </View>
                 <View style={styles.topBarActions}>
                     <TouchableOpacity style={styles.refreshBtn} onPress={onRefresh} activeOpacity={0.7}>
@@ -421,7 +535,7 @@ const AdminDashboardScreen = ({ navigation }) => {
                         onPress={() => setActiveTab('inventory')}
                     >
                         <Text style={[styles.tabText, activeTab === 'inventory' && styles.tabTextActive]}>
-                            🛏️ Rooms & OTA ({rooms.length})
+                            🛏️ Suites & OTA ({rooms.length})
                         </Text>
                     </TouchableOpacity>
 
@@ -430,7 +544,7 @@ const AdminDashboardScreen = ({ navigation }) => {
                         onPress={() => setActiveTab('offline')}
                     >
                         <Text style={[styles.tabText, activeTab === 'offline' && styles.tabTextActive]}>
-                            ➕ Walk-In Booking
+                            ➕ Walk-In Studio
                         </Text>
                     </TouchableOpacity>
 
@@ -439,7 +553,7 @@ const AdminDashboardScreen = ({ navigation }) => {
                         onPress={() => setActiveTab('crm')}
                     >
                         <Text style={[styles.tabText, activeTab === 'crm' && styles.tabTextActive]}>
-                            👥 CRM ({crmGuests.length})
+                            👥 Customer 360 ({crmGuests.length})
                         </Text>
                     </TouchableOpacity>
 
@@ -460,46 +574,206 @@ const AdminDashboardScreen = ({ navigation }) => {
                 refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
             >
                 {/* ============================================================== */}
-                {/* TAB 1: OVERVIEW & LIVE BOOKINGS                                 */}
+                {/* TAB 1: OVERVIEW, ANALYTICS & LIVE RESERVATIONS                  */}
                 {/* ============================================================== */}
                 {activeTab === 'dashboard' && (
                     <View style={styles.tabContent}>
-                        {/* KPI Cards Grid */}
+                        {/* Salesforce Pipeline Chevron Stages Path */}
+                        <View style={styles.pipelineSection}>
+                            <Text style={styles.pipelineSectionTitle}>SALESFORCE PIPELINE CHEVRON</Text>
+                            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.pipelineScroll}>
+                                {[
+                                    { key: 'all', title: '1. ALL RESERVATIONS', count: `${pipelineCounts.all} Total` },
+                                    { key: 'pending', title: '2. PENDING REVIEW', count: `${pipelineCounts.pending} Action Needed` },
+                                    { key: 'confirmed', title: '3. CONFIRMED STAYS', count: `${pipelineCounts.confirmed} Ready` },
+                                    { key: 'booked', title: '4. IN-HOUSE / BOOKED', count: `${pipelineCounts.booked} Checked In` },
+                                    { key: 'cancelled', title: '5. CANCELLED / CLOSED', count: `${pipelineCounts.cancelled} Archival` },
+                                ].map(step => {
+                                    const isActive = statusFilter === step.key;
+                                    return (
+                                        <TouchableOpacity
+                                            key={step.key}
+                                            style={[styles.pipelineStep, isActive && styles.pipelineStepActive]}
+                                            onPress={() => setStatusFilter(step.key)}
+                                            activeOpacity={0.8}
+                                        >
+                                            <Text style={[styles.pipelineStepTitle, isActive && styles.pipelineStepTitleActive]}>
+                                                {step.title}
+                                            </Text>
+                                            <Text style={[styles.pipelineStepCount, isActive && styles.pipelineStepCountActive]}>
+                                                {step.count}
+                                            </Text>
+                                        </TouchableOpacity>
+                                    );
+                                })}
+                            </ScrollView>
+                        </View>
+
+                        {/* 5 KPI Cards Grid (Matches Web Salesforce Console) */}
                         <View style={styles.kpiGrid}>
-                            <View style={[styles.kpiCard, { borderColor: colors.gold }]}>
-                                <Text style={styles.kpiLabel}>TOTAL REVENUE</Text>
-                                <Text style={[styles.kpiValue, { color: colors.goldDark || '#99732B' }]}>
+                            <View style={[styles.kpiCard, { borderTopColor: colors.gold }]}>
+                                <View style={styles.kpiIconWrap}><Text style={{ fontSize: 16 }}>💰</Text></View>
+                                <Text style={styles.kpiLabel}>CONFIRMED REVENUE</Text>
+                                <Text style={[styles.kpiValue, { color: colors.gold }]}>
                                     ₹{stats.totalRevenue.toLocaleString('en-IN')}
                                 </Text>
-                                <Text style={styles.kpiSub}>Excludes cancelled</Text>
+                                <Text style={styles.kpiSub}>In selected range</Text>
                             </View>
 
-                            <View style={[styles.kpiCard, { borderColor: colors.forest }]}>
-                                <Text style={styles.kpiLabel}>TOTAL BOOKINGS</Text>
-                                <Text style={[styles.kpiValue, { color: colors.forestDark }]}>
-                                    {stats.totalBookings}
+                            <View style={[styles.kpiCard, { borderTopColor: '#0891B2' }]}>
+                                <View style={styles.kpiIconWrap}><Text style={{ fontSize: 16 }}>🔗</Text></View>
+                                <Text style={styles.kpiLabel}>OTA REVENUE</Text>
+                                <Text style={[styles.kpiValue, { color: '#0891B2' }]}>
+                                    ₹{otaRevenue.toLocaleString('en-IN')}
                                 </Text>
-                                <Text style={styles.kpiSub}>All-time reservations</Text>
+                                <Text style={styles.kpiSub}>{blockedDates.length} nights synced</Text>
                             </View>
 
-                            <View style={[styles.kpiCard, { borderColor: '#E76F51' }]}>
-                                <Text style={styles.kpiLabel}>PENDING APPROVAL</Text>
+                            <View style={[styles.kpiCard, { borderTopColor: colors.forest }]}>
+                                <View style={styles.kpiIconWrap}><Text style={{ fontSize: 16 }}>✅</Text></View>
+                                <Text style={styles.kpiLabel}>CONFIRMED BOOKINGS</Text>
+                                <Text style={[styles.kpiValue, { color: colors.forestDark }]}>
+                                    {stats.confirmedBookings}
+                                </Text>
+                                <Text style={styles.kpiSub}>Validated stays</Text>
+                            </View>
+
+                            <View style={[styles.kpiCard, { borderTopColor: '#E76F51' }]}>
+                                <View style={styles.kpiIconWrap}><Text style={{ fontSize: 16 }}>⏳</Text></View>
+                                <Text style={styles.kpiLabel}>PENDING REVIEW</Text>
                                 <Text style={[styles.kpiValue, { color: '#E76F51' }]}>
                                     {stats.pendingBookings}
                                 </Text>
-                                <Text style={styles.kpiSub}>Awaiting confirmation</Text>
+                                <Text style={styles.kpiSub}>Action needed</Text>
                             </View>
 
-                            <View style={[styles.kpiCard, { borderColor: colors.success }]}>
-                                <Text style={styles.kpiLabel}>CONFIRMED STAYS</Text>
-                                <Text style={[styles.kpiValue, { color: colors.success }]}>
-                                    {stats.confirmedBookings}
+                            <View style={[styles.kpiCard, { borderTopColor: '#8B5CF6' }]}>
+                                <View style={styles.kpiIconWrap}><Text style={{ fontSize: 16 }}>📊</Text></View>
+                                <Text style={styles.kpiLabel}>TOTAL ENQUIRIES</Text>
+                                <Text style={[styles.kpiValue, { color: '#8B5CF6' }]}>
+                                    {stats.totalBookings}
                                 </Text>
-                                <Text style={styles.kpiSub}>Ready for check-in</Text>
+                                <Text style={styles.kpiSub}>All requests</Text>
                             </View>
                         </View>
 
-                        {/* Search & Filter Header */}
+                        {/* ============================================================== */}
+                        {/* NATIVE VISUAL ANALYTICS CHARTS                                 */}
+                        {/* ============================================================== */}
+
+                        {/* Chart 1: Revenue Trends (Direct vs OTA) */}
+                        <View style={styles.chartCard}>
+                            <View style={styles.chartHeader}>
+                                <View style={{ flex: 1 }}>
+                                    <Text style={styles.chartTitle}>📈 Revenue Trends (Direct vs OTA)</Text>
+                                    <Text style={styles.chartSub}>Direct folio revenue vs synced OTA channels</Text>
+                                </View>
+                                <View style={styles.chartLegend}>
+                                    <View style={styles.legendItem}>
+                                        <View style={[styles.legendDot, { backgroundColor: colors.forest }]} />
+                                        <Text style={styles.legendText}>Direct</Text>
+                                    </View>
+                                    <View style={styles.legendItem}>
+                                        <View style={[styles.legendDot, { backgroundColor: colors.gold }]} />
+                                        <Text style={styles.legendText}>OTA</Text>
+                                    </View>
+                                </View>
+                            </View>
+
+                            <View style={styles.chartContainer}>
+                                {monthlyRevenueData.map((data, idx) => {
+                                    const maxVal = Math.max(...monthlyRevenueData.map(d => Math.max(d.direct, d.ota)), 10000);
+                                    const directHeight = Math.max(4, Math.round((data.direct / maxVal) * 115));
+                                    const otaHeight = Math.max(data.ota > 0 ? 4 : 0, Math.round((data.ota / maxVal) * 115));
+
+                                    return (
+                                        <View key={idx} style={styles.barGroup}>
+                                            <View style={styles.barsPair}>
+                                                {/* Direct Bar */}
+                                                <View style={styles.barCol}>
+                                                    <Text style={styles.barValText}>
+                                                        ₹{(data.direct / 1000).toFixed(1)}k
+                                                    </Text>
+                                                    <View style={styles.barTrack}>
+                                                        <View style={[styles.barFill, { height: directHeight, backgroundColor: colors.forest }]} />
+                                                    </View>
+                                                </View>
+
+                                                {/* OTA Bar */}
+                                                <View style={styles.barCol}>
+                                                    <Text style={styles.barValText}>
+                                                        {data.ota > 0 ? `₹${(data.ota / 1000).toFixed(1)}k` : '₹0'}
+                                                    </Text>
+                                                    <View style={styles.barTrack}>
+                                                        <View style={[styles.barFill, { height: otaHeight, backgroundColor: colors.gold }]} />
+                                                    </View>
+                                                </View>
+                                            </View>
+                                            <Text style={styles.barMonthLabel}>{data.label.split(' ')[0]}</Text>
+                                        </View>
+                                    );
+                                })}
+                                {monthlyRevenueData.length === 0 && (
+                                    <Text style={styles.chartEmptyText}>No monthly revenue data available.</Text>
+                                )}
+                            </View>
+                        </View>
+
+                        {/* Chart 2: Booking Trends (Confirmed vs Cancelled) */}
+                        <View style={styles.chartCard}>
+                            <View style={styles.chartHeader}>
+                                <View style={{ flex: 1 }}>
+                                    <Text style={styles.chartTitle}>📉 Booking Trends (Confirmed vs Cancelled)</Text>
+                                    <Text style={styles.chartSub}>Confirmed guest stays vs cancelled reservation folios</Text>
+                                </View>
+                                <View style={styles.chartLegend}>
+                                    <View style={styles.legendItem}>
+                                        <View style={[styles.legendDot, { backgroundColor: '#10B981' }]} />
+                                        <Text style={styles.legendText}>Confirmed</Text>
+                                    </View>
+                                    <View style={styles.legendItem}>
+                                        <View style={[styles.legendDot, { backgroundColor: '#DC2626' }]} />
+                                        <Text style={styles.legendText}>Cancelled</Text>
+                                    </View>
+                                </View>
+                            </View>
+
+                            <View style={styles.chartContainer}>
+                                {bookingTrendsData.map((data, idx) => {
+                                    const maxVal = Math.max(...bookingTrendsData.map(d => Math.max(d.confirmed, d.cancelled)), 5);
+                                    const confirmedHeight = Math.max(data.confirmed > 0 ? 6 : 0, Math.round((data.confirmed / maxVal) * 115));
+                                    const cancelledHeight = Math.max(data.cancelled > 0 ? 6 : 0, Math.round((data.cancelled / maxVal) * 115));
+
+                                    return (
+                                        <View key={idx} style={styles.barGroup}>
+                                            <View style={styles.barsPair}>
+                                                {/* Confirmed Bar */}
+                                                <View style={styles.barCol}>
+                                                    <Text style={styles.barValText}>{data.confirmed}</Text>
+                                                    <View style={styles.barTrack}>
+                                                        <View style={[styles.barFill, { height: confirmedHeight, backgroundColor: '#10B981' }]} />
+                                                    </View>
+                                                </View>
+
+                                                {/* Cancelled Bar */}
+                                                <View style={styles.barCol}>
+                                                    <Text style={styles.barValText}>{data.cancelled}</Text>
+                                                    <View style={styles.barTrack}>
+                                                        <View style={[styles.barFill, { height: cancelledHeight, backgroundColor: '#DC2626' }]} />
+                                                    </View>
+                                                </View>
+                                            </View>
+                                            <Text style={styles.barMonthLabel}>{data.label.split(' ')[0]}</Text>
+                                        </View>
+                                    );
+                                })}
+                                {bookingTrendsData.length === 0 && (
+                                    <Text style={styles.chartEmptyText}>No booking trends recorded.</Text>
+                                )}
+                            </View>
+                        </View>
+
+                        {/* Search & Filter Section */}
                         <View style={styles.filterSection}>
                             <View style={styles.searchWrap}>
                                 <Text style={{ marginRight: 6 }}>🔍</Text>
@@ -512,28 +786,13 @@ const AdminDashboardScreen = ({ navigation }) => {
                                 />
                                 {searchQuery.length > 0 && (
                                     <TouchableOpacity onPress={() => setSearchQuery('')}>
-                                        <Text style={{ color: colors.grey }}>✕</Text>
+                                        <Text style={{ color: colors.grey, fontWeight: '700' }}>✕</Text>
                                     </TouchableOpacity>
                                 )}
                             </View>
-
-                            {/* Status Filter Pills */}
-                            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterPills}>
-                                {['all', 'pending', 'confirmed', 'booked', 'cancelled'].map(st => (
-                                    <TouchableOpacity
-                                        key={st}
-                                        style={[styles.pill, statusFilter === st && styles.pillActive]}
-                                        onPress={() => setStatusFilter(st)}
-                                    >
-                                        <Text style={[styles.pillText, statusFilter === st && styles.pillTextActive]}>
-                                            {st.toUpperCase()}
-                                        </Text>
-                                    </TouchableOpacity>
-                                ))}
-                            </ScrollView>
                         </View>
 
-                        {/* Bookings List */}
+                        {/* Bookings List Header */}
                         <Text style={styles.sectionHeader}>
                             Reservations ({filteredBookings.length})
                         </Text>
@@ -641,15 +900,13 @@ const AdminDashboardScreen = ({ navigation }) => {
                                                 </TouchableOpacity>
                                             )}
 
-                                            {!isCancelled && (
-                                                <TouchableOpacity
-                                                    style={styles.cancelBtn}
-                                                    onPress={() => handleUpdateStatus(b.id, 'cancelled')}
-                                                    activeOpacity={0.8}
-                                                >
-                                                    <Text style={styles.cancelBtnText}>❌ Cancel</Text>
-                                                </TouchableOpacity>
-                                            )}
+                                            <TouchableOpacity
+                                                style={styles.statusChangeBtn}
+                                                onPress={() => setStatusModalBooking(b)}
+                                                activeOpacity={0.8}
+                                            >
+                                                <Text style={styles.statusChangeBtnText}>✏️ Status</Text>
+                                            </TouchableOpacity>
                                         </View>
                                     </View>
                                 );
@@ -669,7 +926,7 @@ const AdminDashboardScreen = ({ navigation }) => {
                         {rooms.map(room => (
                             <View key={room.id} style={styles.roomCard}>
                                 <View style={styles.roomHeaderRow}>
-                                    <View>
+                                    <View style={{ flex: 1 }}>
                                         <Text style={styles.roomName}>{room.name}</Text>
                                         <Text style={styles.roomMeta}>{room.capacity} · {room.view_type || 'Mountain View'}</Text>
                                     </View>
@@ -681,7 +938,7 @@ const AdminDashboardScreen = ({ navigation }) => {
                                             setLowPriceInput(String(room.price_low_season || ''));
                                         }}
                                     >
-                                        <Text style={styles.editPriceBtnText}>✏️ Edit Price</Text>
+                                        <Text style={styles.editPriceBtnText}>✏️ Edit Tariff</Text>
                                     </TouchableOpacity>
                                 </View>
 
@@ -772,13 +1029,13 @@ const AdminDashboardScreen = ({ navigation }) => {
                 )}
 
                 {/* ============================================================== */}
-                {/* TAB 3: OFFLINE / WALK-IN BOOKING ENGINE                        */}
+                {/* TAB 3: OFFLINE / WALK-IN BOOKING STUDIO                        */}
                 {/* ============================================================== */}
                 {activeTab === 'offline' && (
                     <View style={styles.tabContent}>
                         <View style={styles.cardHeaderWrap}>
-                            <Text style={styles.sectionHeader}>Create Direct / Walk-In Reservation</Text>
-                            <Text style={styles.sectionSub}>Instant reservation creator for walk-in or offline guests.</Text>
+                            <Text style={styles.sectionHeader}>Reservation Studio (Walk-In Booking)</Text>
+                            <Text style={styles.sectionSub}>Instant reservation creator for walk-in or offline guests with live ledger.</Text>
                         </View>
 
                         <View style={styles.formCard}>
@@ -873,8 +1130,8 @@ const AdminDashboardScreen = ({ navigation }) => {
                             <Text style={[styles.inputLabelSmall, { marginTop: 14 }]}>ORGANIC MEAL SELECTION (DAILY)</Text>
                             <View style={styles.mealCounterRow}>
                                 <View style={{ flex: 1 }}>
-                                    <Text style={styles.mealLabel}>Breakfast (₹120)</Text>
-                                    <Text style={styles.mealSub}>Veg: {offlineMeals.breakfastVeg}</Text>
+                                    <Text style={styles.mealLabel}>Breakfast (₹120 Veg / ₹150 NV)</Text>
+                                    <Text style={styles.mealSub}>Veg: {offlineMeals.breakfastVeg} · Non-Veg: {offlineMeals.breakfastNonVeg}</Text>
                                 </View>
                                 <TouchableOpacity
                                     style={styles.counterBtn}
@@ -893,8 +1150,8 @@ const AdminDashboardScreen = ({ navigation }) => {
 
                             <View style={styles.mealCounterRow}>
                                 <View style={{ flex: 1 }}>
-                                    <Text style={styles.mealLabel}>Lunch / Dinner (₹200)</Text>
-                                    <Text style={styles.mealSub}>Meals count: {offlineMeals.dinnerVeg}</Text>
+                                    <Text style={styles.mealLabel}>Lunch / Dinner (₹200 Veg / ₹250 NV)</Text>
+                                    <Text style={styles.mealSub}>Veg: {offlineMeals.dinnerVeg} · Non-Veg: {offlineMeals.dinnerNonVeg}</Text>
                                 </View>
                                 <TouchableOpacity
                                     style={styles.counterBtn}
@@ -921,6 +1178,35 @@ const AdminDashboardScreen = ({ navigation }) => {
                                 onChangeText={setOfflineDiscount}
                             />
 
+                            {/* Real-time Ledger Summary */}
+                            <View style={styles.ledgerCard}>
+                                <View style={styles.ledgerHeader}>
+                                    <Text style={styles.ledgerTitle}>FOLIO PRICING LEDGER</Text>
+                                    <Text style={styles.ledgerBadge}>LIVE ESTIMATE</Text>
+                                </View>
+                                <View style={styles.ledgerRow}>
+                                    <Text style={styles.ledgerLabel}>
+                                        Suites ({offlineSelectedRooms.length} room{offlineSelectedRooms.length > 1 ? 's' : ''} × {liveLedger.nights} night{liveLedger.nights > 1 ? 's' : ''}):
+                                    </Text>
+                                    <Text style={styles.ledgerVal}>₹{liveLedger.roomTotal.toLocaleString('en-IN')}</Text>
+                                </View>
+                                <View style={styles.ledgerRow}>
+                                    <Text style={styles.ledgerLabel}>Organic Himalayan Meals:</Text>
+                                    <Text style={styles.ledgerVal}>₹{liveLedger.mealsTotal.toLocaleString('en-IN')}</Text>
+                                </View>
+                                {liveLedger.discount > 0 && (
+                                    <View style={styles.ledgerRow}>
+                                        <Text style={[styles.ledgerLabel, { color: '#E63946' }]}>Courtesy Discount:</Text>
+                                        <Text style={[styles.ledgerVal, { color: '#E63946' }]}>-₹{liveLedger.discount.toLocaleString('en-IN')}</Text>
+                                    </View>
+                                )}
+                                <View style={styles.ledgerDivider} />
+                                <View style={styles.ledgerTotalRow}>
+                                    <Text style={styles.ledgerTotalLabel}>GRAND FOLIO TOTAL:</Text>
+                                    <Text style={styles.ledgerTotalVal}>₹{liveLedger.grandTotal.toLocaleString('en-IN')}</Text>
+                                </View>
+                            </View>
+
                             <TouchableOpacity
                                 style={styles.createOfflineBtn}
                                 onPress={handleCreateOfflineBooking}
@@ -933,24 +1219,66 @@ const AdminDashboardScreen = ({ navigation }) => {
                 )}
 
                 {/* ============================================================== */}
-                {/* TAB 4: CUSTOMER CRM & LOYALTY                                  */}
+                {/* TAB 4: CUSTOMER 360 CRM & GUEST HISTORY                        */}
                 {/* ============================================================== */}
                 {activeTab === 'crm' && (
                     <View style={styles.tabContent}>
-                        <Text style={styles.sectionHeader}>Customer CRM & Loyalty</Text>
-                        <Text style={styles.sectionSub}>Aggregated guest history, lifetime spend, and repeat guest tiers.</Text>
+                        <Text style={styles.sectionHeader}>Customer 360 CRM & Guest History</Text>
+                        <Text style={styles.sectionSub}>Aggregated guest history, portfolio spend, and repeat guest loyalty tiers.</Text>
 
-                        {crmGuests.length === 0 ? (
+                        {/* CRM Search Input */}
+                        <View style={styles.searchWrap}>
+                            <Text style={{ marginRight: 6 }}>🔍</Text>
+                            <TextInput
+                                style={styles.searchInput}
+                                placeholder="Search guests by name, phone, or email..."
+                                placeholderTextColor={colors.grey}
+                                value={crmSearchQuery}
+                                onChangeText={setCrmSearchQuery}
+                            />
+                            {crmSearchQuery.length > 0 && (
+                                <TouchableOpacity onPress={() => setCrmSearchQuery('')}>
+                                    <Text style={{ color: colors.grey, fontWeight: '700' }}>✕</Text>
+                                </TouchableOpacity>
+                            )}
+                        </View>
+
+                        {/* Tier Filter Chips */}
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.crmFilterScroll}>
+                            {[
+                                { key: 'all', label: `All (${crmGuests.length})` },
+                                { key: 'vip', label: `👑 VIP (${crmGuests.filter(g => (g.loyaltyTier || '').includes('VIP')).length})` },
+                                { key: 'returning', label: `🌿 Returning (${crmGuests.filter(g => (g.loyaltyTier || '').includes('Returning')).length})` },
+                                { key: 'new', label: `🌱 New (${crmGuests.filter(g => (g.loyaltyTier || '').includes('First-Time')).length})` }
+                            ].map(tier => (
+                                <TouchableOpacity
+                                    key={tier.key}
+                                    style={[styles.crmChip, crmTierFilter === tier.key && styles.crmChipActive]}
+                                    onPress={() => setCrmTierFilter(tier.key)}
+                                >
+                                    <Text style={[styles.crmChipText, crmTierFilter === tier.key && styles.crmChipTextActive]}>
+                                        {tier.label}
+                                    </Text>
+                                </TouchableOpacity>
+                            ))}
+                        </ScrollView>
+
+                        {filteredCrmGuests.length === 0 ? (
                             <View style={styles.emptyCard}>
                                 <Text style={{ fontSize: 32, marginBottom: 8 }}>👥</Text>
                                 <Text style={styles.emptyTitle}>No guest records found</Text>
                                 <Text style={styles.emptySub}>Guest entries will populate as reservations are recorded.</Text>
                             </View>
                         ) : (
-                            crmGuests.map(cust => (
+                            filteredCrmGuests.map(cust => (
                                 <View key={cust.id} style={styles.crmCard}>
                                     <View style={styles.crmHeaderRow}>
-                                        <View style={{ flex: 1 }}>
+                                        <View style={styles.crmAvatar}>
+                                            <Text style={styles.crmAvatarText}>
+                                                {(cust.name || 'G').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                                            </Text>
+                                        </View>
+                                        <View style={{ flex: 1, marginLeft: 10 }}>
                                             <Text style={styles.crmName}>{cust.name}</Text>
                                             <Text style={styles.crmPhone}>📞 {cust.phone} · ✉️ {cust.email}</Text>
                                         </View>
@@ -967,11 +1295,32 @@ const AdminDashboardScreen = ({ navigation }) => {
                                         <View style={styles.crmStatItem}>
                                             <Text style={styles.crmStatLabel}>CONFIRMED STAYS</Text>
                                             <Text style={styles.crmStatVal}>{cust.confirmedStays} Visits</Text>
+                                            <View style={{ flexDirection: 'row', gap: 2, marginTop: 2 }}>
+                                                {Array.from({ length: Math.min(5, cust.confirmedStays || 1) }).map((_, i) => (
+                                                    <Text key={i} style={{ color: colors.gold, fontSize: 11 }}>★</Text>
+                                                ))}
+                                            </View>
                                         </View>
                                         <View style={styles.crmStatItem}>
                                             <Text style={styles.crmStatLabel}>TOTAL SPEND</Text>
                                             <Text style={styles.crmStatValHighlight}>₹{cust.totalSpend.toLocaleString('en-IN')}</Text>
                                         </View>
+                                    </View>
+
+                                    {/* LTV Spend Progress Bar */}
+                                    <View style={styles.ltvMeterWrap}>
+                                        <View style={styles.ltvMeterTrack}>
+                                            <View
+                                                style={[
+                                                    styles.ltvMeterFill,
+                                                    {
+                                                        width: `${Math.min(100, Math.max(8, Math.round((cust.totalSpend / maxCrmSpend) * 100)))}%`,
+                                                        backgroundColor: (cust.loyaltyTier || '').includes('VIP') ? colors.gold : colors.forest
+                                                    }
+                                                ]}
+                                            />
+                                        </View>
+                                        <Text style={styles.ltvMeterLabel}>Portfolio LTV: ₹{cust.totalSpend.toLocaleString('en-IN')}</Text>
                                     </View>
 
                                     {/* Action row */}
@@ -984,7 +1333,7 @@ const AdminDashboardScreen = ({ navigation }) => {
                                                 Linking.openURL(`https://wa.me/${clean}?text=${encodeURIComponent(msg)}`);
                                             }}
                                         >
-                                            <Text style={styles.btnTextWhite}>💬 Send Loyalty WA</Text>
+                                            <Text style={styles.btnTextWhite}>💬 Send VIP WhatsApp</Text>
                                         </TouchableOpacity>
 
                                         <TouchableOpacity
@@ -1001,7 +1350,7 @@ const AdminDashboardScreen = ({ navigation }) => {
                 )}
 
                 {/* ============================================================== */}
-                {/* TAB 5: COUPONS & PROMOTIONS                                    */}
+                {/* TAB 5: COUPONS & PROMOTIONAL RATES                             */}
                 {/* ============================================================== */}
                 {activeTab === 'coupons' && (
                     <View style={styles.tabContent}>
@@ -1070,6 +1419,44 @@ const AdminDashboardScreen = ({ navigation }) => {
 
                 <View style={{ height: 60 }} />
             </ScrollView>
+
+            {/* Modal: Status Change */}
+            <Modal visible={!!statusModalBooking} transparent animationType="fade">
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalCard}>
+                        <Text style={styles.modalTitle}>Update Reservation Status</Text>
+                        <Text style={styles.modalSub}>
+                            Change folio #{statusModalBooking?.id?.slice(0, 8)} status in Supabase.
+                        </Text>
+
+                        <View style={{ gap: 8, marginVertical: 10 }}>
+                            {[
+                                { key: 'confirmed', label: '✅ Mark as Confirmed', color: '#10B981' },
+                                { key: 'booked', label: '🏠 Mark as Checked In / Booked', color: colors.forest },
+                                { key: 'pending', label: '⏳ Mark as Pending Review', color: '#E76F51' },
+                                { key: 'cancelled', label: '❌ Mark as Cancelled / Closed', color: '#DC2626' }
+                            ].map(opt => (
+                                <TouchableOpacity
+                                    key={opt.key}
+                                    style={[styles.statusOptionBtn, { borderColor: opt.color }]}
+                                    onPress={() => handleUpdateStatus(statusModalBooking.id, opt.key)}
+                                >
+                                    <Text style={[styles.statusOptionText, { color: opt.color }]}>
+                                        {opt.label}
+                                    </Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+
+                        <TouchableOpacity
+                            style={[styles.modalCancelBtn, { alignSelf: 'center', marginTop: 8 }]}
+                            onPress={() => setStatusModalBooking(null)}
+                        >
+                            <Text style={styles.modalCancelText}>Close Window</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </Modal>
 
             {/* Modal: Edit Room Price */}
             <Modal visible={!!editingRoom} transparent animationType="fade">
@@ -1303,6 +1690,58 @@ const styles = StyleSheet.create({
     tabContent: {
         padding: 16
     },
+
+    // Salesforce Pipeline Chevron Path
+    pipelineSection: {
+        marginBottom: 16
+    },
+    pipelineSectionTitle: {
+        fontSize: 10,
+        fontWeight: '800',
+        color: colors.grey,
+        letterSpacing: 0.8,
+        marginBottom: 6
+    },
+    pipelineScroll: {
+        gap: 8
+    },
+    pipelineStep: {
+        backgroundColor: colors.bgSurface,
+        paddingVertical: 8,
+        paddingHorizontal: 14,
+        borderRadius: radius.sm,
+        borderLeftWidth: 3,
+        borderLeftColor: colors.borderMedium,
+        borderWidth: 1,
+        borderColor: colors.borderSubtle,
+        minWidth: 140
+    },
+    pipelineStepActive: {
+        backgroundColor: 'rgba(35, 72, 59, 0.08)',
+        borderLeftColor: colors.forest,
+        borderColor: colors.forest
+    },
+    pipelineStepTitle: {
+        fontSize: 10,
+        fontWeight: '800',
+        color: colors.textMain,
+        letterSpacing: 0.5
+    },
+    pipelineStepTitleActive: {
+        color: colors.forestDark
+    },
+    pipelineStepCount: {
+        fontSize: 11,
+        color: colors.textMuted,
+        fontWeight: '500',
+        marginTop: 2
+    },
+    pipelineStepCountActive: {
+        color: colors.forest,
+        fontWeight: '700'
+    },
+
+    // 5 KPI Metric Cards
     kpiGrid: {
         flexDirection: 'row',
         flexWrap: 'wrap',
@@ -1314,8 +1753,19 @@ const styles = StyleSheet.create({
         backgroundColor: colors.bgSurface,
         borderRadius: radius.md,
         padding: 14,
-        borderWidth: 1.5,
+        borderWidth: 1,
+        borderColor: colors.borderSubtle,
+        borderTopWidth: 3.5,
         ...shadows.subtle
+    },
+    kpiIconWrap: {
+        width: 28,
+        height: 28,
+        borderRadius: 6,
+        backgroundColor: colors.ivoryWarm,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 6
     },
     kpiLabel: {
         fontSize: 9,
@@ -1325,7 +1775,7 @@ const styles = StyleSheet.create({
         marginBottom: 4
     },
     kpiValue: {
-        fontSize: 20,
+        fontSize: 18,
         fontWeight: '800',
         marginBottom: 2
     },
@@ -1333,8 +1783,117 @@ const styles = StyleSheet.create({
         fontSize: 10,
         color: colors.textMuted
     },
+
+    // Analytics Chart Cards
+    chartCard: {
+        backgroundColor: colors.bgSurface,
+        borderRadius: radius.md,
+        padding: 16,
+        marginBottom: 16,
+        borderWidth: 1,
+        borderColor: colors.borderSubtle,
+        ...shadows.card
+    },
+    chartHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'flex-start',
+        marginBottom: 14
+    },
+    chartTitle: {
+        fontSize: 15,
+        fontWeight: '800',
+        color: colors.forestDark
+    },
+    chartSub: {
+        fontSize: 10,
+        color: colors.textMuted,
+        marginTop: 2
+    },
+    chartLegend: {
+        flexDirection: 'row',
+        gap: 10,
+        alignItems: 'center',
+        backgroundColor: colors.ivoryWarm,
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: radius.full
+    },
+    legendItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4
+    },
+    legendDot: {
+        width: 8,
+        height: 8,
+        borderRadius: 2
+    },
+    legendText: {
+        fontSize: 10,
+        fontWeight: '700',
+        color: colors.textMain
+    },
+    chartContainer: {
+        flexDirection: 'row',
+        alignItems: 'flex-end',
+        justifyContent: 'space-around',
+        height: 150,
+        borderBottomWidth: 1.5,
+        borderBottomColor: colors.borderMedium,
+        paddingBottom: 4
+    },
+    barGroup: {
+        alignItems: 'center',
+        justifyContent: 'flex-end',
+        height: '100%'
+    },
+    barsPair: {
+        flexDirection: 'row',
+        alignItems: 'flex-end',
+        gap: 4,
+        height: 120
+    },
+    barCol: {
+        alignItems: 'center',
+        justifyContent: 'flex-end',
+        height: '100%'
+    },
+    barValText: {
+        fontSize: 8,
+        fontWeight: '700',
+        color: colors.textMuted,
+        marginBottom: 3
+    },
+    barTrack: {
+        width: 22,
+        height: 105,
+        backgroundColor: 'rgba(35, 72, 59, 0.05)',
+        borderRadius: 4,
+        justifyContent: 'flex-end',
+        overflow: 'hidden'
+    },
+    barFill: {
+        width: '100%',
+        borderRadius: 4
+    },
+    barMonthLabel: {
+        fontSize: 10,
+        fontWeight: '700',
+        color: colors.textMain,
+        marginTop: 6
+    },
+    chartEmptyText: {
+        color: colors.textMuted,
+        fontSize: 11,
+        fontStyle: 'italic',
+        alignSelf: 'center',
+        marginBottom: 40
+    },
+
+    // Filter & Search
     filterSection: {
-        marginBottom: 16
+        marginBottom: 12
     },
     searchWrap: {
         flexDirection: 'row',
@@ -1344,36 +1903,13 @@ const styles = StyleSheet.create({
         paddingHorizontal: 12,
         borderWidth: 1,
         borderColor: colors.borderMedium,
-        marginBottom: 10
+        marginBottom: 8
     },
     searchInput: {
         flex: 1,
         paddingVertical: 10,
         fontSize: 13,
         color: colors.textMain
-    },
-    filterPills: {
-        gap: 6
-    },
-    pill: {
-        paddingVertical: 6,
-        paddingHorizontal: 12,
-        borderRadius: radius.full,
-        backgroundColor: colors.bgSurface,
-        borderWidth: 1,
-        borderColor: colors.borderSubtle
-    },
-    pillActive: {
-        backgroundColor: colors.forest,
-        borderColor: colors.forest
-    },
-    pillText: {
-        fontSize: 10,
-        fontWeight: '700',
-        color: colors.grey
-    },
-    pillTextActive: {
-        color: colors.ivory
     },
     sectionHeader: {
         fontSize: 16,
@@ -1401,8 +1937,11 @@ const styles = StyleSheet.create({
     },
     emptySub: {
         fontSize: 12,
-        color: colors.grey
+        color: colors.grey,
+        textAlign: 'center'
     },
+
+    // Booking Card
     bookingCard: {
         backgroundColor: colors.bgSurface,
         borderRadius: radius.md,
@@ -1410,27 +1949,26 @@ const styles = StyleSheet.create({
         marginBottom: 12,
         borderWidth: 1,
         borderColor: colors.borderSubtle,
-        ...shadows.subtle
+        ...shadows.card
     },
     bookingHeaderRow: {
         flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between'
+        alignItems: 'center'
     },
     guestAvatar: {
         width: 36,
         height: 36,
-        borderRadius: radius.full,
-        backgroundColor: colors.forestSubtle,
-        borderWidth: 1,
-        borderColor: colors.forest,
+        borderRadius: 18,
+        backgroundColor: 'rgba(35, 72, 59, 0.1)',
         alignItems: 'center',
-        justifyContent: 'center'
+        justifyContent: 'center',
+        borderWidth: 1,
+        borderColor: 'rgba(35, 72, 59, 0.2)'
     },
     guestAvatarText: {
-        fontSize: 12,
+        fontSize: 13,
         fontWeight: '800',
-        color: colors.forest
+        color: colors.forestDark
     },
     guestName: {
         fontSize: 15,
@@ -1439,16 +1977,17 @@ const styles = StyleSheet.create({
     },
     bookingRef: {
         fontSize: 11,
-        color: colors.grey
+        color: colors.textMuted
     },
     statusBadge: {
         paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: radius.xs
+        paddingVertical: 3,
+        borderRadius: radius.full
     },
     statusBadgeText: {
-        fontSize: 9,
-        fontWeight: '800'
+        fontSize: 10,
+        fontWeight: '800',
+        letterSpacing: 0.5
     },
     bookingDivider: {
         height: 1,
@@ -1458,68 +1997,73 @@ const styles = StyleSheet.create({
     bookingDetailRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        marginBottom: 5
+        alignItems: 'center',
+        marginBottom: 6
     },
     detailLabel: {
         fontSize: 10,
-        fontWeight: '700',
-        color: colors.grey
+        fontWeight: '800',
+        color: colors.grey,
+        letterSpacing: 0.5
     },
     detailVal: {
         fontSize: 12,
-        color: colors.textMain,
-        fontWeight: '600'
+        color: colors.textMain
     },
     detailValBold: {
         fontSize: 12,
-        color: colors.forestDark,
-        fontWeight: '700'
+        fontWeight: '700',
+        color: colors.forestDark
     },
     priceHighlight: {
-        fontSize: 15,
+        fontSize: 16,
         fontWeight: '800',
-        color: colors.terracotta
+        color: colors.goldDark || '#99732B'
     },
     actionBtnRow: {
         flexDirection: 'row',
-        flexWrap: 'wrap',
-        gap: 6,
-        marginTop: 12
+        gap: 8,
+        marginTop: 10,
+        flexWrap: 'wrap'
     },
     waBtn: {
         backgroundColor: colors.whatsapp,
-        paddingHorizontal: 10,
+        paddingHorizontal: 12,
         paddingVertical: 7,
         borderRadius: radius.xs
     },
     callBtn: {
         backgroundColor: colors.forest,
-        paddingHorizontal: 10,
+        paddingHorizontal: 12,
         paddingVertical: 7,
         borderRadius: radius.xs
     },
     confirmBtn: {
-        backgroundColor: colors.success,
+        backgroundColor: '#10B981',
+        paddingHorizontal: 12,
+        paddingVertical: 7,
+        borderRadius: radius.xs
+    },
+    statusChangeBtn: {
+        backgroundColor: colors.ivoryWarm,
+        borderWidth: 1,
+        borderColor: colors.borderMedium,
         paddingHorizontal: 10,
         paddingVertical: 7,
         borderRadius: radius.xs
     },
-    cancelBtn: {
-        backgroundColor: '#FEE2E2',
-        paddingHorizontal: 10,
-        paddingVertical: 7,
-        borderRadius: radius.xs
-    },
-    cancelBtnText: {
-        color: '#991B1B',
+    statusChangeBtnText: {
         fontSize: 11,
-        fontWeight: '700'
+        fontWeight: '700',
+        color: colors.textMain
     },
     btnTextWhite: {
         color: '#FFFFFF',
         fontSize: 11,
         fontWeight: '700'
     },
+
+    // Suites & Inventory
     roomCard: {
         backgroundColor: colors.bgSurface,
         borderRadius: radius.md,
@@ -1549,7 +2093,7 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: colors.borderMedium,
         paddingHorizontal: 10,
-        paddingVertical: 6,
+        paddingVertical: 5,
         borderRadius: radius.xs
     },
     editPriceBtnText: {
@@ -1564,13 +2108,16 @@ const styles = StyleSheet.create({
     priceBadge: {
         flex: 1,
         backgroundColor: colors.ivoryWarm,
-        borderRadius: radius.xs,
-        padding: 8
+        padding: 8,
+        borderRadius: radius.sm,
+        borderWidth: 1,
+        borderColor: colors.borderSubtle
     },
     priceBadgeLabel: {
         fontSize: 9,
-        fontWeight: '700',
-        color: colors.grey
+        fontWeight: '800',
+        color: colors.grey,
+        marginBottom: 2
     },
     priceBadgeVal: {
         fontSize: 13,
@@ -1580,7 +2127,7 @@ const styles = StyleSheet.create({
     blockDateCard: {
         backgroundColor: colors.bgSurface,
         borderRadius: radius.md,
-        padding: 18,
+        padding: 16,
         marginTop: 10,
         borderWidth: 1,
         borderColor: colors.borderSubtle
@@ -1589,45 +2136,44 @@ const styles = StyleSheet.create({
         fontSize: 15,
         fontWeight: '800',
         color: colors.forestDark,
-        marginBottom: 3
+        marginBottom: 4
     },
     blockDateSub: {
-        fontSize: 12,
-        color: colors.grey,
+        fontSize: 11,
+        color: colors.textMuted,
         marginBottom: 14
     },
     inputLabelSmall: {
         fontSize: 10,
         fontWeight: '800',
         color: colors.grey,
-        letterSpacing: 0.8,
-        marginBottom: 5,
-        marginTop: 8
+        letterSpacing: 0.5,
+        marginBottom: 4
     },
     simpleInput: {
-        backgroundColor: colors.ivoryWarm,
+        backgroundColor: '#FFFFFF',
         borderWidth: 1,
         borderColor: colors.borderMedium,
         borderRadius: radius.xs,
-        paddingHorizontal: 10,
-        paddingVertical: 9,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
         fontSize: 13,
         color: colors.textMain,
-        marginBottom: 6
+        marginBottom: 10
     },
     roomSelectRow: {
         flexDirection: 'row',
         flexWrap: 'wrap',
         gap: 6,
-        marginBottom: 8
+        marginBottom: 10
     },
     roomChip: {
         paddingHorizontal: 10,
         paddingVertical: 6,
-        borderRadius: radius.xs,
+        borderRadius: radius.full,
         backgroundColor: colors.ivoryWarm,
         borderWidth: 1,
-        borderColor: colors.borderMedium
+        borderColor: colors.borderSubtle
     },
     roomChipActive: {
         backgroundColor: colors.forest,
@@ -1635,18 +2181,19 @@ const styles = StyleSheet.create({
     },
     roomChipText: {
         fontSize: 11,
-        fontWeight: '700',
+        fontWeight: '600',
         color: colors.grey
     },
     roomChipTextActive: {
-        color: colors.ivory
+        color: colors.ivory,
+        fontWeight: '700'
     },
     blockSubmitBtn: {
-        backgroundColor: colors.terracotta,
-        paddingVertical: 12,
+        backgroundColor: colors.forest,
+        paddingVertical: 10,
         borderRadius: radius.xs,
         alignItems: 'center',
-        marginTop: 8
+        marginTop: 6
     },
     blockedItem: {
         flexDirection: 'row',
@@ -1654,13 +2201,13 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         backgroundColor: colors.ivoryWarm,
         padding: 10,
-        borderRadius: radius.xs,
-        marginBottom: 6
+        borderRadius: radius.sm,
+        marginTop: 6
     },
     blockedDateText: {
         fontSize: 12,
         fontWeight: '700',
-        color: colors.textMain
+        color: colors.forestDark
     },
     blockedRoomText: {
         fontSize: 10,
@@ -1669,81 +2216,187 @@ const styles = StyleSheet.create({
     unblockBtn: {
         backgroundColor: '#FEE2E2',
         paddingHorizontal: 8,
-        paddingVertical: 5,
+        paddingVertical: 4,
         borderRadius: radius.xs
     },
     unblockBtnText: {
-        fontSize: 10,
-        fontWeight: '700',
-        color: '#991B1B'
+        color: '#DC2626',
+        fontSize: 11,
+        fontWeight: '700'
     },
+
+    // Walk-In Studio & Ledger
     cardHeaderWrap: {
-        marginBottom: 10
+        marginBottom: 12
     },
     formCard: {
         backgroundColor: colors.bgSurface,
         borderRadius: radius.md,
-        padding: 18,
+        padding: 16,
         borderWidth: 1,
         borderColor: colors.borderSubtle,
-        ...shadows.subtle
+        ...shadows.card
     },
     mealCounterRow: {
         flexDirection: 'row',
         alignItems: 'center',
         backgroundColor: colors.ivoryWarm,
-        borderRadius: radius.xs,
         padding: 10,
-        marginBottom: 6
+        borderRadius: radius.sm,
+        marginBottom: 8
     },
     mealLabel: {
         fontSize: 12,
         fontWeight: '700',
-        color: colors.textMain
+        color: colors.forestDark
     },
     mealSub: {
         fontSize: 10,
         color: colors.grey
     },
     counterBtn: {
-        backgroundColor: colors.forest,
         width: 28,
         height: 28,
-        borderRadius: radius.xs,
-        justifyContent: 'center',
-        alignItems: 'center'
+        borderRadius: 14,
+        backgroundColor: colors.forest,
+        alignItems: 'center',
+        justifyContent: 'center'
     },
     counterBtnText: {
         color: '#FFFFFF',
-        fontSize: 16,
-        fontWeight: 'bold'
+        fontSize: 15,
+        fontWeight: '700'
     },
     counterVal: {
-        fontSize: 14,
+        fontSize: 13,
         fontWeight: '800',
-        marginHorizontal: 12,
+        color: colors.forestDark,
+        marginHorizontal: 12
+    },
+    ledgerCard: {
+        backgroundColor: 'rgba(22, 46, 37, 0.04)',
+        borderRadius: radius.sm,
+        padding: 14,
+        borderWidth: 1,
+        borderColor: 'rgba(197, 160, 89, 0.4)',
+        marginVertical: 12
+    },
+    ledgerHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 8
+    },
+    ledgerTitle: {
+        fontSize: 10,
+        fontWeight: '800',
+        color: colors.forestDark,
+        letterSpacing: 0.8
+    },
+    ledgerBadge: {
+        fontSize: 9,
+        fontWeight: '800',
+        color: colors.gold,
+        backgroundColor: 'rgba(197, 160, 89, 0.15)',
+        paddingHorizontal: 6,
+        paddingVertical: 1,
+        borderRadius: 4
+    },
+    ledgerRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 4
+    },
+    ledgerLabel: {
+        fontSize: 11,
+        color: colors.textMuted
+    },
+    ledgerVal: {
+        fontSize: 11,
+        fontWeight: '700',
+        color: colors.textMain
+    },
+    ledgerDivider: {
+        height: 1,
+        backgroundColor: 'rgba(98, 92, 80, 0.2)',
+        marginVertical: 6
+    },
+    ledgerTotalRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center'
+    },
+    ledgerTotalLabel: {
+        fontSize: 11,
+        fontWeight: '800',
         color: colors.forestDark
     },
+    ledgerTotalVal: {
+        fontSize: 18,
+        fontWeight: '800',
+        color: colors.gold
+    },
     createOfflineBtn: {
-        backgroundColor: colors.forest,
-        paddingVertical: 14,
+        backgroundColor: colors.gold,
+        paddingVertical: 12,
         borderRadius: radius.sm,
         alignItems: 'center',
-        marginTop: 16
+        marginTop: 6
+    },
+
+    // Customer 360 CRM
+    crmFilterScroll: {
+        gap: 6,
+        marginBottom: 12
+    },
+    crmChip: {
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: radius.full,
+        backgroundColor: colors.bgSurface,
+        borderWidth: 1,
+        borderColor: colors.borderSubtle
+    },
+    crmChipActive: {
+        backgroundColor: colors.forest,
+        borderColor: colors.forest
+    },
+    crmChipText: {
+        fontSize: 11,
+        fontWeight: '700',
+        color: colors.grey
+    },
+    crmChipTextActive: {
+        color: colors.ivory
     },
     crmCard: {
         backgroundColor: colors.bgSurface,
         borderRadius: radius.md,
         padding: 16,
-        marginBottom: 10,
+        marginBottom: 12,
         borderWidth: 1,
         borderColor: colors.borderSubtle,
-        ...shadows.subtle
+        ...shadows.card
     },
     crmHeaderRow: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
         alignItems: 'center'
+    },
+    crmAvatar: {
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        backgroundColor: 'rgba(197, 160, 89, 0.15)',
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 1.5,
+        borderColor: colors.gold
+    },
+    crmAvatarText: {
+        fontSize: 12,
+        fontWeight: '800',
+        color: colors.forestDark
     },
     crmName: {
         fontSize: 15,
@@ -1752,13 +2405,12 @@ const styles = StyleSheet.create({
     },
     crmPhone: {
         fontSize: 11,
-        color: colors.grey,
-        marginTop: 2
+        color: colors.grey
     },
     loyaltyBadge: {
         paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: radius.xs
+        paddingVertical: 3,
+        borderRadius: radius.full
     },
     loyaltyBadgeText: {
         fontSize: 10,
@@ -1772,15 +2424,16 @@ const styles = StyleSheet.create({
     crmStatsRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        marginBottom: 10
+        marginBottom: 8
     },
     crmStatItem: {
         flex: 1
     },
     crmStatLabel: {
         fontSize: 9,
-        fontWeight: '700',
-        color: colors.grey
+        fontWeight: '800',
+        color: colors.grey,
+        letterSpacing: 0.5
     },
     crmStatVal: {
         fontSize: 13,
@@ -1790,11 +2443,30 @@ const styles = StyleSheet.create({
     crmStatValHighlight: {
         fontSize: 14,
         fontWeight: '800',
-        color: colors.goldDark || '#99732B'
+        color: colors.gold
+    },
+    ltvMeterWrap: {
+        marginVertical: 6
+    },
+    ltvMeterTrack: {
+        height: 5,
+        backgroundColor: 'rgba(98, 92, 80, 0.15)',
+        borderRadius: 3,
+        overflow: 'hidden'
+    },
+    ltvMeterFill: {
+        height: '100%',
+        borderRadius: 3
+    },
+    ltvMeterLabel: {
+        fontSize: 9,
+        color: colors.textMuted,
+        marginTop: 3
     },
     crmActionRow: {
         flexDirection: 'row',
-        gap: 8
+        gap: 8,
+        marginTop: 8
     },
     crmWaBtn: {
         backgroundColor: colors.whatsapp,
@@ -1810,6 +2482,8 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         borderRadius: radius.xs
     },
+
+    // Coupons
     couponTopHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
@@ -1871,6 +2545,8 @@ const styles = StyleSheet.create({
         paddingVertical: 5,
         borderRadius: radius.xs
     },
+
+    // Modals
     modalOverlay: {
         flex: 1,
         backgroundColor: 'rgba(0,0,0,0.6)',
@@ -1895,6 +2571,17 @@ const styles = StyleSheet.create({
         fontSize: 12,
         color: colors.grey,
         marginBottom: 14
+    },
+    statusOptionBtn: {
+        paddingVertical: 10,
+        paddingHorizontal: 14,
+        borderRadius: radius.xs,
+        borderWidth: 1.5,
+        backgroundColor: colors.ivoryWarm
+    },
+    statusOptionText: {
+        fontSize: 13,
+        fontWeight: '700'
     },
     modalBtnRow: {
         flexDirection: 'row',
