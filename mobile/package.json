@@ -8,8 +8,8 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "build:apk": "npx eas-cli build -p android --profile preview",
-    "build:aab": "npx eas-cli build -p android --profile production",
+    "build:apk": "npx eas-cli build -p android --profile preview --non-interactive",
+    "build:aab": "npx eas-cli build -p android --profile production --non-interactive",
     "prebuild": "npx expo prebuild --platform android"
   },
   "dependencies": {

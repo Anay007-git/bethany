@@ -1,0 +1,15 @@
+# Ignore all top-level directories except mobile
+/api/**
+/dist/**
+/image asset/**
+/public/**
+/src/**
+/supabase/**
+/test/**
+/.vercel/**
+/node_modules/**
+
+# Ignore mobile caches
+mobile/node_modules/
+mobile/.expo/
+mobile/dist/
