@@ -84,59 +84,126 @@
    1. SALESFORCE SLDS SIDEBAR NAVIGATION
    ========================================================================== */
 .admin-layout .admin-sidebar {
-    width: 260px;
+    width: 270px;
     background: var(--slds-bg-sidebar);
     border-right: 1px solid rgba(197, 160, 89, 0.2);
     display: flex;
     flex-direction: column;
     position: fixed;
     height: 100vh;
-    padding: 24px 16px;
+    padding: 20px 14px;
     box-sizing: border-box;
     z-index: 100;
     left: 0;
     top: 0;
     transition: width 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.15);
+    box-shadow: 4px 0 28px rgba(0, 0, 0, 0.25);
 }
 
 .admin-layout .admin-sidebar.collapsed {
-    width: 80px;
-    padding: 24px 12px;
+    width: 76px;
+    padding: 20px 10px;
 }
 
 /* Sidebar Header / Brand */
 .admin-layout .sidebar-header {
     display: flex;
     align-items: center;
-    justifyContent: space-between;
-    margin-bottom: 28px;
+    justify-content: space-between;
+    margin-bottom: 20px;
     padding-bottom: 16px;
-    border-bottom: 1px solid rgba(248, 246, 240, 0.1);
+    border-bottom: 1px solid rgba(248, 246, 240, 0.12);
 }
 
 .admin-layout .sidebar-brand {
-    font-family: var(--font-serif);
-    font-size: 22px;
-    font-weight: 700;
-    color: var(--himalaya-ivory);
-    letter-spacing: 0.5px;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
     text-decoration: none;
 }
 
-.admin-layout .sidebar-brand span {
+.admin-layout .brand-crest {
+    font-size: 24px;
+    line-height: 1;
+}
+
+.admin-layout .brand-titles {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.admin-layout .brand-name {
+    font-family: var(--font-serif);
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--himalaya-ivory);
+    letter-spacing: 1px;
+    line-height: 1;
+}
+
+.admin-layout .brand-badge {
     color: var(--himalaya-gold);
     font-family: var(--font-sans);
-    font-size: 11px;
+    font-size: 9px;
     font-weight: 800;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+}
+
+.admin-layout .brand-initial {
+    font-family: var(--font-serif);
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--himalaya-gold);
+}
+
+.admin-layout .sidebar-collapse-toggle {
+    background: rgba(248, 246, 240, 0.08);
+    border: 1px solid rgba(197, 160, 89, 0.3);
+    color: var(--himalaya-beige);
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 11px;
+    transition: all 0.2s ease;
+}
+
+.admin-layout .sidebar-collapse-toggle:hover {
+    background: var(--himalaya-gold);
+    color: var(--himalaya-forest-dark);
+}
+
+/* Sidebar Scrollable Section */
+.admin-layout .sidebar-scrollable {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: 2px;
+}
+
+.admin-layout .sidebar-scrollable::-webkit-scrollbar {
+    width: 4px;
+}
+
+.admin-layout .sidebar-scrollable::-webkit-scrollbar-thumb {
     background: rgba(197, 160, 89, 0.2);
-    padding: 2px 7px;
-    border-radius: var(--slds-radius-sm);
-    border: 1px solid var(--himalaya-gold);
-    letter-spacing: 1px;
+    border-radius: 2px;
+}
+
+.admin-layout .sidebar-section-label {
+    font-family: var(--font-sans);
+    font-size: 10px;
+    font-weight: 800;
+    color: rgba(234, 227, 213, 0.5);
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    padding: 0 10px;
+    margin-bottom: 6px;
 }
 
 /* App Launcher Icon (Salesforce 9-dot grid) */
@@ -160,15 +227,14 @@
 .admin-layout .sidebar-nav {
     display: flex;
     flex-direction: column;
-    gap: 6px;
-    flex: 1;
+    gap: 4px;
 }
 
 .admin-layout .nav-item {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 11px 14px;
+    gap: 10px;
+    padding: 10px 12px;
     border-radius: var(--slds-radius-md);
     color: var(--himalaya-beige);
     font-family: var(--font-sans);
@@ -180,6 +246,7 @@
     transition: all 0.15s ease;
     text-align: left;
     width: 100%;
+    position: relative;
 }
 
 .admin-layout .nav-item:hover {
@@ -191,16 +258,143 @@
     background: var(--himalaya-gold);
     color: var(--himalaya-forest-dark);
     font-weight: 700;
-    box-shadow: 0 4px 12px rgba(197, 160, 89, 0.35);
+    box-shadow: 0 4px 14px rgba(197, 160, 89, 0.4);
 }
 
-.admin-layout .nav-item span {
+.admin-layout .nav-icon {
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.admin-layout .nav-label-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex: 1;
     white-space: nowrap;
 }
 
+.admin-layout .nav-badge-count {
+    background: rgba(22, 46, 37, 0.25);
+    color: inherit;
+    font-size: 10px;
+    font-weight: 800;
+    padding: 1px 7px;
+    border-radius: var(--slds-radius-pill);
+}
+
+.admin-layout .nav-item.active .nav-badge-count {
+    background: rgba(22, 46, 37, 0.3);
+    color: var(--himalaya-forest-dark);
+}
+
+.admin-layout .nav-badge-pill {
+    background: rgba(248, 246, 240, 0.15);
+    color: var(--himalaya-ivory);
+    font-size: 9px;
+    font-weight: 800;
+    padding: 1px 6px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.admin-layout .nav-badge-pill.gold {
+    background: rgba(197, 160, 89, 0.25);
+    color: var(--himalaya-gold);
+    border: 1px solid rgba(197, 160, 89, 0.4);
+}
+
+.admin-layout .nav-item.active .nav-badge-pill {
+    background: rgba(22, 46, 37, 0.2);
+    color: var(--himalaya-forest-dark);
+    border: none;
+}
+
+/* Sidebar Footer & Concierge Card */
 .admin-layout .sidebar-footer {
-    padding-top: 16px;
-    border-top: 1px solid rgba(248, 246, 240, 0.1);
+    padding-top: 14px;
+    border-top: 1px solid rgba(248, 246, 240, 0.12);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.admin-layout .concierge-user-card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    background: rgba(248, 246, 240, 0.05);
+    border-radius: var(--slds-radius-md);
+    border: 1px solid rgba(197, 160, 89, 0.15);
+}
+
+.admin-layout .concierge-avatar {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: var(--himalaya-gold);
+    color: var(--himalaya-forest-dark);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.admin-layout .concierge-details {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.admin-layout .concierge-name {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--himalaya-ivory);
+}
+
+.admin-layout .concierge-status {
+    font-size: 10px;
+    color: var(--himalaya-beige);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.admin-layout .online-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #10B981;
+    box-shadow: 0 0 6px #10B981;
+}
+
+.admin-layout .btn-sidebar-logout {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 8px;
+    border-radius: var(--slds-radius-sm);
+    background: transparent;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: #FCA5A5;
+    font-family: var(--font-sans);
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.admin-layout .btn-sidebar-logout:hover {
+    background: rgba(239, 68, 68, 0.15);
+    border-color: #EF4444;
+    color: #FFFFFF;
 }
 
 /* ==========================================================================
@@ -208,7 +402,7 @@
    ========================================================================== */
 .admin-layout .admin-main {
     flex: 1;
-    margin-left: 260px;
+    margin-left: 270px;
     padding: 0;
     transition: margin-left 0.25s cubic-bezier(0.16, 1, 0.3, 1);
     min-width: 0;
@@ -216,7 +410,19 @@
 }
 
 .admin-layout .admin-main.expanded {
-    margin-left: 80px;
+    margin-left: 76px;
+}
+
+.admin-layout .page-breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10px;
+    font-weight: 800;
+    color: var(--himalaya-gold);
+    letter-spacing: 0.8px;
+    margin-bottom: 4px;
+    text-transform: uppercase;
 }
 
 /* Salesforce Global Utility Bar */
@@ -226,7 +432,7 @@
     padding: 10px 28px;
     display: flex;
     align-items: center;
-    justifyContent: space-between;
+    justify-content: space-between;
     position: sticky;
     top: 0;
     z-index: 40;
@@ -284,7 +490,7 @@
     color: var(--himalaya-ivory);
     display: flex;
     align-items: center;
-    justifyContent: center;
+    justify-content: center;
     font-size: 11px;
     font-weight: 700;
 }
@@ -296,7 +502,7 @@
     padding: 20px 28px;
     display: flex;
     align-items: center;
-    justifyContent: space-between;
+    justify-content: space-between;
     flex-wrap: wrap;
     gap: 16px;
 }
@@ -503,7 +709,7 @@
     background: var(--himalaya-ivory-warm);
     display: flex;
     align-items: center;
-    justifyContent: center;
+    justify-content: center;
     font-size: 18px;
     flex-shrink: 0;
     border: 1px solid var(--slds-border-color);
@@ -617,7 +823,7 @@
     font-size: 12px;
     display: flex;
     align-items: center;
-    justifyContent: center;
+    justify-content: center;
     border: 1px solid rgba(35, 72, 59, 0.2);
 }
 
@@ -700,27 +906,103 @@
 }
 
 /* ==========================================================================
-   6. SALESFORCE 2-COLUMN FORMS (WALK-IN & OFFLINE ENGINE)
+   6. SALESFORCE 2-COLUMN RESERVATION DEAL STUDIO (WALK-IN CPQ ENGINE)
    ========================================================================== */
-.admin-layout .offline-booking-form {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
+.admin-layout .slds-reservation-studio {
+    padding: 24px 28px;
+    width: 100%;
 }
 
-.admin-layout .form-section-title {
+.admin-layout .studio-hero-bar {
+    background: var(--slds-bg-surface);
+    border: 1px solid var(--slds-border-color);
+    border-left: 4px solid var(--himalaya-forest);
+    border-radius: var(--slds-radius-md);
+    padding: 20px 24px;
+    margin-bottom: 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+    box-shadow: var(--slds-shadow-card);
+}
+
+.admin-layout .studio-hero-bar h2 {
+    font-family: var(--font-serif);
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--himalaya-forest-dark);
+    margin: 0 0 4px 0;
+}
+
+.admin-layout .studio-hero-bar p {
+    font-size: 12px;
+    color: var(--slds-text-secondary);
+    margin: 0;
+    max-width: 720px;
+}
+
+.admin-layout .studio-badges {
+    display: flex;
+    gap: 8px;
+}
+
+/* 2-Column Responsive Grid */
+.admin-layout .studio-layout-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.8fr) minmax(360px, 1.2fr);
+    gap: 24px;
+    align-items: start;
+    width: 100%;
+}
+
+.admin-layout .studio-config-column {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Section Header in Panels */
+.admin-layout .panel-section-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 18px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--slds-border-color);
+}
+
+.admin-layout .title-icon {
+    font-size: 20px;
+    width: 38px;
+    height: 38px;
+    background: var(--himalaya-forest-subtle);
+    border-radius: var(--slds-radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(35, 72, 59, 0.15);
+}
+
+.admin-layout .panel-section-title h4 {
     font-family: var(--font-serif);
     font-size: 18px;
     font-weight: 700;
     color: var(--himalaya-forest-dark);
-    margin-bottom: 12px;
-    padding-bottom: 6px;
-    border-bottom: 1px solid var(--slds-border-color);
+    margin: 0;
 }
 
+.admin-layout .panel-section-title p {
+    font-family: var(--font-sans);
+    font-size: 11px;
+    color: var(--slds-text-secondary);
+    margin: 2px 0 0 0;
+}
+
+/* Form Groups & Inputs */
 .admin-layout .form-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
     gap: 16px;
 }
 
@@ -744,12 +1026,12 @@
     background: var(--himalaya-ivory-warm);
     border: 1px solid var(--slds-border-medium);
     border-radius: var(--slds-radius-sm);
-    padding: 10px 12px;
+    padding: 10px 14px;
     font-family: var(--font-sans);
     font-size: 13px;
     color: var(--slds-text-primary);
     outline: none;
-    transition: border-color 0.2s ease;
+    transition: all 0.2s ease;
 }
 
 .admin-layout .form-group input:focus,
@@ -757,11 +1039,212 @@
 .admin-layout .form-group textarea:focus {
     border-color: var(--himalaya-forest);
     background: #FFFFFF;
-    box-shadow: 0 0 0 3px rgba(35, 72, 59, 0.1);
+    box-shadow: 0 0 0 3px rgba(35, 72, 59, 0.12);
 }
 
-/* Meal Plan Configuration */
+/* Stay Itinerary Meta Banner */
+.admin-layout .stay-meta-banner {
+    background: var(--himalaya-ivory-warm);
+    border: 1px solid var(--slds-border-color);
+    border-radius: var(--slds-radius-sm);
+    padding: 12px 16px;
+    margin-top: 16px;
+}
+
+.admin-layout .meta-pill {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+}
+
+.admin-layout .meta-label {
+    font-weight: 700;
+    color: var(--slds-text-secondary);
+}
+
+.admin-layout .meta-val {
+    font-weight: 800;
+    color: var(--himalaya-forest-dark);
+}
+
+.admin-layout .season-badge {
+    padding: 2px 10px;
+    border-radius: var(--slds-radius-pill);
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.admin-layout .season-badge.peak {
+    background: #FEF3C7;
+    color: #B45309;
+    border: 1px solid #FCD34D;
+}
+
+.admin-layout .season-badge.standard {
+    background: #DCFCE7;
+    color: #15803D;
+    border: 1px solid #86EFAC;
+}
+
+/* Luxury Suite Selection Cards */
+.admin-layout .suite-selector-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 16px;
+}
+
+.admin-layout .suite-card {
+    background: var(--slds-bg-surface);
+    border: 2px solid var(--slds-border-color);
+    border-radius: var(--slds-radius-md);
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    box-shadow: var(--slds-shadow-subtle);
+}
+
+.admin-layout .suite-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--slds-shadow-card);
+    border-color: var(--himalaya-gold);
+}
+
+.admin-layout .suite-card.selected {
+    border-color: var(--himalaya-gold);
+    box-shadow: 0 6px 20px rgba(197, 160, 89, 0.35);
+    background: #FFFCF7;
+}
+
+.admin-layout .suite-card.unavailable {
+    opacity: 0.55;
+    cursor: not-allowed;
+    background: #F8F9FA;
+}
+
+.admin-layout .suite-thumb-wrap {
+    height: 130px;
+    position: relative;
+    overflow: hidden;
+    background: #2D3748;
+}
+
+.admin-layout .suite-thumb {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.4s ease;
+}
+
+.admin-layout .suite-card:hover .suite-thumb {
+    transform: scale(1.06);
+}
+
+.admin-layout .suite-select-checkbox {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.45);
+    border: 2px solid #FFFFFF;
+    color: #FFFFFF;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 14px;
+    transition: all 0.2s ease;
+}
+
+.admin-layout .suite-select-checkbox.checked {
+    background: var(--himalaya-gold);
+    border-color: var(--himalaya-gold);
+    color: var(--himalaya-forest-dark);
+}
+
+.admin-layout .suite-status-tag {
+    position: absolute;
+    bottom: 8px;
+    right: 8px;
+}
+
+.admin-layout .avail-tag,
+.admin-layout .ready-tag {
+    background: rgba(22, 101, 52, 0.9);
+    color: #FFFFFF;
+    padding: 3px 8px;
+    border-radius: var(--slds-radius-sm);
+    font-size: 10px;
+    font-weight: 700;
+    backdrop-filter: blur(4px);
+}
+
+.admin-layout .booked-tag {
+    background: rgba(185, 28, 28, 0.9);
+    color: #FFFFFF;
+    padding: 3px 8px;
+    border-radius: var(--slds-radius-sm);
+    font-size: 10px;
+    font-weight: 700;
+    backdrop-filter: blur(4px);
+}
+
+.admin-layout .suite-card-info {
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex: 1;
+}
+
+.admin-layout .suite-card-title {
+    font-family: var(--font-serif);
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--himalaya-forest-dark);
+}
+
+.admin-layout .suite-card-features {
+    display: flex;
+    gap: 12px;
+    font-size: 11px;
+    color: var(--slds-text-secondary);
+}
+
+.admin-layout .suite-card-price {
+    margin-top: auto;
+    padding-top: 8px;
+    border-top: 1px dashed var(--slds-border-color);
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+}
+
+.admin-layout .suite-card-price .price-val {
+    font-family: var(--font-serif);
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--himalaya-forest);
+}
+
+.admin-layout .suite-card-price .price-sub {
+    font-size: 11px;
+    color: var(--slds-text-weak);
+}
+
+/* Himalayan Kitchen Meal Configurator */
 .admin-layout .meal-configurator {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.admin-layout .meal-plan-card {
     background: var(--himalaya-ivory-warm);
     border: 1px solid var(--slds-border-color);
     border-radius: var(--slds-radius-md);
@@ -771,42 +1254,364 @@
     gap: 12px;
 }
 
-.admin-layout .meal-row {
+.admin-layout .meal-plan-header {
     display: flex;
     align-items: center;
-    justifyContent: space-between;
-    padding: 8px 0;
-    border-bottom: 1px dashed var(--slds-border-color);
+    gap: 12px;
 }
 
-.admin-layout .meal-row:last-child {
-    border-bottom: none;
+.admin-layout .meal-icon {
+    font-size: 24px;
 }
 
-/* Pricing Quote Summary */
-.admin-layout .quote-summary-box {
+.admin-layout .meal-info {
+    flex: 1;
+}
+
+.admin-layout .meal-info h5 {
+    font-family: var(--font-serif);
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--himalaya-forest-dark);
+    margin: 0;
+}
+
+.admin-layout .meal-info p {
+    font-size: 11px;
+    color: var(--slds-text-secondary);
+    margin: 2px 0 0 0;
+}
+
+.admin-layout .meal-rate-badge {
+    background: #FFFFFF;
+    border: 1px solid var(--slds-border-medium);
+    color: var(--himalaya-forest);
+    font-size: 11px;
+    font-weight: 800;
+    padding: 4px 10px;
+    border-radius: var(--slds-radius-pill);
+}
+
+.admin-layout .meal-steppers-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    padding-top: 10px;
+    border-top: 1px dashed var(--slds-border-color);
+}
+
+.admin-layout .meal-stepper {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    background: #FFFFFF;
+    padding: 8px 12px;
+    border-radius: var(--slds-radius-sm);
+    border: 1px solid var(--slds-border-color);
+}
+
+.admin-layout .diet-label {
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.admin-layout .diet-label.veg {
+    color: #15803D;
+}
+
+.admin-layout .diet-label.nonveg {
+    color: #B45309;
+}
+
+.admin-layout .stepper-controls {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.admin-layout .stepper-controls button {
+    width: 26px;
+    height: 26px;
+    border-radius: 4px;
+    border: 1px solid var(--slds-border-medium);
+    background: var(--himalaya-ivory-warm);
+    color: var(--slds-text-primary);
+    font-weight: 800;
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s ease;
+}
+
+.admin-layout .stepper-controls button:hover {
+    background: var(--himalaya-forest);
+    color: #FFFFFF;
+    border-color: var(--himalaya-forest);
+}
+
+.admin-layout .stepper-controls input {
+    width: 42px;
+    text-align: center;
+    border: 1px solid var(--slds-border-medium);
+    border-radius: 4px;
+    padding: 4px;
+    font-weight: 700;
+    font-size: 13px;
+    background: #FFFFFF;
+}
+
+/* Sticky Salesforce CPQ Ledger (Right Column) */
+.admin-layout .studio-ledger-column {
+    position: relative;
+}
+
+.admin-layout .ledger-sticky-card {
+    position: sticky;
+    top: 80px;
     background: var(--himalaya-forest-dark);
     color: var(--himalaya-ivory);
+    border-radius: var(--slds-radius-lg);
+    padding: 24px;
+    border: 1.5px solid var(--himalaya-gold);
+    box-shadow: 0 12px 40px rgba(22, 46, 37, 0.35);
+}
+
+.admin-layout .ledger-header {
+    margin-bottom: 20px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid rgba(248, 246, 240, 0.15);
+}
+
+.admin-layout .ledger-badge {
+    color: var(--himalaya-gold);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+}
+
+.admin-layout .ledger-header h3 {
+    font-family: var(--font-serif);
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--himalaya-ivory);
+    margin: 0 0 4px 0;
+}
+
+.admin-layout .ledger-header p {
+    font-size: 11px;
+    color: var(--himalaya-beige);
+    margin: 0;
+}
+
+.admin-layout .ledger-breakdown {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.admin-layout .ledger-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+}
+
+.admin-layout .ledger-key {
+    color: var(--himalaya-beige);
+    font-size: 12px;
+}
+
+.admin-layout .ledger-val {
+    font-weight: 700;
+    color: var(--himalaya-ivory);
+    text-align: right;
+    max-width: 60%;
+}
+
+.admin-layout .ledger-divider {
+    height: 1px;
+    background: rgba(197, 160, 89, 0.25);
+    margin: 6px 0;
+}
+
+.admin-layout .ledger-discount-box {
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(197, 160, 89, 0.25);
+    border-radius: var(--slds-radius-sm);
+    padding: 10px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.admin-layout .ledger-discount-box label {
+    font-size: 10px;
+    font-weight: 800;
+    color: var(--himalaya-gold);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.admin-layout .ledger-discount-box input {
+    background: rgba(248, 246, 240, 0.08);
+    border: 1px solid rgba(197, 160, 89, 0.4);
+    border-radius: 4px;
+    padding: 8px 12px;
+    color: #FFFFFF;
+    font-size: 14px;
+    font-weight: 700;
+    outline: none;
+}
+
+.admin-layout .ledger-total-box {
+    background: rgba(0, 0, 0, 0.3);
     border-radius: var(--slds-radius-md);
-    padding: 22px;
-    margin-top: 10px;
-    border: 1px solid var(--himalaya-gold);
-    box-shadow: var(--slds-shadow-card);
+    padding: 16px;
+    margin-top: 8px;
+    border: 1px solid rgba(197, 160, 89, 0.35);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
 }
 
-.admin-layout .quote-summary-title {
-    font-family: var(--font-serif);
-    font-size: 20px;
-    font-weight: 700;
-    color: var(--himalaya-gold);
-    margin-bottom: 14px;
+.admin-layout .total-label {
+    font-size: 11px;
+    font-weight: 800;
+    color: var(--himalaya-beige);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
 }
 
-.admin-layout .quote-total-price {
+.admin-layout .total-number {
     font-family: var(--font-serif);
-    font-size: 32px;
+    font-size: 38px;
     font-weight: 700;
     color: var(--himalaya-gold);
+    line-height: 1.1;
+    margin: 4px 0;
+    text-shadow: 0 2px 12px rgba(197, 160, 89, 0.4);
+}
+
+.admin-layout .total-sub {
+    font-size: 10px;
+    color: var(--himalaya-beige);
+    opacity: 0.8;
+}
+
+.admin-layout .btn-confirm-booking {
+    width: 100%;
+    margin-top: 16px;
+    padding: 14px 20px;
+    background: var(--himalaya-gold);
+    color: var(--himalaya-forest-dark);
+    border: none;
+    border-radius: var(--slds-radius-sm);
+    font-family: var(--font-sans);
+    font-size: 14px;
+    font-weight: 800;
+    cursor: pointer;
+    box-shadow: 0 4px 16px rgba(197, 160, 89, 0.4);
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.admin-layout .btn-confirm-booking:hover:not(:disabled) {
+    background: var(--himalaya-gold-light);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(197, 160, 89, 0.6);
+}
+
+.admin-layout .btn-confirm-booking:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    background: #64748B;
+    color: #CBD5E1;
+    box-shadow: none;
+}
+
+.admin-layout .ledger-footer-note {
+    font-size: 10px;
+    color: var(--himalaya-beige);
+    margin-top: 12px;
+    line-height: 1.4;
+    display: flex;
+    gap: 6px;
+    opacity: 0.85;
+}
+
+/* ==========================================================================
+   7. SALESFORCE CUSTOMER 360 CRM STYLING
+   ========================================================================== */
+.admin-layout .crm-container {
+    padding: 24px 28px;
+}
+
+.admin-layout .slds-tier-pill {
+    background: var(--himalaya-ivory-warm);
+    border: 1px solid var(--slds-border-medium);
+    border-radius: var(--slds-radius-pill);
+    padding: 6px 14px;
+    font-family: var(--font-sans);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--slds-text-primary);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.15s ease;
+}
+
+.admin-layout .slds-tier-pill:hover {
+    background: #FFFFFF;
+    border-color: var(--himalaya-forest);
+}
+
+.admin-layout .slds-tier-pill.active {
+    background: var(--himalaya-forest);
+    color: #FFFFFF;
+    border-color: var(--himalaya-forest);
+    font-weight: 700;
+    box-shadow: 0 2px 8px rgba(35, 72, 59, 0.25);
+}
+
+.admin-layout .count-chip {
+    background: rgba(0, 0, 0, 0.08);
+    font-size: 10px;
+    font-weight: 800;
+    padding: 1px 6px;
+    border-radius: var(--slds-radius-pill);
+}
+
+.admin-layout .slds-tier-pill.active .count-chip {
+    background: rgba(255, 255, 255, 0.25);
+    color: #FFFFFF;
+}
+
+.admin-layout .slds-customer-row {
+    transition: background-color 0.15s ease;
+}
+
+.admin-layout .slds-customer-row:hover {
+    background-color: var(--himalaya-ivory-warm);
+}
+
+@media (max-width: 1024px) {
+    .admin-layout .studio-layout-grid {
+        grid-template-columns: 1fr;
+    }
+    .admin-layout .ledger-sticky-card {
+        position: static;
+    }
 }
 
 /* ==========================================================================
@@ -893,7 +1698,7 @@
     backdrop-filter: blur(4px);
     display: flex;
     align-items: center;
-    justifyContent: center;
+    justify-content: center;
     z-index: 1000;
 }
 

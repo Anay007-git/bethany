@@ -647,74 +647,125 @@ const AdminDashboard = ({ onLogout }) => {
 
     return (
         <div className="admin-layout">
-            {/* Sidebar Navigation */}
-            {/* Sidebar Navigation */}
+            {/* Salesforce Lightning Left Navigation */}
             <aside className={`admin-sidebar ${isCollapsed ? 'collapsed' : ''}`}>
                 <div className="sidebar-header">
                     <div className="sidebar-brand">
-                        {!isCollapsed && <>Bethany<span>Admin</span></>}
-                        {isCollapsed && <span style={{ fontSize: '1.5rem' }}>B</span>}
+                        <span className="brand-crest">🏡</span>
+                        {!isCollapsed && (
+                            <div className="brand-titles">
+                                <span className="brand-name">BETHANY</span>
+                                <span className="brand-badge">OPERATIONS CONSOLE</span>
+                            </div>
+                        )}
+                        {isCollapsed && <span className="brand-initial">B</span>}
                     </div>
                     <button
-                        className="btn-secondary"
+                        className="sidebar-collapse-toggle"
                         onClick={() => setIsCollapsed(!isCollapsed)}
-                        style={{
-                            padding: '8px',
-                            minWidth: 'auto',
-                            borderRadius: '50%',
-                            width: '32px',
-                            height: '32px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            marginLeft: isCollapsed ? '0' : 'auto'
-                        }}
+                        title={isCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
                     >
-                        {isCollapsed ? '→' : '←'}
+                        {isCollapsed ? '❯' : '❮'}
                     </button>
                 </div>
 
-                <nav className="sidebar-nav">
-                    <button
-                        className={`nav-item ${activeTab === 'dashboard' ? 'active' : ''}`}
-                        onClick={() => setActiveTab('dashboard')}
-                        title="Dashboard"
-                    >
-                        📊 {!isCollapsed && <span>Dashboard</span>}
-                    </button>
-                    <button
-                        className={`nav-item ${activeTab === 'inventory' ? 'active' : ''}`}
-                        onClick={() => setActiveTab('inventory')}
-                        title="Inventory"
-                    >
-                        🏨 {!isCollapsed && <span>Inventory & OTA</span>}
-                    </button>
-                    <button
-                        className={`nav-item ${activeTab === 'offline' ? 'active' : ''}`}
-                        onClick={() => setActiveTab('offline')}
-                        title="New Booking"
-                    >
-                        ➕ {!isCollapsed && <span>New Booking</span>}
-                    </button>
-                    <button
-                        className={`nav-item ${activeTab === 'marketing' ? 'active' : ''}`}
-                        onClick={() => setActiveTab('marketing')}
-                        title="Marketing"
-                    >
-                        📢 {!isCollapsed && <span>Marketing</span>}
-                    </button>
-                    <button
-                        className={`nav-item ${activeTab === 'coupons' ? 'active' : ''}`}
-                        onClick={() => setActiveTab('coupons')}
-                        title="Coupons"
-                    >
-                        🎟️ {!isCollapsed && <span>Coupons</span>}
-                    </button>
-                </nav>
+                <div className="sidebar-scrollable">
+                    {/* Section 1: Operations */}
+                    <div className="sidebar-section-label">
+                        {!isCollapsed ? 'RESERVATIONS & FOLIO' : '•••'}
+                    </div>
+                    <nav className="sidebar-nav">
+                        <button
+                            className={`nav-item ${activeTab === 'dashboard' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('dashboard')}
+                            title="Dashboard Overview"
+                        >
+                            <span className="nav-icon">📊</span>
+                            {!isCollapsed && (
+                                <span className="nav-label-wrap">
+                                    <span>Operations Overview</span>
+                                    <span className="nav-badge-count">{allBookings.length}</span>
+                                </span>
+                            )}
+                        </button>
+                        <button
+                            className={`nav-item ${activeTab === 'offline' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('offline')}
+                            title="Walk-In Reservation Studio"
+                        >
+                            <span className="nav-icon">➕</span>
+                            {!isCollapsed && (
+                                <span className="nav-label-wrap">
+                                    <span>Reservation Studio</span>
+                                    <span className="nav-badge-pill">Walk-In</span>
+                                </span>
+                            )}
+                        </button>
+                    </nav>
+
+                    {/* Section 2: CRM & Guests */}
+                    <div className="sidebar-section-label" style={{ marginTop: '14px' }}>
+                        {!isCollapsed ? 'GUEST RELATIONSHIPS' : '•••'}
+                    </div>
+                    <nav className="sidebar-nav">
+                        <button
+                            className={`nav-item ${activeTab === 'marketing' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('marketing')}
+                            title="Customer 360 CRM"
+                        >
+                            <span className="nav-icon">👥</span>
+                            {!isCollapsed && (
+                                <span className="nav-label-wrap">
+                                    <span>Customer 360 CRM</span>
+                                    <span className="nav-badge-pill gold">VIP</span>
+                                </span>
+                            )}
+                        </button>
+                        <button
+                            className={`nav-item ${activeTab === 'coupons' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('coupons')}
+                            title="Promotions & Coupons"
+                        >
+                            <span className="nav-icon">🎟️</span>
+                            {!isCollapsed && <span>Coupons & Rates</span>}
+                        </button>
+                    </nav>
+
+                    {/* Section 3: Room Inventory */}
+                    <div className="sidebar-section-label" style={{ marginTop: '14px' }}>
+                        {!isCollapsed ? 'CHANNELS & SUITES' : '•••'}
+                    </div>
+                    <nav className="sidebar-nav">
+                        <button
+                            className={`nav-item ${activeTab === 'inventory' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('inventory')}
+                            title="Inventory & OTA Channel Sync"
+                        >
+                            <span className="nav-icon">🏨</span>
+                            {!isCollapsed && <span>Inventory & OTA</span>}
+                        </button>
+                    </nav>
+                </div>
 
                 <div className="sidebar-footer">
-                    <button onClick={onLogout} className="btn-danger" style={{ width: '100%', justifyContent: 'center', padding: isCollapsed ? '12px 0' : '12px' }}>
-                        {isCollapsed ? '🚪' : '🚪 Logout'}
+                    {!isCollapsed && (
+                        <div className="concierge-user-card">
+                            <div className="concierge-avatar">NH</div>
+                            <div className="concierge-details">
+                                <div className="concierge-name">Namastehills</div>
+                                <div className="concierge-status">
+                                    <span className="online-dot"></span> Concierge Admin
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                    <button 
+                        onClick={onLogout} 
+                        className="btn-sidebar-logout" 
+                        title="Sign Out of Operations Console"
+                    >
+                        <span>🚪</span>
+                        {!isCollapsed && <span>Secure Sign Out</span>}
                     </button>
                 </div>
             </aside>
@@ -770,30 +821,47 @@ const AdminDashboard = ({ onLogout }) => {
 
                 <header className="main-header">
                     <div className="page-title">
-                        <h1>{activeTab === 'dashboard' ? 'Overview' : activeTab === 'inventory' ? 'Room Inventory' : activeTab === 'marketing' ? 'Customer CRM' : activeTab === 'coupons' ? 'Coupon Management' : 'Create Booking'}</h1>
-                        <p>{new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                        <div className="page-breadcrumb">
+                            <span>OPERATIONS</span>
+                            <span>/</span>
+                            <span>{activeTab === 'dashboard' ? 'RESERVATIONS OVERVIEW' : activeTab === 'inventory' ? 'ROOM INVENTORY & CHANNELS' : activeTab === 'marketing' ? 'CUSTOMER 360 CRM' : activeTab === 'coupons' ? 'PROMOTIONS & COUPONS' : 'NEW RESERVATION STUDIO'}</span>
+                        </div>
+                        <h1>
+                            {activeTab === 'dashboard' && '📊 Reservations & Revenue Intelligence'}
+                            {activeTab === 'inventory' && '🏨 Room Inventory & Multi-OTA Sync'}
+                            {activeTab === 'marketing' && '👥 Customer 360 & Guest Loyalty Suite'}
+                            {activeTab === 'coupons' && '🎟️ Promotional Coupons & Tariff Rules'}
+                            {activeTab === 'offline' && '➕ Walk-In & Direct Reservation Studio'}
+                        </h1>
+                        <p>{new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })} · Himalayan Heritage Concierge Desk</p>
                     </div>
 
-                    {activeTab === 'dashboard' && (
-                        <div className="header-actions">
-                            <div className="filter-bar">
-                                <input type="date" value={dateRange.start} onChange={e => setDateRange(p => ({ ...p, start: e.target.value }))} className="date-input" />
-                                <span>→</span>
-                                <input type="date" value={dateRange.end} onChange={e => setDateRange(p => ({ ...p, end: e.target.value }))} className="date-input" />
-                                <select
-                                    value={statusFilter}
-                                    onChange={(e) => setStatusFilter(e.target.value)}
-                                >
-                                    <option value="all">All Status</option>
-                                    <option value="pending">Pending</option>
-                                    <option value="confirmed">Confirmed</option>
-                                    <option value="booked">Booked</option>
-                                    <option value="cancelled">Cancelled</option>
-                                </select>
-                            </div>
-                            <button onClick={exportCSV} className="btn-primary"><span>📥</span> Export CSV</button>
-                        </div>
-                    )}
+                    <div className="header-actions">
+                        {activeTab === 'dashboard' && (
+                            <>
+                                <div className="filter-bar">
+                                    <input type="date" value={dateRange.start} onChange={e => setDateRange(p => ({ ...p, start: e.target.value }))} className="date-input" />
+                                    <span>→</span>
+                                    <input type="date" value={dateRange.end} onChange={e => setDateRange(p => ({ ...p, end: e.target.value }))} className="date-input" />
+                                    <select
+                                        value={statusFilter}
+                                        onChange={(e) => setStatusFilter(e.target.value)}
+                                    >
+                                        <option value="all">All Status</option>
+                                        <option value="pending">Pending</option>
+                                        <option value="confirmed">Confirmed</option>
+                                        <option value="booked">Booked</option>
+                                        <option value="cancelled">Cancelled</option>
+                                    </select>
+                                </div>
+                                <button onClick={exportCSV} className="btn-secondary"><span>📥</span> Export CSV</button>
+                                <button onClick={() => setActiveTab('offline')} className="btn-primary"><span>➕</span> New Booking</button>
+                            </>
+                        )}
+                        {activeTab !== 'dashboard' && (
+                            <button onClick={loadData} className="btn-secondary"><span>🔄</span> Refresh Data</button>
+                        )}
+                    </div>
                 </header>
 
                 {activeTab === 'dashboard' && (
@@ -1458,153 +1526,373 @@ const AdminDashboard = ({ onLogout }) => {
                         )}
                     </div>
                 )}
+
                 {activeTab === 'offline' && (
-                    <div className="card-panel" style={{ maxWidth: '800px', margin: '0 auto' }}>
-                        <h3>Create New Booking</h3>
-                        <form onSubmit={handleOfflineSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-                                <div>
-                                    <label className="form-label">Guest Name</label>
-                                    <input type="text" value={offlineForm.name} onChange={e => setOfflineForm({ ...offlineForm, name: e.target.value })} required className="date-input" style={{ width: '100%' }} />
-                                </div>
-                                <div>
-                                    <label className="form-label">Phone</label>
-                                    <input type="text" value={offlineForm.phone} onChange={e => setOfflineForm({ ...offlineForm, phone: e.target.value })} required className="date-input" style={{ width: '100%' }} />
-                                </div>
-                            </div>
-
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px' }}>
-                                <div>
-                                    <label className="form-label">Check In</label>
-                                    <input type="date" value={offlineForm.checkIn} onChange={e => setOfflineForm({ ...offlineForm, checkIn: e.target.value })} required className="date-input" style={{ width: '100%' }} />
-                                </div>
-                                <div>
-                                    <label className="form-label">Check Out</label>
-                                    <input type="date" value={offlineForm.checkOut} onChange={e => setOfflineForm({ ...offlineForm, checkOut: e.target.value })} required className="date-input" style={{ width: '100%' }} />
-                                </div>
-                                <div>
-                                    <label className="form-label">Guests</label>
-                                    <input
-                                        type="number"
-                                        min="1"
-                                        value={offlineForm.guests}
-                                        onChange={e => setOfflineForm({ ...offlineForm, guests: e.target.value === '' ? '' : parseInt(e.target.value) })}
-                                        onWheel={(e) => e.target.blur()}
-                                        required
-                                        className="date-input"
-                                        style={{ width: '100%' }}
-                                    />
-                                </div>
-                            </div>
-
+                    <div className="slds-reservation-studio">
+                        {/* Studio Top Context Banner */}
+                        <div className="studio-hero-bar">
                             <div>
-                                <label className="form-label" style={{ marginBottom: '10px', display: 'block' }}>Room Selection</label>
-                                <div style={{ display: 'grid', gridTemplateColumns: 'minmax(200px, 1fr) minmax(200px, 1fr)', gap: '15px' }}>
-                                    {rooms.map(r => {
-                                        const isSelected = offlineForm.selectedRooms.includes(r.id);
-                                        const isAvail = (offlineForm.checkIn && offlineForm.checkOut) ? isRoomAvailable(r.id, offlineForm.checkIn, offlineForm.checkOut) : true;
-                                        return (
-                                            <div
-                                                key={r.id}
-                                                onClick={() => {
-                                                    if (!isAvail && !isSelected) return; // Prevent selecting unavailable room
-                                                    setOfflineForm(prev => {
-                                                        const isNowSelected = !isSelected;
-                                                        let newRooms = isNowSelected
-                                                            ? [...prev.selectedRooms, r.id]
-                                                            : prev.selectedRooms.filter(id => id !== r.id);
-                                                        return { ...prev, selectedRooms: newRooms };
-                                                    });
-                                                }}
-                                                style={{
-                                                    padding: '12px 16px',
-                                                    border: `2px solid ${isSelected ? 'var(--primary)' : 'var(--border-color)'}`,
-                                                    borderRadius: '8px',
-                                                    cursor: (!isAvail && !isSelected) ? 'not-allowed' : 'pointer',
-                                                    opacity: (!isAvail && !isSelected) ? 0.5 : 1,
-                                                    background: isSelected ? 'var(--bg-highlight)' : 'transparent',
-                                                    display: 'flex',
-                                                    justifyContent: 'space-between',
-                                                    alignItems: 'center',
-                                                    boxShadow: isSelected ? '0 4px 6px rgba(0,0,0,0.05)' : 'none',
-                                                    transition: 'all 0.2s'
-                                                }}
-                                            >
-                                                <div>
-                                                    <div style={{ fontWeight: '600', color: isSelected ? 'var(--primary)' : 'var(--text-main)' }}>{r.name}</div>
-                                                    <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '4px' }}>Max: {r.capacity} Guests</div>
-                                                </div>
-                                                {offlineForm.checkIn && offlineForm.checkOut && (
-                                                    <div style={{ fontSize: '0.8rem', fontWeight: 'bold', color: isAvail ? 'var(--success)' : 'var(--danger)' }}>
-                                                        {isAvail ? '✅ Avail' : '❌ Booked'}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        );
-                                    })}
-                                </div>
+                                <h2>Walk-In & Direct Reservation Deal Studio</h2>
+                                <p>Salesforce CPQ Opportunity Engine · Select luxury suites, tailor Himalayan meal plans, calculate live tariffs, and generate official WhatsApp folios</p>
                             </div>
+                            <div className="studio-badges">
+                                <span className="badge badge-booked">Direct Walk-In Folio</span>
+                                <span className="badge badge-confirmed">Instant WhatsApp Bill</span>
+                            </div>
+                        </div>
 
-                            <div className="meal-plan-section">
-                                <label className="form-label" style={{ marginBottom: '15px', color: 'var(--text-main)', fontSize: '1rem' }}>Meal Plan (Daily Count)</label>
-                                {['breakfast', 'lunch', 'dinner'].map(type => (
-                                    <div key={type} className="meal-row">
-                                        <div style={{ width: '100px', textTransform: 'capitalize', fontWeight: '500', color: 'var(--text-muted)' }}>{type}</div>
-                                        <div style={{ flex: 1, display: 'flex', gap: '10px' }}>
-                                            <div style={{ flex: 1 }}>
-                                                <input
-                                                    type="number"
-                                                    placeholder="Veg"
-                                                    min="0"
-                                                    value={offlineForm.mealSelection[type].veg === '' ? '' : offlineForm.mealSelection[type].veg}
-                                                    onChange={(e) => handleMealChange(type, 'veg', e.target.value)}
-                                                    onWheel={(e) => e.target.blur()}
-                                                    className="date-input"
-                                                    style={{ width: '100%' }}
-                                                />
-                                            </div>
-                                            <div style={{ flex: 1 }}>
-                                                <input
-                                                    type="number"
-                                                    placeholder="Non-Veg"
-                                                    min="0"
-                                                    value={offlineForm.mealSelection[type].nonVeg === '' ? '' : offlineForm.mealSelection[type].nonVeg}
-                                                    onChange={(e) => handleMealChange(type, 'nonVeg', e.target.value)}
-                                                    onWheel={(e) => e.target.blur()}
-                                                    className="date-input"
-                                                    style={{ width: '100%' }}
-                                                />
-                                            </div>
+                        {/* 2-Column Responsive Studio Layout */}
+                        <form onSubmit={handleOfflineSubmit} className="studio-layout-grid">
+                            {/* Left Column: Stage Configuration (65%) */}
+                            <div className="studio-config-column">
+
+                                {/* 1. Guest Identity & Contact */}
+                                <div className="card-panel" style={{ margin: '0 0 20px 0' }}>
+                                    <div className="panel-section-title">
+                                        <span className="title-icon">👤</span>
+                                        <div>
+                                            <h4>Guest Identity & Primary Contact</h4>
+                                            <p>Guest profile details for digital invoice and WhatsApp concierge confirmation</p>
                                         </div>
                                     </div>
-                                ))}
+                                    <div className="form-grid">
+                                        <div className="form-group">
+                                            <label>Guest Full Name *</label>
+                                            <input
+                                                type="text"
+                                                value={offlineForm.name}
+                                                onChange={e => setOfflineForm({ ...offlineForm, name: e.target.value })}
+                                                placeholder="e.g. Sisir Kumar Soren"
+                                                required
+                                            />
+                                        </div>
+                                        <div className="form-group">
+                                            <label>Primary Phone / WhatsApp *</label>
+                                            <input
+                                                type="tel"
+                                                value={offlineForm.phone}
+                                                onChange={e => setOfflineForm({ ...offlineForm, phone: e.target.value })}
+                                                placeholder="e.g. 9876543210"
+                                                required
+                                            />
+                                        </div>
+                                        <div className="form-group">
+                                            <label>Email Address</label>
+                                            <input
+                                                type="email"
+                                                value={offlineForm.email}
+                                                onChange={e => setOfflineForm({ ...offlineForm, email: e.target.value })}
+                                                placeholder="offline@bethany.com"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* 2. Stay Dates & Headcount */}
+                                <div className="card-panel" style={{ margin: '0 0 20px 0' }}>
+                                    <div className="panel-section-title">
+                                        <span className="title-icon">🗓️</span>
+                                        <div>
+                                            <h4>Stay Itinerary & Party Size</h4>
+                                            <p>Select arrival and departure dates to verify suite inventory & seasonal rates</p>
+                                        </div>
+                                    </div>
+                                    <div className="form-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}>
+                                        <div className="form-group">
+                                            <label>Check-In Date *</label>
+                                            <input
+                                                type="date"
+                                                value={offlineForm.checkIn}
+                                                onChange={e => setOfflineForm({ ...offlineForm, checkIn: e.target.value })}
+                                                required
+                                            />
+                                        </div>
+                                        <div className="form-group">
+                                            <label>Check-Out Date *</label>
+                                            <input
+                                                type="date"
+                                                value={offlineForm.checkOut}
+                                                onChange={e => setOfflineForm({ ...offlineForm, checkOut: e.target.value })}
+                                                required
+                                            />
+                                        </div>
+                                        <div className="form-group">
+                                            <label>Total Guests (Headcount) *</label>
+                                            <input
+                                                type="number"
+                                                min="1"
+                                                max="20"
+                                                value={offlineForm.guests}
+                                                onChange={e => setOfflineForm({ ...offlineForm, guests: e.target.value === '' ? '' : parseInt(e.target.value) })}
+                                                onWheel={(e) => e.target.blur()}
+                                                required
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* Stay Itinerary Meta Banner */}
+                                    {offlineForm.checkIn && offlineForm.checkOut && (
+                                        <div className="stay-meta-banner">
+                                            {(() => {
+                                                const start = new Date(offlineForm.checkIn);
+                                                const end = new Date(offlineForm.checkOut);
+                                                const nights = Math.max(0, Math.ceil((end - start) / (1000 * 60 * 60 * 24)));
+                                                const isHigh = isHighSeason(start);
+                                                return (
+                                                    <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', alignItems: 'center' }}>
+                                                        <div className="meta-pill">
+                                                            <span className="meta-label">Duration:</span>
+                                                            <span className="meta-val">{nights} {nights === 1 ? 'Night' : 'Nights'}</span>
+                                                        </div>
+                                                        <div className="meta-pill">
+                                                            <span className="meta-label">Season Tariff:</span>
+                                                            <span className={`season-badge ${isHigh ? 'peak' : 'standard'}`}>
+                                                                {isHigh ? '🍂 Peak Festival Season' : '🌿 Standard Mountain Season'}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })()}
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* 3. Luxury Suite Selector (High-End Visual Cards) */}
+                                <div className="card-panel" style={{ margin: '0 0 20px 0' }}>
+                                    <div className="panel-section-title">
+                                        <span className="title-icon">🏨</span>
+                                        <div>
+                                            <h4>Luxury Heritage Suite Selection</h4>
+                                            <p>Select one or more suites for this reservation. Click card to toggle.</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="suite-selector-grid">
+                                        {rooms.map(r => {
+                                            const isSelected = offlineForm.selectedRooms.includes(r.id);
+                                            const isAvail = (offlineForm.checkIn && offlineForm.checkOut)
+                                                ? isRoomAvailable(r.id, offlineForm.checkIn, offlineForm.checkOut)
+                                                : true;
+                                            const roomPhoto = r.images?.[0] || 'https://r1imghtlak.mmtcdn.com/bc566280898d11ec90380a58a9feac02.jpg?output-quality=75&downsize=*:500&crop=990:500';
+                                            const checkInDate = offlineForm.checkIn ? new Date(offlineForm.checkIn) : new Date();
+                                            const currentRate = getSeasonalRoomPrice(checkInDate, r.id);
+
+                                            return (
+                                                <div
+                                                    key={r.id}
+                                                    className={`suite-card ${isSelected ? 'selected' : ''} ${!isAvail ? 'unavailable' : ''}`}
+                                                    onClick={() => {
+                                                        if (!isAvail && !isSelected) return;
+                                                        setOfflineForm(prev => {
+                                                            const isNowSelected = !isSelected;
+                                                            const newRooms = isNowSelected
+                                                                ? [...prev.selectedRooms, r.id]
+                                                                : prev.selectedRooms.filter(id => id !== r.id);
+                                                            return { ...prev, selectedRooms: newRooms };
+                                                        });
+                                                    }}
+                                                >
+                                                    <div className="suite-thumb-wrap">
+                                                        <img src={roomPhoto} alt={r.name} className="suite-thumb" />
+                                                        <div className={`suite-select-checkbox ${isSelected ? 'checked' : ''}`}>
+                                                            {isSelected ? '✓' : ''}
+                                                        </div>
+                                                        <div className="suite-status-tag">
+                                                            {offlineForm.checkIn && offlineForm.checkOut ? (
+                                                                isAvail ? (
+                                                                    <span className="avail-tag">● Available</span>
+                                                                ) : (
+                                                                    <span className="booked-tag">✕ Blocked / Booked</span>
+                                                                )
+                                                            ) : (
+                                                                <span className="ready-tag">● Available</span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                    <div className="suite-card-info">
+                                                        <div className="suite-card-title">{r.name}</div>
+                                                        <div className="suite-card-features">
+                                                            <span>👥 {r.capacity || 'Max 4 Guests'}</span>
+                                                            <span>🏔️ {r.view || 'Mountain View'}</span>
+                                                        </div>
+                                                        <div className="suite-card-price">
+                                                            <span className="price-val">₹{currentRate.toLocaleString('en-IN')}</span>
+                                                            <span className="price-sub">/ night</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                    {offlineForm.selectedRooms.length === 0 && (
+                                        <div style={{ marginTop: '12px', fontSize: '12px', color: '#B45309', fontWeight: 600 }}>
+                                            ⚠️ Please select at least one suite above.
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* 4. Himalayan Kitchen Dining Planner */}
+                                <div className="card-panel" style={{ margin: '0 0 20px 0' }}>
+                                    <div className="panel-section-title">
+                                        <span className="title-icon">🍲</span>
+                                        <div>
+                                            <h4>Himalayan Kitchen & Dining Planner</h4>
+                                            <p>Fresh organic meals prepared daily by our local homestay culinary team</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="meal-configurator">
+                                        {[
+                                            { id: 'breakfast', label: 'Mountain Breakfast', icon: '🌅', price: MEAL_PRICES.breakfast, desc: 'Fresh local bakery, eggs, parathas, hot Darjeeling tea' },
+                                            { id: 'lunch', label: 'Traditional Lunch', icon: '☀️', price: MEAL_PRICES.lunch, desc: 'Authentic Himalayan thali, organic rice, dal, seasonal greens' },
+                                            { id: 'dinner', label: 'Homestay Dinner', icon: '🌙', price: MEAL_PRICES.dinner, desc: 'Comforting home-cooked feast & Kalimpong mountain specials' }
+                                        ].map(meal => (
+                                            <div key={meal.id} className="meal-plan-card">
+                                                <div className="meal-plan-header">
+                                                    <span className="meal-icon">{meal.icon}</span>
+                                                    <div className="meal-info">
+                                                        <h5>{meal.label}</h5>
+                                                        <p>{meal.desc}</p>
+                                                    </div>
+                                                    <div className="meal-rate-badge">₹{meal.price}/plate</div>
+                                                </div>
+                                                <div className="meal-steppers-grid">
+                                                    <div className="meal-stepper">
+                                                        <span className="diet-label veg">🥦 Veg Plates:</span>
+                                                        <div className="stepper-controls">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    const cur = parseInt(offlineForm.mealSelection[meal.id].veg) || 0;
+                                                                    handleMealChange(meal.id, 'veg', Math.max(0, cur - 1));
+                                                                }}
+                                                            >-</button>
+                                                            <input
+                                                                type="number"
+                                                                min="0"
+                                                                value={offlineForm.mealSelection[meal.id].veg === '' ? '' : offlineForm.mealSelection[meal.id].veg}
+                                                                onChange={e => handleMealChange(meal.id, 'veg', e.target.value)}
+                                                                onWheel={e => e.target.blur()}
+                                                            />
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    const cur = parseInt(offlineForm.mealSelection[meal.id].veg) || 0;
+                                                                    handleMealChange(meal.id, 'veg', cur + 1);
+                                                                }}
+                                                            >+</button>
+                                                        </div>
+                                                    </div>
+                                                    <div className="meal-stepper">
+                                                        <span className="diet-label nonveg">🍗 Non-Veg:</span>
+                                                        <div className="stepper-controls">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    const cur = parseInt(offlineForm.mealSelection[meal.id].nonVeg) || 0;
+                                                                    handleMealChange(meal.id, 'nonVeg', Math.max(0, cur - 1));
+                                                                }}
+                                                            >-</button>
+                                                            <input
+                                                                type="number"
+                                                                min="0"
+                                                                value={offlineForm.mealSelection[meal.id].nonVeg === '' ? '' : offlineForm.mealSelection[meal.id].nonVeg}
+                                                                onChange={e => handleMealChange(meal.id, 'nonVeg', e.target.value)}
+                                                                onWheel={e => e.target.blur()}
+                                                            />
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    const cur = parseInt(offlineForm.mealSelection[meal.id].nonVeg) || 0;
+                                                                    handleMealChange(meal.id, 'nonVeg', cur + 1);
+                                                                }}
+                                                            >+</button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
                             </div>
 
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-input)', padding: '20px', borderRadius: '12px', border: '1px solid var(--border-glass)' }}>
-                                <div>
-                                    <label className="form-label">Discount (₹)</label>
-                                    <input
-                                        type="number"
-                                        min="0"
-                                        value={offlineForm.discount === 0 ? 0 : (offlineForm.discount || '')}
-                                        onChange={e => setOfflineForm({ ...offlineForm, discount: e.target.value === '' ? '' : parseInt(e.target.value) })}
-                                        onWheel={(e) => e.target.blur()}
-                                        className="date-input"
-                                        placeholder="0"
-                                        style={{ width: '120px', padding: '10px', marginBottom: '8px' }}
-                                    />
-                                    <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>Total Estimated Price</div>
-                                    <div style={{ fontSize: '1.8rem', fontWeight: '700', color: 'var(--text-main)', textShadow: '0 2px 10px rgba(0,0,0,0.3)' }}>₹{(parseInt(offlineForm.price) || 0).toLocaleString('en-IN')}</div>
+                            {/* Right Column: Sticky Salesforce CPQ Ledger (35%) */}
+                            <div className="studio-ledger-column">
+                                <div className="ledger-sticky-card">
+                                    <div className="ledger-header">
+                                        <div className="ledger-badge">FOLIO SUMMARY</div>
+                                        <h3>Reservation Folio Ledger</h3>
+                                        <p>Salesforce CPQ Live Calculation</p>
+                                    </div>
+
+                                    {/* Breakdown Items */}
+                                    <div className="ledger-breakdown">
+                                        <div className="ledger-row">
+                                            <span className="ledger-key">Guest Name</span>
+                                            <span className="ledger-val">{offlineForm.name || 'Not provided'}</span>
+                                        </div>
+                                        <div className="ledger-row">
+                                            <span className="ledger-key">Contact Phone</span>
+                                            <span className="ledger-val">{offlineForm.phone || '—'}</span>
+                                        </div>
+                                        <div className="ledger-row">
+                                            <span className="ledger-key">Selected Suites</span>
+                                            <span className="ledger-val">
+                                                {offlineForm.selectedRooms.length > 0
+                                                    ? rooms.filter(r => offlineForm.selectedRooms.includes(r.id)).map(r => r.name).join(', ')
+                                                    : 'None selected'}
+                                            </span>
+                                        </div>
+                                        <div className="ledger-row">
+                                            <span className="ledger-key">Headcount</span>
+                                            <span className="ledger-val">{offlineForm.guests || 1} Guests</span>
+                                        </div>
+
+                                        <div className="ledger-divider"></div>
+
+                                        {/* Special Discount Field */}
+                                        <div className="ledger-discount-box">
+                                            <label>Special Direct Privilege Discount (₹ Fixed)</label>
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                placeholder="0"
+                                                value={offlineForm.discount === 0 ? '' : offlineForm.discount}
+                                                onChange={e => setOfflineForm({ ...offlineForm, discount: e.target.value === '' ? '' : parseInt(e.target.value) })}
+                                                onWheel={e => e.target.blur()}
+                                            />
+                                        </div>
+
+                                        {/* Grand Total */}
+                                        <div className="ledger-total-box">
+                                            <span className="total-label">Estimated Total Folio</span>
+                                            <span className="total-number">
+                                                ₹{(parseInt(offlineForm.price) || 0).toLocaleString('en-IN')}
+                                            </span>
+                                            <span className="total-sub">Includes all taxes, suites & tailored dining</span>
+                                        </div>
+                                    </div>
+
+                                    {/* Submit Action Button */}
+                                    <button
+                                        type="submit"
+                                        disabled={offlineForm.selectedRooms.length === 0 || !offlineForm.name || !offlineForm.phone}
+                                        className="btn-confirm-booking"
+                                        title={offlineForm.selectedRooms.length === 0 ? 'Select at least one suite' : 'Lock reservation & generate WhatsApp invoice'}
+                                    >
+                                        <span>🔒 Lock & Confirm Reservation</span>
+                                    </button>
+
+                                    <div className="ledger-footer-note">
+                                        <span>💬</span> Automatically generates official invoice bill URL and opens WhatsApp concierge confirmation with pre-filled link
+                                    </div>
                                 </div>
-                                <button type="submit" disabled={!isRoomAvailable(offlineForm.room, offlineForm.checkIn, offlineForm.checkOut)} className="btn-primary" style={{ padding: '12px 24px', fontSize: '1rem', opacity: isRoomAvailable(offlineForm.room, offlineForm.checkIn, offlineForm.checkOut) ? 1 : 0.5 }}>
-                                    Confirm Booking
-                                </button>
                             </div>
                         </form>
                     </div>
-                )
-                }
-            </main >
+                )}
+            </main>
         </div >
     );
 };
