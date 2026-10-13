@@ -509,6 +509,13 @@ const AdminDashboardScreen = ({ navigation }) => {
                     <Text style={styles.topBarSub}>Staff: Namastehills · Concierge Admin</Text>
                 </View>
                 <View style={styles.topBarActions}>
+                    <TouchableOpacity
+                        style={styles.guestViewBtn}
+                        onPress={() => navigation.navigate('MainTabs')}
+                        activeOpacity={0.7}
+                    >
+                        <Text style={styles.guestViewBtnText}>🏠 Guest App</Text>
+                    </TouchableOpacity>
                     <TouchableOpacity style={styles.refreshBtn} onPress={onRefresh} activeOpacity={0.7}>
                         <Text style={styles.refreshBtnText}>🔄 Sync</Text>
                     </TouchableOpacity>
@@ -1629,6 +1636,19 @@ const styles = StyleSheet.create({
     topBarActions: {
         flexDirection: 'row',
         gap: 8
+    },
+    guestViewBtn: {
+        backgroundColor: 'rgba(197, 160, 89, 0.2)',
+        borderWidth: 1,
+        borderColor: colors.gold,
+        paddingHorizontal: 9,
+        paddingVertical: 6,
+        borderRadius: radius.xs
+    },
+    guestViewBtnText: {
+        color: colors.goldLight,
+        fontSize: 11,
+        fontWeight: '700'
     },
     refreshBtn: {
         backgroundColor: 'rgba(255, 255, 255, 0.12)',
