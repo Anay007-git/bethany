@@ -116,6 +116,22 @@ const ContactScreen = ({ navigation }) => {
                     <Text style={styles.arrowIcon}>→</Text>
                 </TouchableOpacity>
 
+                {/* Staff Admin Portal Access */}
+                <TouchableOpacity
+                    style={styles.adminCard}
+                    onPress={() => navigation.navigate('AdminLogin')}
+                    activeOpacity={0.85}
+                >
+                    <View style={styles.adminIconBox}>
+                        <Text style={{ fontSize: 18 }}>🔐</Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                        <Text style={styles.adminCardTitle}>Staff Administration Suite</Text>
+                        <Text style={styles.adminCardSub}>Concierge login · Live bookings · Tariff manager · CRM</Text>
+                    </View>
+                    <Text style={styles.adminArrowIcon}>→</Text>
+                </TouchableOpacity>
+
                 <View style={{ height: 40 }} />
             </View>
         </ScrollView>
@@ -261,6 +277,43 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         color: colors.forest,
         marginLeft: 12
+    },
+    adminCard: {
+        backgroundColor: colors.forestDark,
+        borderRadius: radius.md,
+        padding: 16,
+        marginTop: 14,
+        flexDirection: 'row',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: colors.gold,
+        ...shadows.card
+    },
+    adminIconBox: {
+        width: 36,
+        height: 36,
+        borderRadius: radius.xs,
+        backgroundColor: 'rgba(197, 160, 89, 0.2)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 12
+    },
+    adminCardTitle: {
+        fontSize: 13,
+        fontWeight: '800',
+        color: colors.ivory,
+        marginBottom: 2
+    },
+    adminCardSub: {
+        fontSize: 10,
+        color: colors.beige,
+        opacity: 0.85
+    },
+    adminArrowIcon: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        color: colors.goldLight,
+        marginLeft: 10
     }
 });
 

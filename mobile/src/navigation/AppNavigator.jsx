@@ -16,6 +16,8 @@ import BookingConfirmationScreen from '../screens/BookingConfirmationScreen';
 import MyBookingsScreen from '../screens/MyBookingsScreen';
 import ContactScreen from '../screens/ContactScreen';
 import HomestayPoliciesScreen from '../screens/HomestayPoliciesScreen';
+import AdminLoginScreen from '../screens/AdminLoginScreen';
+import AdminDashboardScreen from '../screens/AdminDashboardScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -73,6 +75,8 @@ export default function AppNavigator() {
                 <Stack.Screen name="PaymentHandoff" component={PaymentHandoffScreen} />
                 <Stack.Screen name="BookingConfirmation" component={BookingConfirmationScreen} />
                 <Stack.Screen name="Policies" component={HomestayPoliciesScreen} />
+                <Stack.Screen name="AdminLogin" component={AdminLoginScreen} />
+                <Stack.Screen name="AdminDashboard" component={AdminDashboardScreen} />
             </Stack.Navigator>
         </NavigationContainer>
     );

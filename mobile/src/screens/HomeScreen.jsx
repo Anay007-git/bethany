@@ -40,8 +40,17 @@ const HomeScreen = ({ navigation }) => {
                     style={styles.heroImage}
                 />
                 <View style={styles.heroOverlay}>
-                    <View style={styles.elevationBadge}>
-                        <Text style={styles.elevationText}>📍 1,250 M · KALIMPONG</Text>
+                    <View style={styles.heroTopRow}>
+                        <View style={styles.elevationBadge}>
+                            <Text style={styles.elevationText}>📍 1,250 M · KALIMPONG</Text>
+                        </View>
+                        <TouchableOpacity
+                            style={styles.staffPortalBadge}
+                            onPress={() => navigation.navigate('AdminLogin')}
+                            activeOpacity={0.8}
+                        >
+                            <Text style={styles.staffPortalBadgeText}>🔐 Staff</Text>
+                        </TouchableOpacity>
                     </View>
                     <Text style={styles.heroTitle}>Wake Up Above The Himalayan Clouds</Text>
                     <Text style={styles.heroSubtitle}>Unobstructed views of Mt. Kanchenjunga & authentic organic hospitality</Text>
@@ -194,13 +203,18 @@ const styles = StyleSheet.create({
         paddingBottom: 24,
         justifyContent: 'flex-end'
     },
+    heroTopRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 12
+    },
     elevationBadge: {
         backgroundColor: 'rgba(244, 239, 230, 0.2)',
         paddingHorizontal: 12,
         paddingVertical: 5,
         borderRadius: radius.full,
         alignSelf: 'flex-start',
-        marginBottom: 12,
         borderWidth: 1,
         borderColor: 'rgba(244, 239, 230, 0.3)'
     },
@@ -209,6 +223,20 @@ const styles = StyleSheet.create({
         fontSize: 11,
         fontWeight: '700',
         letterSpacing: 1
+    },
+    staffPortalBadge: {
+        backgroundColor: 'rgba(22, 46, 37, 0.85)',
+        paddingHorizontal: 10,
+        paddingVertical: 5,
+        borderRadius: radius.full,
+        borderWidth: 1,
+        borderColor: colors.gold
+    },
+    staffPortalBadgeText: {
+        color: colors.ivory,
+        fontSize: 11,
+        fontWeight: '800',
+        letterSpacing: 0.5
     },
     heroTitle: {
         color: colors.ivory,

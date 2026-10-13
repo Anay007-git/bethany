@@ -12,6 +12,10 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 });
 
 export const MobileSupabaseService = {
+    // -------------------------------------------------------------
+    // GUEST-FACING METHODS
+    // -------------------------------------------------------------
+
     // 1. Fetch Rooms Inventory
     async getRooms() {
         try {
@@ -27,7 +31,7 @@ export const MobileSupabaseService = {
         }
     },
 
-    // 2. Fetch Active Bookings for Availability Check
+    // 2. Fetch Active Bookings for Guest Availability Check
     async getAllBookings() {
         try {
             const { data, error } = await supabase
@@ -43,11 +47,13 @@ export const MobileSupabaseService = {
     },
 
     // 3. Fetch OTA Blocked Dates
-    async getBlockedDates() {
+    async getBlockedDates(roomId = null) {
         try {
-            const { data, error } = await supabase
-                .from('ota_blocked_dates')
-                .select('*');
+            let query = supabase.from('ota_blocked_dates').select('*');
+            if (roomId) {
+                query = query.eq('room_id', roomId);
+            }
+            const { data, error } = await query;
             if (error) throw error;
             return { success: true, data: data || [] };
         } catch (err) {
@@ -55,7 +61,7 @@ export const MobileSupabaseService = {
         }
     },
 
-    // 4. Create New Booking
+    // 4. Create New Booking (Guest Flow)
     async createBooking(bookingData) {
         try {
             // A. Create Guest
@@ -178,6 +184,353 @@ export const MobileSupabaseService = {
             return false;
         } catch {
             return false;
+        }
+    },
+
+    // -------------------------------------------------------------
+    // ADMIN MODULE METHODS
+    // -------------------------------------------------------------
+
+    // A1. Admin: Dashboard Stats & Live Bookings
+    async getAdminDashboardStats() {
+        try {
+            const { data: bookings, error } = await supabase
+                .from('bookings')
+                .select(`
+                    *,
+                    guests (
+                        full_name,
+                        email,
+                        phone
+                    ),
+                    invoices (*)
+                `)
+                .order('created_at', { ascending: false });
+
+            if (error) throw error;
+
+            const safeList = bookings || [];
+            const nonCancelled = safeList.filter(b => (b.status || '').toLowerCase() !== 'cancelled');
+            const totalRevenue = nonCancelled.reduce((sum, b) => sum + (parseFloat(b.total_price) || 0), 0);
+            const totalBookings = safeList.length;
+            const pendingBookings = safeList.filter(b => (b.status || '').toLowerCase() === 'pending').length;
+            const confirmedBookings = safeList.filter(b => ['confirmed', 'booked'].includes((b.status || '').toLowerCase())).length;
+            const cancelledBookings = safeList.filter(b => (b.status || '').toLowerCase() === 'cancelled').length;
+
+            return {
+                success: true,
+                totalRevenue,
+                totalBookings,
+                pendingBookings,
+                confirmedBookings,
+                cancelledBookings,
+                allBookings: safeList
+            };
+        } catch (error) {
+            console.error('Admin Stats Fetch Error:', error);
+            return {
+                success: false,
+                totalRevenue: 0,
+                totalBookings: 0,
+                pendingBookings: 0,
+                confirmedBookings: 0,
+                cancelledBookings: 0,
+                allBookings: [],
+                error: error.message
+            };
+        }
+    },
+
+    // A2. Admin: Update Booking Status (e.g. 'confirmed', 'booked', 'cancelled')
+    async updateBookingStatus(bookingId, newStatus) {
+        try {
+            const { data, error } = await supabase
+                .from('bookings')
+                .update({ status: newStatus })
+                .eq('id', bookingId)
+                .select()
+                .single();
+
+            if (error) throw error;
+            return { success: true, data };
+        } catch (error) {
+            console.error('Admin Update Status Error:', error);
+            return { success: false, error: error.message };
+        }
+    },
+
+    // A3. Admin: Update Room Price & Inventory
+    async updateRoom(roomId, updates) {
+        try {
+            const { data, error } = await supabase
+                .from('rooms')
+                .update(updates)
+                .eq('id', roomId)
+                .select()
+                .single();
+
+            if (error) throw error;
+            return { success: true, data };
+        } catch (error) {
+            console.error('Admin Update Room Error:', error);
+            return { success: false, error: error.message };
+        }
+    },
+
+    // A4. Admin: Block Date for Room (OTA Sync / Maintenance)
+    async blockDate(roomId, dateStr, reason = 'Admin Block') {
+        try {
+            const { data, error } = await supabase
+                .from('ota_blocked_dates')
+                .insert([{
+                    room_id: roomId,
+                    blocked_date: dateStr,
+                    source: reason
+                }])
+                .select();
+
+            if (error) throw error;
+            return { success: true, data };
+        } catch (error) {
+            console.error('Admin Block Date Error:', error);
+            return { success: false, error: error.message };
+        }
+    },
+
+    // A5. Admin: Unblock Date for Room
+    async unblockDate(roomId, dateStr) {
+        try {
+            const { error } = await supabase
+                .from('ota_blocked_dates')
+                .delete()
+                .eq('room_id', roomId)
+                .eq('blocked_date', dateStr);
+
+            if (error) throw error;
+            return { success: true };
+        } catch (error) {
+            console.error('Admin Unblock Date Error:', error);
+            return { success: false, error: error.message };
+        }
+    },
+
+    // A6. Admin: Get All Coupons
+    async getCoupons() {
+        try {
+            const { data, error } = await supabase
+                .from('coupons')
+                .select('*')
+                .order('created_at', { ascending: false });
+
+            if (error) throw error;
+            return { success: true, data: data || [] };
+        } catch (error) {
+            console.error('Admin Get Coupons Error:', error);
+            return { success: false, error: error.message, data: [] };
+        }
+    },
+
+    // A7. Admin: Create Coupon
+    async createCoupon(couponData) {
+        try {
+            const { data, error } = await supabase
+                .from('coupons')
+                .insert([{
+                    code: couponData.code.trim().toUpperCase(),
+                    discount_type: couponData.discount_type || 'percentage',
+                    discount_value: parseFloat(couponData.discount_value) || 0,
+                    usage_limit: couponData.usage_limit ? parseInt(couponData.usage_limit, 10) : null,
+                    expiry_date: couponData.expiry_date || null,
+                    is_active: true
+                }])
+                .select()
+                .single();
+
+            if (error) throw error;
+            return { success: true, data };
+        } catch (error) {
+            console.error('Admin Create Coupon Error:', error);
+            return { success: false, error: error.message };
+        }
+    },
+
+    // A8. Admin: Toggle Coupon Active State
+    async toggleCouponActive(couponId, isActive) {
+        try {
+            const { data, error } = await supabase
+                .from('coupons')
+                .update({ is_active: isActive })
+                .eq('id', couponId)
+                .select()
+                .single();
+
+            if (error) throw error;
+            return { success: true, data };
+        } catch (error) {
+            console.error('Admin Toggle Coupon Error:', error);
+            return { success: false, error: error.message };
+        }
+    },
+
+    // A9. Admin: Delete Coupon
+    async deleteCoupon(couponId) {
+        try {
+            const { error } = await supabase
+                .from('coupons')
+                .delete()
+                .eq('id', couponId);
+
+            if (error) throw error;
+            return { success: true };
+        } catch (error) {
+            console.error('Admin Delete Coupon Error:', error);
+            return { success: false, error: error.message };
+        }
+    },
+
+    // A10. Admin: Create Manual / Offline Booking
+    async createAdminManualBooking(bookingData) {
+        try {
+            // A. Create / reuse guest
+            const { data: guest, error: guestError } = await supabase
+                .from('guests')
+                .insert([{
+                    full_name: bookingData.name.trim(),
+                    email: (bookingData.email || 'offline@bethany.com').trim(),
+                    phone: bookingData.phone.trim()
+                }])
+                .select()
+                .single();
+
+            if (guestError) throw guestError;
+
+            // B. Room records array
+            const roomIds = bookingData.selectedRooms.map(r => ({ id: r.id, name: r.name }));
+
+            // C. Insert booking
+            const { data: booking, error: bookingError } = await supabase
+                .from('bookings')
+                .insert([{
+                    guest_id: guest.id,
+                    room_ids: roomIds,
+                    check_in: bookingData.checkIn,
+                    check_out: bookingData.checkOut,
+                    guests_count: parseInt(bookingData.guests, 10) || 1,
+                    total_price: parseFloat(bookingData.totalPrice) || 0,
+                    meal_preferences: bookingData.mealSummary || 'None',
+                    special_requests: bookingData.notes || 'Direct Manual Booking by Concierge',
+                    status: bookingData.status || 'confirmed',
+                    source: 'admin_manual'
+                }])
+                .select()
+                .single();
+
+            if (bookingError) throw bookingError;
+
+            // D. Generate Invoice
+            const invNum = `INV-ADM-${Date.now().toString().slice(-6)}`;
+            await supabase
+                .from('invoices')
+                .insert([{
+                    booking_id: booking.id,
+                    invoice_number: invNum,
+                    items: bookingData.invoiceItems || [{ name: 'Homestay Stay', amount: bookingData.totalPrice }],
+                    total_amount: bookingData.totalPrice,
+                    status: 'paid'
+                }]).catch(() => {});
+
+            return { success: true, booking, guest };
+        } catch (error) {
+            console.error('Admin Manual Booking Error:', error);
+            return { success: false, error: error.message };
+        }
+    },
+
+    // A11. Admin: CRM Analytics & Guest Loyalty Aggregation
+    async getCRMAnalytics() {
+        try {
+            const { data: bookings, error } = await supabase
+                .from('bookings')
+                .select(`
+                    id,
+                    created_at,
+                    check_in,
+                    check_out,
+                    total_price,
+                    status,
+                    source,
+                    guests (
+                        id,
+                        full_name,
+                        email,
+                        phone
+                    )
+                `)
+                .order('created_at', { ascending: false });
+
+            if (error) throw error;
+
+            const guestMap = new Map();
+
+            (bookings || []).forEach(b => {
+                let g = b.guests;
+                if (Array.isArray(g)) g = g[0];
+                if (!g || !g.phone) return;
+
+                const phoneKey = g.phone.replace(/\D/g, '').slice(-10);
+                if (!phoneKey) return;
+
+                const bPrice = parseFloat(b.total_price) || 0;
+                const isPaidStay = ['confirmed', 'booked', 'completed'].includes((b.status || '').toLowerCase());
+
+                if (!guestMap.has(phoneKey)) {
+                    guestMap.set(phoneKey, {
+                        id: g.id || b.id,
+                        name: g.full_name || 'Guest',
+                        phone: g.phone,
+                        email: g.email || 'N/A',
+                        totalBookings: 1,
+                        confirmedStays: isPaidStay ? 1 : 0,
+                        totalSpend: isPaidStay ? bPrice : 0,
+                        lastBookingDate: b.created_at || b.check_in,
+                        bookings: [b]
+                    });
+                } else {
+                    const existing = guestMap.get(phoneKey);
+                    existing.totalBookings += 1;
+                    if (isPaidStay) {
+                        existing.confirmedStays += 1;
+                        existing.totalSpend += bPrice;
+                    }
+                    existing.bookings.push(b);
+                }
+            });
+
+            // Convert to array and calculate loyalty tier
+            const guestsList = Array.from(guestMap.values()).map(cust => {
+                let tier = '🌱 First-Time Guest';
+                let tierColor = '#2A9D8F';
+                if (cust.confirmedStays >= 3 || cust.totalSpend >= 20000) {
+                    tier = '👑 VIP Patron';
+                    tierColor = '#C5A059';
+                } else if (cust.confirmedStays >= 2 || cust.totalSpend >= 8000) {
+                    tier = '🌿 Returning Guest';
+                    tierColor = '#23483B';
+                }
+                return {
+                    ...cust,
+                    loyaltyTier: tier,
+                    tierColor
+                };
+            });
+
+            // Sort by total spend descending
+            guestsList.sort((a, b) => b.totalSpend - a.totalSpend);
+
+            return { success: true, data: guestsList };
+        } catch (error) {
+            console.error('CRM Analytics Error:', error);
+            return { success: false, data: [], error: error.message };
         }
     }
 };
