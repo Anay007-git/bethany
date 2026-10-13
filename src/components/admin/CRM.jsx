@@ -141,7 +141,26 @@ const CRM = ({ allBookings }) => {
                                 filteredGuests.map((guest, index) => (
                                     <tr key={index}>
                                         <td>
-                                            <div style={{ fontWeight: '600', color: '#1e293b' }}>{guest.name}</div>
+                                            <div className="guest-avatar-wrap">
+                                                <div className="guest-avatar">
+                                                    {(guest.name || 'G').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                                                </div>
+                                                <div>
+                                                    <div style={{ fontWeight: '700', color: 'var(--himalaya-forest-dark)' }}>{guest.name}</div>
+                                                    <span style={{
+                                                        fontSize: '10px',
+                                                        fontWeight: '800',
+                                                        padding: '2px 8px',
+                                                        borderRadius: '12px',
+                                                        display: 'inline-block',
+                                                        marginTop: '3px',
+                                                        background: guest.visits >= 3 ? '#FEF3C7' : guest.visits >= 2 ? '#DCFCE7' : '#F3F4F6',
+                                                        color: guest.visits >= 3 ? '#B45309' : guest.visits >= 2 ? '#15803D' : '#6B7280'
+                                                    }}>
+                                                        {guest.visits >= 3 ? '👑 VIP Patron' : guest.visits >= 2 ? '🌿 Returning Guest' : '🌱 New Contact'}
+                                                    </span>
+                                                </div>
+                                            </div>
                                         </td>
                                         <td>
                                             <div style={{ display: 'flex', flexDirection: 'column' }}>

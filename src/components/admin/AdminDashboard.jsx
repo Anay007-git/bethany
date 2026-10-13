@@ -28,6 +28,7 @@ const AdminDashboard = ({ onLogout }) => {
         };
     });
     const [statusFilter, setStatusFilter] = useState('all');
+    const [searchQuery, setSearchQuery] = useState('');
 
     const [offlineForm, setOfflineForm] = useState({
         name: '', phone: '', email: 'offline@bethany.com',
@@ -454,9 +455,20 @@ const AdminDashboard = ({ onLogout }) => {
 
             if (statusFilter !== 'all' && (b.status || '').toLowerCase() !== statusFilter) return false;
 
+            if (searchQuery.trim()) {
+                const q = searchQuery.toLowerCase();
+                const guestName = (b.guests?.full_name || '').toLowerCase();
+                const guestPhone = (b.guests?.phone || '').toLowerCase();
+                const guestEmail = (b.guests?.email || '').toLowerCase();
+                const bookingId = (b.id || '').toLowerCase();
+                const roomNames = (b.room_ids || []).map(r => (r.name || '').toLowerCase()).join(' ');
+                const match = guestName.includes(q) || guestPhone.includes(q) || guestEmail.includes(q) || bookingId.includes(q) || roomNames.includes(q);
+                if (!match) return false;
+            }
+
             return dateMatch;
         });
-    }, [allBookings, dateRange, statusFilter]);
+    }, [allBookings, dateRange, statusFilter, searchQuery]);
 
     // Metrics Logic
     const metrics = useMemo(() => {
@@ -709,6 +721,53 @@ const AdminDashboard = ({ onLogout }) => {
 
             {/* Main Content Area */}
             <main className={`admin-main ${isCollapsed ? 'expanded' : ''}`}>
+                {/* Salesforce Global Utility Header */}
+                <div className="slds-global-header">
+                    <div className="slds-global-header-left">
+                        <div className="slds-app-launcher" title="Salesforce App Launcher">
+                            <span></span><span></span><span></span>
+                            <span></span><span></span><span></span>
+                            <span></span><span></span><span></span>
+                        </div>
+                        <span style={{ fontFamily: 'var(--font-serif)', fontWeight: 700, fontSize: '16px', color: 'var(--himalaya-forest-dark)' }}>
+                            Bethany Homestay Operations Console
+                        </span>
+                        <div className="slds-global-search">
+                            <span>🔍</span>
+                            <input
+                                type="text"
+                                placeholder="Search reservations, guests, phone..."
+                                value={searchQuery}
+                                onChange={e => setSearchQuery(e.target.value)}
+                            />
+                            {searchQuery && (
+                                <button
+                                    onClick={() => setSearchQuery('')}
+                                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--slds-text-weak)' }}
+                                >
+                                    ✕
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                    <div className="slds-global-header-right">
+                        <button
+                            onClick={loadData}
+                            className="btn-secondary"
+                            style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', padding: '5px 10px' }}
+                            title="Sync live Supabase data"
+                        >
+                            🔄 Sync Live
+                        </button>
+                        <div className="slds-user-badge">
+                            <div className="slds-user-avatar">NH</div>
+                            <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--himalaya-forest-dark)' }}>
+                                Namastehills · Concierge Admin
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
                 <header className="main-header">
                     <div className="page-title">
                         <h1>{activeTab === 'dashboard' ? 'Overview' : activeTab === 'inventory' ? 'Room Inventory' : activeTab === 'marketing' ? 'Customer CRM' : activeTab === 'coupons' ? 'Coupon Management' : 'Create Booking'}</h1>
@@ -735,12 +794,49 @@ const AdminDashboard = ({ onLogout }) => {
                             <button onClick={exportCSV} className="btn-primary"><span>📥</span> Export CSV</button>
                         </div>
                     )}
-
-                    {/* Mobile Logout (visible via CSS media query if needed, or keeping it simples for now) */}
                 </header>
 
                 {activeTab === 'dashboard' && (
                     <>
+                        {/* Salesforce Pipeline Chevron Stages Path */}
+                        <div className="slds-pipeline-path">
+                            <div
+                                className={`slds-path-step ${statusFilter === 'all' ? 'active' : ''}`}
+                                onClick={() => setStatusFilter('all')}
+                            >
+                                <span className="slds-path-title">1. ALL RESERVATIONS</span>
+                                <span className="slds-path-count">{allBookings.length} Total</span>
+                            </div>
+                            <div
+                                className={`slds-path-step ${statusFilter === 'pending' ? 'active' : ''}`}
+                                onClick={() => setStatusFilter('pending')}
+                            >
+                                <span className="slds-path-title">2. PENDING REVIEW</span>
+                                <span className="slds-path-count">{allBookings.filter(b => (b.status || '').toLowerCase() === 'pending').length} Action Needed</span>
+                            </div>
+                            <div
+                                className={`slds-path-step confirmed ${statusFilter === 'confirmed' ? 'active' : ''}`}
+                                onClick={() => setStatusFilter('confirmed')}
+                            >
+                                <span className="slds-path-title">3. CONFIRMED STAYS</span>
+                                <span className="slds-path-count">{allBookings.filter(b => (b.status || '').toLowerCase() === 'confirmed').length} Ready</span>
+                            </div>
+                            <div
+                                className={`slds-path-step ${statusFilter === 'booked' ? 'active' : ''}`}
+                                onClick={() => setStatusFilter('booked')}
+                            >
+                                <span className="slds-path-title">4. IN-HOUSE / BOOKED</span>
+                                <span className="slds-path-count">{allBookings.filter(b => (b.status || '').toLowerCase() === 'booked').length} Checked In</span>
+                            </div>
+                            <div
+                                className={`slds-path-step ${statusFilter === 'cancelled' ? 'active' : ''}`}
+                                onClick={() => setStatusFilter('cancelled')}
+                            >
+                                <span className="slds-path-title">5. CANCELLED / CLOSED</span>
+                                <span className="slds-path-count">{allBookings.filter(b => (b.status || '').toLowerCase() === 'cancelled').length} Archival</span>
+                            </div>
+                        </div>
+
                         {/* KPI Cards */}
                         <div className="stats-grid">
                             <StatCard title="Confirmed Revenue" value={`₹${metrics.revenue.toLocaleString('en-IN')}`} icon="💰" color="#10b981" subtitle="In selected range" />
@@ -855,8 +951,15 @@ const AdminDashboard = ({ onLogout }) => {
                                             filteredBookings.map(b => (
                                                 <tr key={b.id}>
                                                     <td>
-                                                        <div style={{ fontWeight: '600' }}>{b.guests?.full_name || 'Unknown'}</div>
-                                                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{b.guests?.phone}</div>
+                                                        <div className="guest-avatar-wrap">
+                                                            <div className="guest-avatar">
+                                                                {(b.guests?.full_name || 'G').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                                                            </div>
+                                                            <div>
+                                                                <div style={{ fontWeight: '700', color: 'var(--himalaya-forest-dark)' }}>{b.guests?.full_name || 'Unknown'}</div>
+                                                                <div style={{ fontSize: '0.8rem', color: 'var(--slds-text-secondary)' }}>📞 {b.guests?.phone}</div>
+                                                            </div>
+                                                        </div>
                                                     </td>
                                                     <td>
                                                         <div style={{ textAlign: 'center', fontWeight: '500' }}>{b.guests_count || 1} 👥</div>

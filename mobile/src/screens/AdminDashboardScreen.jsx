@@ -570,7 +570,12 @@ const AdminDashboardScreen = ({ navigation }) => {
                                 return (
                                     <View key={b.id} style={styles.bookingCard}>
                                         <View style={styles.bookingHeaderRow}>
-                                            <View style={{ flex: 1 }}>
+                                            <View style={styles.guestAvatar}>
+                                                <Text style={styles.guestAvatarText}>
+                                                    {(g?.full_name || 'G').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                                                </Text>
+                                            </View>
+                                            <View style={{ flex: 1, marginLeft: 10 }}>
                                                 <Text style={styles.guestName}>{g?.full_name || 'Guest'}</Text>
                                                 <Text style={styles.bookingRef}>Ref: #{b.id.slice(0, 8)} · {b.source || 'website'}</Text>
                                             </View>
@@ -1411,6 +1416,21 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between'
+    },
+    guestAvatar: {
+        width: 36,
+        height: 36,
+        borderRadius: radius.full,
+        backgroundColor: colors.forestSubtle,
+        borderWidth: 1,
+        borderColor: colors.forest,
+        alignItems: 'center',
+        justifyContent: 'center'
+    },
+    guestAvatarText: {
+        fontSize: 12,
+        fontWeight: '800',
+        color: colors.forest
     },
     guestName: {
         fontSize: 15,

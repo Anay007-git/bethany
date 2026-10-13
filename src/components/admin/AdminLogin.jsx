@@ -210,7 +210,7 @@ const AdminLogin = () => {
             alignItems: 'center',
             justifyContent: 'center',
             padding: '24px',
-            fontFamily: "'Outfit', 'Plus Jakarta Sans', system-ui, sans-serif"
+            fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif"
         }}>
             <div style={{
                 background: '#FFFFFF',
@@ -239,8 +239,9 @@ const AdminLogin = () => {
                     </div>
                     <h2 style={{
                         color: '#162E25',
-                        fontSize: '24px',
-                        fontWeight: '800',
+                        fontFamily: "'Cormorant Garamond', Georgia, serif",
+                        fontSize: '32px',
+                        fontWeight: '700',
                         margin: '0 0 6px 0',
                         letterSpacing: '-0.3px'
                     }}>
