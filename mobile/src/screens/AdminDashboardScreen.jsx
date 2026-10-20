@@ -48,6 +48,24 @@ const AdminDashboardScreen = ({ navigation }) => {
     const [editingRoom, setEditingRoom] = useState(null);
     const [highPriceInput, setHighPriceInput] = useState('');
     const [lowPriceInput, setLowPriceInput] = useState('');
+    const [editFeaturesInput, setEditFeaturesInput] = useState('');
+    const [editCapacityInput, setEditCapacityInput] = useState('');
+    const [editViewInput, setEditViewInput] = useState('');
+
+    // List New Room Modal State
+    const [showCreateRoomModal, setShowCreateRoomModal] = useState(false);
+    const [newRoomForm, setNewRoomForm] = useState({
+        name: '',
+        id: '',
+        price_low_season: '2500',
+        price_high_season: '3000',
+        capacity: '4 Adults',
+        view: 'Mountain View',
+        size: '380 sq.ft',
+        features: 'King Bed, Mountain View, Free High-speed WiFi, Geyser Water Heater, Electric Kettle',
+        imageUrl: '',
+        description: ''
+    });
 
     // Block Date inputs
     const [selectedRoomForBlock, setSelectedRoomForBlock] = useState('carmel');
@@ -319,7 +337,7 @@ const AdminDashboardScreen = ({ navigation }) => {
         Linking.openURL(`tel:${phone.replace(/\D/g, '')}`);
     };
 
-    // Save Room Pricing
+    // Save Room Pricing & Features
     const handleSaveRoomPrice = async () => {
         if (!editingRoom) return;
         const hp = parseFloat(highPriceInput);
@@ -329,18 +347,116 @@ const AdminDashboardScreen = ({ navigation }) => {
             return;
         }
 
+        const featuresArray = editFeaturesInput
+            ? editFeaturesInput.split(',').map(f => f.trim()).filter(Boolean)
+            : (Array.isArray(editingRoom.features) ? editingRoom.features : []);
+
         const res = await MobileSupabaseService.updateRoom(editingRoom.id, {
             price_high_season: hp,
-            price_low_season: lp
+            price_low_season: lp,
+            features: featuresArray,
+            capacity: editCapacityInput.trim() || editingRoom.capacity,
+            view_type: editViewInput.trim() || editingRoom.view_type
         });
 
         if (res.success) {
-            Alert.alert('Success', `${editingRoom.name} pricing updated.`);
+            Alert.alert('Success', `${editingRoom.name} updated successfully.`);
             setEditingRoom(null);
             loadAllAdminData();
         } else {
-            Alert.alert('Error', res.error || 'Failed to update room pricing.');
+            Alert.alert('Error', res.error || 'Failed to update room.');
         }
+    };
+
+    // Create & List New Room
+    const handleCreateRoom = async () => {
+        if (!newRoomForm.name.trim()) {
+            Alert.alert('Validation Error', 'Please enter a Suite name.');
+            return;
+        }
+
+        const slug = newRoomForm.id.trim()
+            ? newRoomForm.id.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '')
+            : newRoomForm.name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+
+        if (!slug) {
+            Alert.alert('Validation Error', 'Please enter a valid unique Suite ID / Slug.');
+            return;
+        }
+
+        if (rooms.some(r => r.id === slug)) {
+            Alert.alert('Duplicate ID', `A room with ID "${slug}" already exists. Please choose a different name or ID.`);
+            return;
+        }
+
+        const hp = parseFloat(newRoomForm.price_high_season) || 3000;
+        const lp = parseFloat(newRoomForm.price_low_season) || 2500;
+        const featuresArray = newRoomForm.features
+            ? newRoomForm.features.split(',').map(f => f.trim()).filter(Boolean)
+            : ['King Bed', 'Mountain View', 'High-Speed Wi-Fi'];
+
+        const images = newRoomForm.imageUrl.trim()
+            ? [newRoomForm.imageUrl.trim()]
+            : ['https://r1imghtlak.mmtcdn.com/bc566280898d11ec90380a58a9feac02.jpg?output-quality=75&downsize=*:500&crop=990:500'];
+
+        const payload = {
+            id: slug,
+            name: newRoomForm.name.trim(),
+            price_low_season: lp,
+            price_high_season: hp,
+            capacity: newRoomForm.capacity || '4 Adults',
+            view_type: newRoomForm.view || 'Mountain View',
+            size: newRoomForm.size || '380 sq.ft',
+            description: newRoomForm.description || '',
+            features: featuresArray,
+            images: images,
+            is_active: true
+        };
+
+        const res = await MobileSupabaseService.createRoom(payload);
+        if (res.success) {
+            Alert.alert('Success', `🎉 Suite "${newRoomForm.name}" created and listed successfully!`);
+            setShowCreateRoomModal(false);
+            setNewRoomForm({
+                name: '',
+                id: '',
+                price_low_season: '2500',
+                price_high_season: '3000',
+                capacity: '4 Adults',
+                view: 'Mountain View',
+                size: '380 sq.ft',
+                features: 'King Bed, Mountain View, Free High-speed WiFi, Geyser Water Heater, Electric Kettle',
+                imageUrl: '',
+                description: ''
+            });
+            loadAllAdminData();
+        } else {
+            Alert.alert('Error', res.error || 'Failed to list new suite.');
+        }
+    };
+
+    // Delete Room
+    const handleDeleteRoom = (room) => {
+        Alert.alert(
+            'Confirm Delete',
+            `Are you sure you want to permanently delete "${room.name}"? This will remove it from app and web listings.`,
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Delete Suite',
+                    style: 'destructive',
+                    onPress: async () => {
+                        const res = await MobileSupabaseService.deleteRoom(room.id);
+                        if (res.success) {
+                            Alert.alert('Deleted', `${room.name} has been removed.`);
+                            loadAllAdminData();
+                        } else {
+                            Alert.alert('Error', res.error || 'Failed to delete room.');
+                        }
+                    }
+                }
+            ]
+        );
     };
 
     // Block Date
@@ -927,26 +1043,48 @@ const AdminDashboardScreen = ({ navigation }) => {
                 {/* ============================================================== */}
                 {activeTab === 'inventory' && (
                     <View style={styles.tabContent}>
-                        <Text style={styles.sectionHeader}>Suites & Live Pricing</Text>
-                        <Text style={styles.sectionSub}>Tap any suite to update high & low season tariffs.</Text>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                            <View style={{ flex: 1, paddingRight: 8 }}>
+                                <Text style={styles.sectionHeader}>Suites & Live Pricing</Text>
+                                <Text style={styles.sectionSub}>Manage tariffs, custom features, and live inventory.</Text>
+                            </View>
+                            <TouchableOpacity
+                                style={styles.addSuiteBtn}
+                                onPress={() => setShowCreateRoomModal(true)}
+                                activeOpacity={0.8}
+                            >
+                                <Text style={styles.addSuiteBtnText}>➕ List Suite</Text>
+                            </TouchableOpacity>
+                        </View>
 
                         {rooms.map(room => (
                             <View key={room.id} style={styles.roomCard}>
                                 <View style={styles.roomHeaderRow}>
-                                    <View style={{ flex: 1 }}>
+                                    <View style={{ flex: 1, paddingRight: 6 }}>
                                         <Text style={styles.roomName}>{room.name}</Text>
                                         <Text style={styles.roomMeta}>{room.capacity} · {room.view_type || 'Mountain View'}</Text>
                                     </View>
-                                    <TouchableOpacity
-                                        style={styles.editPriceBtn}
-                                        onPress={() => {
-                                            setEditingRoom(room);
-                                            setHighPriceInput(String(room.price_high_season || ''));
-                                            setLowPriceInput(String(room.price_low_season || ''));
-                                        }}
-                                    >
-                                        <Text style={styles.editPriceBtnText}>✏️ Edit Tariff</Text>
-                                    </TouchableOpacity>
+                                    <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
+                                        <TouchableOpacity
+                                            style={styles.editPriceBtn}
+                                            onPress={() => {
+                                                setEditingRoom(room);
+                                                setHighPriceInput(String(room.price_high_season || ''));
+                                                setLowPriceInput(String(room.price_low_season || ''));
+                                                setEditFeaturesInput(Array.isArray(room.features) ? room.features.join(', ') : (room.features || ''));
+                                                setEditCapacityInput(room.capacity || '');
+                                                setEditViewInput(room.view_type || '');
+                                            }}
+                                        >
+                                            <Text style={styles.editPriceBtnText}>✏️ Edit</Text>
+                                        </TouchableOpacity>
+                                        <TouchableOpacity
+                                            style={[styles.editPriceBtn, { backgroundColor: '#FEE2E2', borderColor: '#FCA5A5' }]}
+                                            onPress={() => handleDeleteRoom(room)}
+                                        >
+                                            <Text style={[styles.editPriceBtnText, { color: '#DC2626' }]}>🗑️</Text>
+                                        </TouchableOpacity>
+                                    </View>
                                 </View>
 
                                 <View style={styles.priceRow}>
@@ -959,6 +1097,16 @@ const AdminDashboardScreen = ({ navigation }) => {
                                         <Text style={styles.priceBadgeVal}>₹{room.price_low_season}/night</Text>
                                     </View>
                                 </View>
+
+                                {room.features && (Array.isArray(room.features) ? room.features : String(room.features).split(',')).length > 0 && (
+                                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: 8 }}>
+                                        {(Array.isArray(room.features) ? room.features : String(room.features).split(',')).map((f, i) => (
+                                            <View key={i} style={{ backgroundColor: 'rgba(35, 72, 59, 0.08)', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 4 }}>
+                                                <Text style={{ fontSize: 10, color: colors.forestDark, fontWeight: '600' }}>✓ {f.trim()}</Text>
+                                            </View>
+                                        ))}
+                                    </View>
+                                )}
                             </View>
                         ))}
 
@@ -1465,37 +1613,232 @@ const AdminDashboardScreen = ({ navigation }) => {
                 </View>
             </Modal>
 
-            {/* Modal: Edit Room Price */}
+            {/* Modal: Edit Room Price & Features */}
             <Modal visible={!!editingRoom} transparent animationType="fade">
                 <View style={styles.modalOverlay}>
-                    <View style={styles.modalCard}>
-                        <Text style={styles.modalTitle}>Edit Tariff: {editingRoom?.name}</Text>
-                        <Text style={styles.modalSub}>Update season prices per room per night.</Text>
+                    <View style={[styles.modalCard, { maxHeight: '90%' }]}>
+                        <ScrollView showsVerticalScrollIndicator={false}>
+                            <Text style={styles.modalTitle}>Edit Suite: {editingRoom?.name}</Text>
+                            <Text style={styles.modalSub}>Update tariffs, capacity, and custom amenities/features.</Text>
 
-                        <Text style={styles.inputLabelSmall}>HIGH SEASON PRICE (₹)</Text>
-                        <TextInput
-                            style={styles.simpleInput}
-                            keyboardType="numeric"
-                            value={highPriceInput}
-                            onChangeText={setHighPriceInput}
-                        />
+                            <View style={{ flexDirection: 'row', gap: 10 }}>
+                                <View style={{ flex: 1 }}>
+                                    <Text style={styles.inputLabelSmall}>HIGH SEASON (₹)</Text>
+                                    <TextInput
+                                        style={styles.simpleInput}
+                                        keyboardType="numeric"
+                                        value={highPriceInput}
+                                        onChangeText={setHighPriceInput}
+                                    />
+                                </View>
+                                <View style={{ flex: 1 }}>
+                                    <Text style={styles.inputLabelSmall}>LOW SEASON (₹)</Text>
+                                    <TextInput
+                                        style={styles.simpleInput}
+                                        keyboardType="numeric"
+                                        value={lowPriceInput}
+                                        onChangeText={setLowPriceInput}
+                                    />
+                                </View>
+                            </View>
 
-                        <Text style={styles.inputLabelSmall}>LOW SEASON PRICE (₹)</Text>
-                        <TextInput
-                            style={styles.simpleInput}
-                            keyboardType="numeric"
-                            value={lowPriceInput}
-                            onChangeText={setLowPriceInput}
-                        />
+                            <Text style={styles.inputLabelSmall}>CAPACITY</Text>
+                            <TextInput
+                                style={styles.simpleInput}
+                                placeholder="e.g. 4 Adults + 1 Kid"
+                                value={editCapacityInput}
+                                onChangeText={setEditCapacityInput}
+                            />
 
-                        <View style={styles.modalBtnRow}>
-                            <TouchableOpacity style={styles.modalCancelBtn} onPress={() => setEditingRoom(null)}>
-                                <Text style={styles.modalCancelText}>Cancel</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity style={styles.modalSaveBtn} onPress={handleSaveRoomPrice}>
-                                <Text style={styles.btnTextWhite}>Save Tariff</Text>
-                            </TouchableOpacity>
-                        </View>
+                            <Text style={styles.inputLabelSmall}>VIEW TYPE</Text>
+                            <TextInput
+                                style={styles.simpleInput}
+                                placeholder="e.g. 180° Kanchenjunga View"
+                                value={editViewInput}
+                                onChangeText={setEditViewInput}
+                            />
+
+                            <Text style={styles.inputLabelSmall}>ROOM FEATURES & AMENITIES (COMMA SEPARATED)</Text>
+                            <TextInput
+                                style={[styles.simpleInput, { height: 64, textAlignVertical: 'top' }]}
+                                multiline
+                                placeholder="e.g. King Bed, Mountain View, Geyser, Free WiFi"
+                                value={editFeaturesInput}
+                                onChangeText={setEditFeaturesInput}
+                            />
+
+                            <Text style={[styles.inputLabelSmall, { marginTop: 4, marginBottom: 4 }]}>QUICK ADD FEATURE:</Text>
+                            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
+                                {['Mountain View', 'Private Balcony', 'King Bed', 'Geyser', 'Electric Kettle', 'Wi-Fi', 'Room Heater', 'Living Area'].map((feat, idx) => (
+                                    <TouchableOpacity
+                                        key={idx}
+                                        style={{ backgroundColor: colors.ivoryWarm, borderWidth: 1, borderColor: colors.borderSubtle, paddingHorizontal: 8, paddingVertical: 4, borderRadius: radius.xs }}
+                                        onPress={() => {
+                                            const current = editFeaturesInput.trim();
+                                            if (!current) {
+                                                setEditFeaturesInput(feat);
+                                            } else if (!current.toLowerCase().includes(feat.toLowerCase())) {
+                                                setEditFeaturesInput(`${current}, ${feat}`);
+                                            }
+                                        }}
+                                    >
+                                        <Text style={{ fontSize: 10, fontWeight: '700', color: colors.forestDark }}>+ {feat}</Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+
+                            <View style={styles.modalBtnRow}>
+                                <TouchableOpacity style={styles.modalCancelBtn} onPress={() => setEditingRoom(null)}>
+                                    <Text style={styles.modalCancelText}>Cancel</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity style={styles.modalSaveBtn} onPress={handleSaveRoomPrice}>
+                                    <Text style={styles.btnTextWhite}>Save Changes</Text>
+                                </TouchableOpacity>
+                            </View>
+                        </ScrollView>
+                    </View>
+                </View>
+            </Modal>
+
+            {/* Modal: List New Suite */}
+            <Modal visible={showCreateRoomModal} transparent animationType="fade">
+                <View style={styles.modalOverlay}>
+                    <View style={[styles.modalCard, { maxHeight: '90%' }]}>
+                        <ScrollView showsVerticalScrollIndicator={false}>
+                            <Text style={styles.modalTitle}>List New Boutique Suite</Text>
+                            <Text style={styles.modalSub}>Add a new room listing to app and web catalog.</Text>
+
+                            <Text style={styles.inputLabelSmall}>SUITE NAME *</Text>
+                            <TextInput
+                                style={styles.simpleInput}
+                                placeholder="e.g. Hermon Suite"
+                                value={newRoomForm.name}
+                                onChangeText={(text) => {
+                                    const autoSlug = text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+                                    setNewRoomForm(prev => ({
+                                        ...prev,
+                                        name: text,
+                                        id: prev.id ? prev.id : autoSlug
+                                    }));
+                                }}
+                            />
+
+                            <Text style={styles.inputLabelSmall}>UNIQUE ID / SLUG *</Text>
+                            <TextInput
+                                style={styles.simpleInput}
+                                placeholder="e.g. hermon"
+                                autoCapitalize="none"
+                                value={newRoomForm.id}
+                                onChangeText={(text) => setNewRoomForm(prev => ({ ...prev, id: text.toLowerCase().replace(/[^a-z0-9_-]/g, '') }))}
+                            />
+
+                            <View style={{ flexDirection: 'row', gap: 10 }}>
+                                <View style={{ flex: 1 }}>
+                                    <Text style={styles.inputLabelSmall}>LOW SEASON (₹) *</Text>
+                                    <TextInput
+                                        style={styles.simpleInput}
+                                        keyboardType="numeric"
+                                        placeholder="2500"
+                                        value={newRoomForm.price_low_season}
+                                        onChangeText={(text) => setNewRoomForm(prev => ({ ...prev, price_low_season: text }))}
+                                    />
+                                </View>
+                                <View style={{ flex: 1 }}>
+                                    <Text style={styles.inputLabelSmall}>HIGH SEASON (₹) *</Text>
+                                    <TextInput
+                                        style={styles.simpleInput}
+                                        keyboardType="numeric"
+                                        placeholder="3000"
+                                        value={newRoomForm.price_high_season}
+                                        onChangeText={(text) => setNewRoomForm(prev => ({ ...prev, price_high_season: text }))}
+                                    />
+                                </View>
+                            </View>
+
+                            <View style={{ flexDirection: 'row', gap: 10 }}>
+                                <View style={{ flex: 1 }}>
+                                    <Text style={styles.inputLabelSmall}>CAPACITY</Text>
+                                    <TextInput
+                                        style={styles.simpleInput}
+                                        placeholder="e.g. 4 Adults + 1 Kid"
+                                        value={newRoomForm.capacity}
+                                        onChangeText={(text) => setNewRoomForm(prev => ({ ...prev, capacity: text }))}
+                                    />
+                                </View>
+                                <View style={{ flex: 1 }}>
+                                    <Text style={styles.inputLabelSmall}>SIZE</Text>
+                                    <TextInput
+                                        style={styles.simpleInput}
+                                        placeholder="e.g. 400 sq.ft"
+                                        value={newRoomForm.size}
+                                        onChangeText={(text) => setNewRoomForm(prev => ({ ...prev, size: text }))}
+                                    />
+                                </View>
+                            </View>
+
+                            <Text style={styles.inputLabelSmall}>VIEW TYPE</Text>
+                            <TextInput
+                                style={styles.simpleInput}
+                                placeholder="e.g. 180° Kanchenjunga View"
+                                value={newRoomForm.view}
+                                onChangeText={(text) => setNewRoomForm(prev => ({ ...prev, view: text }))}
+                            />
+
+                            <Text style={styles.inputLabelSmall}>ROOM FEATURES & AMENITIES (COMMA SEPARATED)</Text>
+                            <TextInput
+                                style={[styles.simpleInput, { height: 60, textAlignVertical: 'top' }]}
+                                multiline
+                                placeholder="e.g. King Bed, Mountain View, Geyser, Free WiFi"
+                                value={newRoomForm.features}
+                                onChangeText={(text) => setNewRoomForm(prev => ({ ...prev, features: text }))}
+                            />
+
+                            <Text style={[styles.inputLabelSmall, { marginTop: 4, marginBottom: 4 }]}>QUICK ADD FEATURE:</Text>
+                            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
+                                {['Mountain View', 'Private Balcony', 'King Bed', 'Geyser', 'Electric Kettle', 'Wi-Fi', 'Room Heater', 'Living Area'].map((feat, idx) => (
+                                    <TouchableOpacity
+                                        key={idx}
+                                        style={{ backgroundColor: colors.ivoryWarm, borderWidth: 1, borderColor: colors.borderSubtle, paddingHorizontal: 8, paddingVertical: 4, borderRadius: radius.xs }}
+                                        onPress={() => {
+                                            const current = (newRoomForm.features || '').trim();
+                                            if (!current) {
+                                                setNewRoomForm(prev => ({ ...prev, features: feat }));
+                                            } else if (!current.toLowerCase().includes(feat.toLowerCase())) {
+                                                setNewRoomForm(prev => ({ ...prev, features: `${current}, ${feat}` }));
+                                            }
+                                        }}
+                                    >
+                                        <Text style={{ fontSize: 10, fontWeight: '700', color: colors.forestDark }}>+ {feat}</Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+
+                            <Text style={styles.inputLabelSmall}>COVER IMAGE URL</Text>
+                            <TextInput
+                                style={styles.simpleInput}
+                                placeholder="https://..."
+                                value={newRoomForm.imageUrl}
+                                onChangeText={(text) => setNewRoomForm(prev => ({ ...prev, imageUrl: text }))}
+                            />
+
+                            <Text style={styles.inputLabelSmall}>DESCRIPTION</Text>
+                            <TextInput
+                                style={[styles.simpleInput, { height: 60, textAlignVertical: 'top' }]}
+                                multiline
+                                placeholder="Describe the room, ambiance, warmth and heritage..."
+                                value={newRoomForm.description}
+                                onChangeText={(text) => setNewRoomForm(prev => ({ ...prev, description: text }))}
+                            />
+
+                            <View style={styles.modalBtnRow}>
+                                <TouchableOpacity style={styles.modalCancelBtn} onPress={() => setShowCreateRoomModal(false)}>
+                                    <Text style={styles.modalCancelText}>Cancel</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity style={styles.modalSaveBtn} onPress={handleCreateRoom}>
+                                    <Text style={styles.btnTextWhite}>List Suite</Text>
+                                </TouchableOpacity>
+                            </View>
+                        </ScrollView>
                     </View>
                 </View>
             </Modal>
@@ -2084,6 +2427,19 @@ const styles = StyleSheet.create({
     },
 
     // Suites & Inventory
+    addSuiteBtn: {
+        backgroundColor: colors.forest,
+        paddingHorizontal: 12,
+        paddingVertical: 7,
+        borderRadius: radius.xs,
+        flexDirection: 'row',
+        alignItems: 'center'
+    },
+    addSuiteBtnText: {
+        color: '#FFFFFF',
+        fontSize: 11,
+        fontWeight: '700'
+    },
     roomCard: {
         backgroundColor: colors.bgSurface,
         borderRadius: radius.md,

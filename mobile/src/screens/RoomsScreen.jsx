@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { colors, radius, shadows } from '../theme';
 import { MobileSupabaseService } from '../services/SupabaseService';
-import { DEFAULT_ROOMS } from '../services/pricingService';
+import { DEFAULT_ROOMS, getSeasonalRoomPrice } from '../services/pricingService';
 
 const RoomsScreen = ({ navigation }) => {
     const [rooms, setRooms] = useState(DEFAULT_ROOMS);
@@ -18,7 +18,9 @@ const RoomsScreen = ({ navigation }) => {
 
     useEffect(() => {
         loadRooms();
-    }, []);
+        const unsubscribe = navigation?.addListener ? navigation.addListener('focus', loadRooms) : undefined;
+        return unsubscribe;
+    }, [navigation]);
 
     const loadRooms = async () => {
         setLoading(true);
@@ -30,12 +32,14 @@ const RoomsScreen = ({ navigation }) => {
                     name: r.name,
                     priceLowSeason: Number(r.price_low_season || 2500),
                     priceHighSeason: Number(r.price_high_season || 3000),
+                    price_low_season: Number(r.price_low_season || 2500),
+                    price_high_season: Number(r.price_high_season || 3000),
                     capacity: r.capacity || '4 Adults',
                     view: r.view_type || r.view || 'Mountain View',
                     size: r.size || '380 sq.ft',
-                    extraBed: r.id === 'carmel' ? 'Extra 1 Mattress' : r.id === 'sion' ? 'Extra 1 Cot' : null,
+                    extraBed: r.extra_bed || (r.id === 'carmel' ? 'Extra 1 Mattress' : r.id === 'sion' ? 'Extra 1 Cot' : null),
                     features: r.features && r.features.length > 0 ? r.features : ['Attached Bathroom', 'Wi-Fi', 'Daily Housekeeping'],
-                    images: r.images && r.images.length > 0 ? r.images : DEFAULT_ROOMS.find(dr => dr.id === r.id)?.images || [],
+                    images: r.images && r.images.length > 0 ? r.images : DEFAULT_ROOMS.find(dr => dr.id === r.id)?.images || ['https://r1imghtlak.mmtcdn.com/bc566280898d11ec90380a58a9feac02.jpg?output-quality=75&downsize=*:500&crop=990:500'],
                     description: r.description || DEFAULT_ROOMS.find(dr => dr.id === r.id)?.description || ''
                 }));
                 setRooms(mapped);
@@ -47,68 +51,72 @@ const RoomsScreen = ({ navigation }) => {
         }
     };
 
-    const renderRoomCard = ({ item }) => (
-        <View style={styles.roomCard}>
-            <TouchableOpacity
-                activeOpacity={0.9}
-                onPress={() => navigation.navigate('RoomDetail', { room: item })}
-            >
-                <View style={styles.imageContainer}>
-                    <Image source={{ uri: item.images[0] }} style={styles.roomImage} />
-                    <View style={styles.viewBadge}>
-                        <Text style={styles.viewBadgeText}>{item.view}</Text>
-                    </View>
-                </View>
-            </TouchableOpacity>
+    const renderRoomCard = ({ item }) => {
+        const currentPrice = getSeasonalRoomPrice(new Date(), item.id, rooms);
 
-            <View style={styles.cardContent}>
-                <View style={styles.titleRow}>
-                    <Text style={styles.roomName}>{item.name}</Text>
-                    <View style={styles.rateBox}>
-                        <Text style={styles.priceText}>₹{item.priceLowSeason}</Text>
-                        <Text style={styles.perNightText}>/ night</Text>
-                    </View>
-                </View>
-
-                <Text style={styles.roomSpecs}>{item.capacity} · {item.size}</Text>
-
-                {item.extraBed && (
-                    <View style={styles.extraBedPill}>
-                        <Text style={styles.extraBedText}>🛏️ {item.extraBed}</Text>
-                    </View>
-                )}
-
-                <Text style={styles.description} numberOfLines={2}>
-                    {item.description}
-                </Text>
-
-                {/* Features Pills */}
-                <View style={styles.featuresRow}>
-                    {item.features.slice(0, 3).map((feat, idx) => (
-                        <View key={idx} style={styles.featurePill}>
-                            <Text style={styles.featureText}>{feat}</Text>
+        return (
+            <View style={styles.roomCard}>
+                <TouchableOpacity
+                    activeOpacity={0.9}
+                    onPress={() => navigation.navigate('RoomDetail', { room: item })}
+                >
+                    <View style={styles.imageContainer}>
+                        <Image source={{ uri: item.images[0] }} style={styles.roomImage} />
+                        <View style={styles.viewBadge}>
+                            <Text style={styles.viewBadgeText}>{item.view}</Text>
                         </View>
-                    ))}
-                </View>
+                    </View>
+                </TouchableOpacity>
 
-                <View style={styles.actionRow}>
-                    <TouchableOpacity
-                        style={styles.detailsBtn}
-                        onPress={() => navigation.navigate('RoomDetail', { room: item })}
-                    >
-                        <Text style={styles.detailsBtnText}>View Gallery</Text>
-                    </TouchableOpacity>
+                <View style={styles.cardContent}>
+                    <View style={styles.titleRow}>
+                        <Text style={styles.roomName}>{item.name}</Text>
+                        <View style={styles.rateBox}>
+                            <Text style={styles.priceText}>₹{currentPrice.toLocaleString('en-IN')}</Text>
+                            <Text style={styles.perNightText}>/ night</Text>
+                        </View>
+                    </View>
 
-                    <TouchableOpacity
-                        style={styles.bookBtn}
-                        onPress={() => navigation.navigate('BookingFlow', { preSelectedRoom: item })}
-                    >
-                        <Text style={styles.bookBtnText}>Book Room</Text>
-                    </TouchableOpacity>
+                    <Text style={styles.roomSpecs}>{item.capacity} · {item.size}</Text>
+
+                    {item.extraBed && (
+                        <View style={styles.extraBedPill}>
+                            <Text style={styles.extraBedText}>🛏️ {item.extraBed}</Text>
+                        </View>
+                    )}
+
+                    <Text style={styles.description} numberOfLines={2}>
+                        {item.description}
+                    </Text>
+
+                    {/* Features Pills */}
+                    <View style={styles.featuresRow}>
+                        {item.features.slice(0, 3).map((feat, idx) => (
+                            <View key={idx} style={styles.featurePill}>
+                                <Text style={styles.featureText}>{feat}</Text>
+                            </View>
+                        ))}
+                    </View>
+
+                    <View style={styles.actionRow}>
+                        <TouchableOpacity
+                            style={styles.detailsBtn}
+                            onPress={() => navigation.navigate('RoomDetail', { room: item })}
+                        >
+                            <Text style={styles.detailsBtnText}>View Gallery</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            style={styles.bookBtn}
+                            onPress={() => navigation.navigate('BookingFlow', { preSelectedRoom: item })}
+                        >
+                            <Text style={styles.bookBtnText}>Book Room</Text>
+                        </TouchableOpacity>
+                    </View>
                 </View>
             </View>
-        </View>
-    );
+        );
+    };
 
     return (
         <View style={styles.container}>
@@ -116,7 +124,7 @@ const RoomsScreen = ({ navigation }) => {
                 <Text style={styles.headerSubtitle}>KALIMPONG SANCTUARY</Text>
                 <Text style={styles.headerTitle}>Available Suites</Text>
                 <Text style={styles.headerDesc}>
-                    All 4 private rooms feature attached western bathrooms, geyser hot water, and tranquil hillside balconies.
+                    All our private rooms feature attached western bathrooms, geyser hot water, and tranquil hillside balconies.
                 </Text>
             </View>
 

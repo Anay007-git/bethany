@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { SupabaseService } from '../services/SupabaseService';
-import { DEFAULT_ROOMS } from '../utils/pricingAndBooking';
+import { DEFAULT_ROOMS, getSeasonalRoomPrice } from '../utils/pricingAndBooking';
 import ImageLightbox from './ImageLightbox';
 
 const RoomShowcase = ({ onSelectRoom }) => {
@@ -9,32 +9,47 @@ const RoomShowcase = ({ onSelectRoom }) => {
     const [lightboxState, setLightboxState] = useState({ isOpen: false, images: [], index: 0 });
     const [detailModalRoom, setDetailModalRoom] = useState(null);
 
-    useEffect(() => {
-        const fetchRooms = async () => {
-            try {
-                const dbRooms = await SupabaseService.getRooms();
-                if (dbRooms && dbRooms.length > 0) {
-                    const formatted = dbRooms.map(r => ({
-                        id: r.id,
-                        name: r.name,
-                        priceLowSeason: Number(r.price_low_season || 2500),
-                        priceHighSeason: Number(r.price_high_season || 3000),
-                        capacity: r.capacity || '4 Adults',
-                        beds: r.capacity || '4 Adults',
-                        extraBed: r.extra_bed || (r.id === 'carmel' ? 'Extra 1 Mattress available' : r.id === 'sion' ? 'Extra 1 Cot available' : null),
-                        view: r.view_type || r.view || (r.id === 'carmel' ? 'Mountain View' : r.id === 'jordan' ? 'Courtyard View' : 'City View'),
-                        size: r.size || (r.id === 'carmel' ? '616 sq.ft (57 sq.mt)' : r.id === 'jordan' ? '380 sq.ft (35 sq.mt)' : r.id === 'sion' ? '320 sq.ft (28 sq.mt)' : '528 sq.ft (48 sq.mt)'),
-                        features: r.features && r.features.length > 0 ? r.features : ['Attached Western Bathroom', 'High-Speed Wi-Fi', 'Daily Housekeeping', '24/7 Hot Water'],
-                        images: r.images && r.images.length > 0 ? r.images : DEFAULT_ROOMS.find(dr => dr.id === r.id)?.images || [],
-                        description: r.description || DEFAULT_ROOMS.find(dr => dr.id === r.id)?.description || ''
-                    }));
-                    setRooms(formatted);
+    const fetchRooms = async () => {
+        try {
+            const dbRooms = await SupabaseService.getRooms();
+            if (dbRooms && dbRooms.length > 0) {
+                const formatted = dbRooms.map(r => ({
+                    id: r.id,
+                    name: r.name,
+                    priceLowSeason: Number(r.price_low_season || 2500),
+                    priceHighSeason: Number(r.price_high_season || 3000),
+                    price_low_season: Number(r.price_low_season || 2500),
+                    price_high_season: Number(r.price_high_season || 3000),
+                    capacity: r.capacity || '4 Adults',
+                    beds: r.capacity || '4 Adults',
+                    extraBed: r.extra_bed || (r.id === 'carmel' ? 'Extra 1 Mattress available' : r.id === 'sion' ? 'Extra 1 Cot available' : null),
+                    view: r.view_type || r.view || (r.id === 'carmel' ? 'Mountain View' : r.id === 'jordan' ? 'Courtyard View' : 'City View'),
+                    size: r.size || (r.id === 'carmel' ? '616 sq.ft (57 sq.mt)' : r.id === 'jordan' ? '380 sq.ft (35 sq.mt)' : r.id === 'sion' ? '320 sq.ft (28 sq.mt)' : '528 sq.ft (48 sq.mt)'),
+                    features: r.features && r.features.length > 0 ? r.features : ['Attached Western Bathroom', 'High-Speed Wi-Fi', 'Daily Housekeeping', '24/7 Hot Water'],
+                    images: r.images && r.images.length > 0 ? r.images : DEFAULT_ROOMS.find(dr => dr.id === r.id)?.images || ['https://r1imghtlak.mmtcdn.com/bc566280898d11ec90380a58a9feac02.jpg?output-quality=75&downsize=*:500&crop=990:500'],
+                    description: r.description || DEFAULT_ROOMS.find(dr => dr.id === r.id)?.description || ''
+                }));
+                setRooms(formatted);
+                if (!formatted.some(r => r.id === activeRoomId)) {
+                    setActiveRoomId(formatted[0].id);
                 }
-            } catch (err) {
-                console.error("Room fetch error, using verified defaults:", err);
             }
-        };
+        } catch (err) {
+            console.error("Room fetch error, using verified defaults:", err);
+        }
+    };
+
+    useEffect(() => {
         fetchRooms();
+
+        const handleRoomsUpdated = () => fetchRooms();
+        window.addEventListener('bethany:roomsUpdated', handleRoomsUpdated);
+        window.addEventListener('focus', handleRoomsUpdated);
+
+        return () => {
+            window.removeEventListener('bethany:roomsUpdated', handleRoomsUpdated);
+            window.removeEventListener('focus', handleRoomsUpdated);
+        };
     }, []);
 
     const openLightbox = (images, index = 0) => {
@@ -61,7 +76,7 @@ const RoomShowcase = ({ onSelectRoom }) => {
                     <div className="section-tag">
                         <span>Curated Hospitality</span>
                     </div>
-                    <h2>Our 4 Boutique Suites</h2>
+                    <h2>Our {rooms.length > 0 ? rooms.length : 4} Boutique Suites</h2>
                     <p>
                         Designed with authentic hill-station charm, panoramic views, and private en-suite bathrooms. Every stay includes daily housekeeping and organic Himalayan morning breakfast options.
                     </p>
@@ -181,10 +196,10 @@ const RoomShowcase = ({ onSelectRoom }) => {
 
                                         <div style={{ textAlign: 'right' }}>
                                             <div style={{ fontSize: '1.65rem', fontWeight: '700', color: 'var(--himalaya-forest-dark)', fontFamily: 'var(--font-serif)' }}>
-                                                ₹{room.priceLowSeason}
+                                                ₹{getSeasonalRoomPrice(new Date(), room.id, rooms).toLocaleString('en-IN')}
                                             </div>
-                                            <span style={{ fontSize: '0.78rem', color: 'var(--text-light)', display: 'block' }}>
-                                                Standard / ₹{room.priceHighSeason} Peak
+                                            <span style={{ fontSize: '0.8rem', color: 'var(--text-light)', display: 'block' }}>
+                                                per night
                                             </span>
                                         </div>
                                     </div>
@@ -294,7 +309,7 @@ const RoomShowcase = ({ onSelectRoom }) => {
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '8px' }}>
                                         <h4 style={{ fontSize: '1.25rem', margin: 0 }}>{room.name}</h4>
                                         <span style={{ fontSize: '1.15rem', fontWeight: '700', color: 'var(--himalaya-forest)' }}>
-                                            ₹{room.priceLowSeason}
+                                            ₹{getSeasonalRoomPrice(new Date(), room.id, rooms).toLocaleString('en-IN')}
                                             <span style={{ fontSize: '0.75rem', fontWeight: '400', color: 'var(--text-light)' }}>/nt</span>
                                         </span>
                                     </div>
@@ -407,20 +422,23 @@ const RoomShowcase = ({ onSelectRoom }) => {
 
                         <div style={{
                             background: 'var(--himalaya-ivory)',
-                            padding: '16px',
+                            padding: '16px 20px',
                             borderRadius: 'var(--radius-sm)',
-                            marginBottom: '24px'
+                            marginBottom: '24px',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center'
                         }}>
-                            <div style={{ fontWeight: '700', marginBottom: '8px', color: 'var(--himalaya-forest-dark)' }}>
-                                Seasonal Pricing Rates
+                            <div>
+                                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                    Room Tariff
+                                </div>
+                                <div style={{ fontSize: '1.5rem', fontWeight: '700', color: 'var(--himalaya-forest-dark)' }}>
+                                    ₹{getSeasonalRoomPrice(new Date(), detailModalRoom.id, rooms).toLocaleString('en-IN')} <span style={{ fontSize: '0.85rem', fontWeight: '400', color: 'var(--text-light)' }}>/ night</span>
+                                </div>
                             </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.94rem' }}>
-                                <span>Standard Season (Feb, May–Sep, Nov 8–30):</span>
-                                <strong>₹{detailModalRoom.priceLowSeason} / night</strong>
-                            </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.94rem', marginTop: '4px' }}>
-                                <span>Peak Season (Dec–Jan, Mar–Apr 15, Oct–Nov 7):</span>
-                                <strong style={{ color: 'var(--himalaya-terracotta)' }}>₹{detailModalRoom.priceHighSeason} / night</strong>
+                            <div style={{ fontSize: '0.86rem', color: 'var(--himalaya-forest)', fontWeight: '600' }}>
+                                ✓ Best Rate Guaranteed
                             </div>
                         </div>
 

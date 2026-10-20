@@ -189,6 +189,36 @@ export const SupabaseService = {
         return { success: true, data };
     },
 
+    // Create new room
+    createRoom: async (roomData) => {
+        try {
+            const { data, error } = await supabase
+                .from('rooms')
+                .insert([roomData])
+                .select();
+            if (error) throw error;
+            return { success: true, data: data?.[0] };
+        } catch (error) {
+            console.error('Error creating room:', error);
+            return { success: false, error: error.message || error };
+        }
+    },
+
+    // Delete room
+    deleteRoom: async (roomId) => {
+        try {
+            const { error } = await supabase
+                .from('rooms')
+                .delete()
+                .eq('id', roomId);
+            if (error) throw error;
+            return { success: true };
+        } catch (error) {
+            console.error('Error deleting room:', error);
+            return { success: false, error: error.message || error };
+        }
+    },
+
     // Upload Room Image
     uploadRoomImage: async (file) => {
         try {

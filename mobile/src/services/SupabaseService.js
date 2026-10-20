@@ -277,6 +277,39 @@ export const MobileSupabaseService = {
         }
     },
 
+    // A3.1 Admin: Create & List New Room
+    async createRoom(roomData) {
+        try {
+            const { data, error } = await supabase
+                .from('rooms')
+                .insert([roomData])
+                .select()
+                .single();
+
+            if (error) throw error;
+            return { success: true, data };
+        } catch (error) {
+            console.error('Admin Create Room Error:', error);
+            return { success: false, error: error.message };
+        }
+    },
+
+    // A3.2 Admin: Delete Room
+    async deleteRoom(roomId) {
+        try {
+            const { error } = await supabase
+                .from('rooms')
+                .delete()
+                .eq('id', roomId);
+
+            if (error) throw error;
+            return { success: true };
+        } catch (error) {
+            console.error('Admin Delete Room Error:', error);
+            return { success: false, error: error.message };
+        }
+    },
+
     // A4. Admin: Block Date for Room (OTA Sync / Maintenance)
     async blockDate(roomId, dateStr, reason = 'Admin Block') {
         try {

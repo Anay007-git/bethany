@@ -18,6 +18,7 @@ import {
     calculateRoomTotal,
     calculateMealTotal,
     calculateDiscount,
+    getSeasonalRoomPrice,
     MEAL_PRICES
 } from '../services/pricingService';
 
@@ -86,6 +87,8 @@ const BookingScreen = ({ route, navigation }) => {
                     name: r.name,
                     priceLowSeason: Number(r.price_low_season || 2500),
                     priceHighSeason: Number(r.price_high_season || 3000),
+                    price_low_season: Number(r.price_low_season || 2500),
+                    price_high_season: Number(r.price_high_season || 3000),
                     capacity: r.capacity || '4 Adults',
                     view: r.view_type || 'Mountain View',
                     size: r.size || '380 sq.ft'
@@ -242,6 +245,7 @@ const BookingScreen = ({ route, navigation }) => {
 
                     {rooms.map(room => {
                         const isSelected = selectedRooms.some(r => r.id === room.id);
+                        const currentRoomPrice = getSeasonalRoomPrice(checkIn ? new Date(checkIn) : new Date(), room.id, rooms);
                         return (
                             <TouchableOpacity
                                 key={room.id}
@@ -258,7 +262,7 @@ const BookingScreen = ({ route, navigation }) => {
                                     <Text style={styles.roomSelectName}>{room.name}</Text>
                                     <Text style={styles.roomSelectMeta}>{room.view} · {room.capacity}</Text>
                                 </View>
-                                <Text style={styles.roomSelectPrice}>₹{room.priceLowSeason}/nt</Text>
+                                <Text style={styles.roomSelectPrice}>₹{currentRoomPrice.toLocaleString('en-IN')}/nt</Text>
                             </TouchableOpacity>
                         );
                     })}
@@ -298,6 +302,7 @@ const BookingScreen = ({ route, navigation }) => {
                                 Organic home-cooked meals by our host family. Plates per day:
                             </Text>
 
+                            {/* Breakfast */}
                             <View style={styles.mealRow}>
                                 <Text style={styles.mealName}>Breakfast (₹120)</Text>
                                 <View style={styles.mealSteppers}>
@@ -317,13 +322,71 @@ const BookingScreen = ({ route, navigation }) => {
                                             breakfast: { ...p.breakfast, veg: p.breakfast.veg + 1 }
                                         }))}
                                     ><Text style={styles.dietBtnText}>+</Text></TouchableOpacity>
+
+                                    <Text style={[styles.dietLabel, { marginLeft: 10 }]}>Non-Veg:</Text>
+                                    <TouchableOpacity
+                                        style={styles.dietBtn}
+                                        onPress={() => setMealSelection(p => ({
+                                            ...p,
+                                            breakfast: { ...p.breakfast, nonVeg: Math.max(0, (p.breakfast.nonVeg || 0) - 1) }
+                                        }))}
+                                    ><Text style={styles.dietBtnText}>−</Text></TouchableOpacity>
+                                    <Text style={styles.dietVal}>{mealSelection.breakfast.nonVeg || 0}</Text>
+                                    <TouchableOpacity
+                                        style={styles.dietBtn}
+                                        onPress={() => setMealSelection(p => ({
+                                            ...p,
+                                            breakfast: { ...p.breakfast, nonVeg: (p.breakfast.nonVeg || 0) + 1 }
+                                        }))}
+                                    ><Text style={styles.dietBtnText}>+</Text></TouchableOpacity>
                                 </View>
                             </View>
 
+                            {/* Lunch */}
+                            <View style={styles.mealRow}>
+                                <Text style={styles.mealName}>Lunch (₹200)</Text>
+                                <View style={styles.mealSteppers}>
+                                    <Text style={styles.dietLabel}>Veg:</Text>
+                                    <TouchableOpacity
+                                        style={styles.dietBtn}
+                                        onPress={() => setMealSelection(p => ({
+                                            ...p,
+                                            lunch: { ...p.lunch, veg: Math.max(0, p.lunch.veg - 1) }
+                                        }))}
+                                    ><Text style={styles.dietBtnText}>−</Text></TouchableOpacity>
+                                    <Text style={styles.dietVal}>{mealSelection.lunch.veg}</Text>
+                                    <TouchableOpacity
+                                        style={styles.dietBtn}
+                                        onPress={() => setMealSelection(p => ({
+                                            ...p,
+                                            lunch: { ...p.lunch, veg: p.lunch.veg + 1 }
+                                        }))}
+                                    ><Text style={styles.dietBtnText}>+</Text></TouchableOpacity>
+
+                                    <Text style={[styles.dietLabel, { marginLeft: 10 }]}>Non-Veg:</Text>
+                                    <TouchableOpacity
+                                        style={styles.dietBtn}
+                                        onPress={() => setMealSelection(p => ({
+                                            ...p,
+                                            lunch: { ...p.lunch, nonVeg: Math.max(0, (p.lunch.nonVeg || 0) - 1) }
+                                        }))}
+                                    ><Text style={styles.dietBtnText}>−</Text></TouchableOpacity>
+                                    <Text style={styles.dietVal}>{mealSelection.lunch.nonVeg || 0}</Text>
+                                    <TouchableOpacity
+                                        style={styles.dietBtn}
+                                        onPress={() => setMealSelection(p => ({
+                                            ...p,
+                                            lunch: { ...p.lunch, nonVeg: (p.lunch.nonVeg || 0) + 1 }
+                                        }))}
+                                    ><Text style={styles.dietBtnText}>+</Text></TouchableOpacity>
+                                </View>
+                            </View>
+
+                            {/* Dinner */}
                             <View style={styles.mealRow}>
                                 <Text style={styles.mealName}>Dinner (₹200)</Text>
                                 <View style={styles.mealSteppers}>
-                                    <Text style={styles.dietLabel}>Plates:</Text>
+                                    <Text style={styles.dietLabel}>Veg:</Text>
                                     <TouchableOpacity
                                         style={styles.dietBtn}
                                         onPress={() => setMealSelection(p => ({
@@ -337,6 +400,23 @@ const BookingScreen = ({ route, navigation }) => {
                                         onPress={() => setMealSelection(p => ({
                                             ...p,
                                             dinner: { ...p.dinner, veg: p.dinner.veg + 1 }
+                                        }))}
+                                    ><Text style={styles.dietBtnText}>+</Text></TouchableOpacity>
+
+                                    <Text style={[styles.dietLabel, { marginLeft: 10 }]}>Non-Veg:</Text>
+                                    <TouchableOpacity
+                                        style={styles.dietBtn}
+                                        onPress={() => setMealSelection(p => ({
+                                            ...p,
+                                            dinner: { ...p.dinner, nonVeg: Math.max(0, (p.dinner.nonVeg || 0) - 1) }
+                                        }))}
+                                    ><Text style={styles.dietBtnText}>−</Text></TouchableOpacity>
+                                    <Text style={styles.dietVal}>{mealSelection.dinner.nonVeg || 0}</Text>
+                                    <TouchableOpacity
+                                        style={styles.dietBtn}
+                                        onPress={() => setMealSelection(p => ({
+                                            ...p,
+                                            dinner: { ...p.dinner, nonVeg: (p.dinner.nonVeg || 0) + 1 }
                                         }))}
                                     ><Text style={styles.dietBtnText}>+</Text></TouchableOpacity>
                                 </View>

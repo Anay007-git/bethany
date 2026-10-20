@@ -102,18 +102,24 @@ export const DEFAULT_ROOMS = [
     }
 ];
 
+/**
+ * Check if a given date falls in On-Season / High Season.
+ * Off-season (Monsoon): Mid June (June 15) through July and August up to Mid September (Sept 15).
+ * Rests are On-Season / Peak Season.
+ */
 export function isHighSeason(date) {
     const d = new Date(date);
-    const month = d.getMonth();
+    const month = d.getMonth(); // 0 = Jan, 5 = June, 6 = July, 7 = Aug, 8 = Sept, 11 = Dec
     const day = d.getDate();
 
-    if (month === 11 || month === 0) return true;
-    if (month === 2) return true;
-    if (month === 3 && day <= 15) return true;
-    if (month === 9) return true;
-    if (month === 10 && day <= 7) return true;
+    // Off-season: Mid June (June 15) to Mid September (Sept 15)
+    if (month === 5 && day >= 15) return false; // June 15 - June 30
+    if (month === 6) return false;              // July 1 - July 31
+    if (month === 7) return false;              // August 1 - August 31
+    if (month === 8 && day <= 15) return false; // September 1 - September 15
 
-    return false;
+    // All other dates are On-Season / Peak Season
+    return true;
 }
 
 export function getSeasonalRoomPrice(date, roomId, roomsList = DEFAULT_ROOMS) {

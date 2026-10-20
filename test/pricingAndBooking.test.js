@@ -11,46 +11,44 @@ import {
 } from '../src/utils/pricingAndBooking.js';
 
 test('Seasonality logic test', () => {
-    // High season: December & January
-    assert.equal(isHighSeason(new Date('2026-12-25')), true, 'Dec 25 must be high season');
-    assert.equal(isHighSeason(new Date('2026-01-10')), true, 'Jan 10 must be high season');
+    // Monsoon / Off-season: Mid June (June 15) to Mid September (Sept 15)
+    assert.equal(isHighSeason(new Date('2026-06-14')), true, 'June 14 must be on-season');
+    assert.equal(isHighSeason(new Date('2026-06-15')), false, 'June 15 must be off-season');
+    assert.equal(isHighSeason(new Date('2026-07-15')), false, 'July 15 must be off-season');
+    assert.equal(isHighSeason(new Date('2026-08-20')), false, 'August 20 must be off-season');
+    assert.equal(isHighSeason(new Date('2026-09-15')), false, 'September 15 must be off-season');
+    assert.equal(isHighSeason(new Date('2026-09-16')), true, 'September 16 must be on-season');
 
-    // High season: March & April up to 15th
-    assert.equal(isHighSeason(new Date('2026-03-20')), true, 'March 20 must be high season');
-    assert.equal(isHighSeason(new Date('2026-04-10')), true, 'April 10 must be high season');
-    assert.equal(isHighSeason(new Date('2026-04-20')), false, 'April 20 must be low season');
-
-    // High season: October & November up to 7th
-    assert.equal(isHighSeason(new Date('2026-10-15')), true, 'October 15 must be high season');
-    assert.equal(isHighSeason(new Date('2026-11-05')), true, 'November 5 must be high season');
-    assert.equal(isHighSeason(new Date('2026-11-15')), false, 'November 15 must be low season');
-
-    // Regular low season: June
-    assert.equal(isHighSeason(new Date('2026-06-15')), false, 'June 15 must be low season');
+    // All rests are On-Season / High Season
+    assert.equal(isHighSeason(new Date('2026-10-15')), true, 'October 15 must be on-season');
+    assert.equal(isHighSeason(new Date('2026-11-20')), true, 'November 20 must be on-season');
+    assert.equal(isHighSeason(new Date('2026-12-25')), true, 'Dec 25 must be on-season');
+    assert.equal(isHighSeason(new Date('2026-01-10')), true, 'Jan 10 must be on-season');
+    assert.equal(isHighSeason(new Date('2026-03-20')), true, 'March 20 must be on-season');
+    assert.equal(isHighSeason(new Date('2026-05-10')), true, 'May 10 must be on-season');
 });
 
 test('Seasonal room pricing test', () => {
-    // Carmel: 3600 High, 3000 Low
+    // Carmel: 3600 High (on-season), 3000 Low (off-season)
     assert.equal(getSeasonalRoomPrice(new Date('2026-01-05'), 'carmel'), 3600);
-    assert.equal(getSeasonalRoomPrice(new Date('2026-06-05'), 'carmel'), 3000);
+    assert.equal(getSeasonalRoomPrice(new Date('2026-07-05'), 'carmel'), 3000);
 
-    // Jordan: 3000 High, 2500 Low
+    // Jordan: 3000 High (on-season), 2500 Low (off-season)
     assert.equal(getSeasonalRoomPrice(new Date('2026-12-20'), 'jordan'), 3000);
-    assert.equal(getSeasonalRoomPrice(new Date('2026-07-20'), 'jordan'), 2500);
+    assert.equal(getSeasonalRoomPrice(new Date('2026-08-10'), 'jordan'), 2500);
 });
 
 test('Multi-night room calculation spanning season transition', () => {
-    // April 14 to April 16 (2 nights: night 1 is high season (Apr 14), night 2 is low season (Apr 15 is high up to 15th, let's verify))
-    // Apr 14 -> High (3600), Apr 15 (day <= 15) -> High (3600) for Carmel
+    // June 14 to June 16 (2 nights: night 1 is June 14 (on-season 3600), night 2 is June 15 (off-season 3000))
     const selectedRooms = [DEFAULT_ROOMS[0]]; // Carmel
-    const res = calculateRoomTotal('2026-04-14', '2026-04-16', selectedRooms);
+    const res = calculateRoomTotal('2026-06-14', '2026-06-16', selectedRooms);
     assert.equal(res.nights, 2);
-    assert.equal(res.roomTotal, 7200);
+    assert.equal(res.roomTotal, 6600); // 3600 + 3000
 
-    // Low season 3 nights for Carmel (June 10 to June 13)
-    const resLow = calculateRoomTotal('2026-06-10', '2026-06-13', selectedRooms);
+    // Off-season 3 nights for Carmel (July 10 to July 13)
+    const resLow = calculateRoomTotal('2026-07-10', '2026-07-13', selectedRooms);
     assert.equal(resLow.nights, 3);
-    assert.equal(resLow.roomTotal, 9000);
+    assert.equal(resLow.roomTotal, 9000); // 3 * 3000
 });
 
 test('Meal calculations test', () => {

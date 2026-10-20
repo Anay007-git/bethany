@@ -18,6 +18,26 @@ const AdminDashboard = ({ onLogout }) => {
     const [newImageUrl, setNewImageUrl] = useState('');
     const [uploadingImg, setUploadingImg] = useState(false);
 
+    // List New Room State
+    const [isAddRoomModalOpen, setIsAddRoomModalOpen] = useState(false);
+    const [newRoomForm, setNewRoomForm] = useState({
+        id: '',
+        name: '',
+        price_low_season: 2500,
+        price_high_season: 3000,
+        capacity: '4 Adults',
+        view: 'Mountain View',
+        size: '400 sq.ft',
+        extra_bed: '',
+        description: '',
+        features: 'Attached Western Bathroom, High-Speed Wi-Fi, Daily Housekeeping, 24/7 Hot Water',
+        images: ['https://r1imghtlak.mmtcdn.com/bc566280898d11ec90380a58a9feac02.jpg?output-quality=75&downsize=*:500&crop=990:500'],
+        ical_import_url: ''
+    });
+    const [newRoomCustomFeature, setNewRoomCustomFeature] = useState('');
+    const [newRoomImageUrl, setNewRoomImageUrl] = useState('');
+    const [uploadingNewRoomImg, setUploadingNewRoomImg] = useState(false);
+
     const [dateRange, setDateRange] = useState(() => {
         const start = new Date();
         const end = new Date();
@@ -119,14 +139,17 @@ const AdminDashboard = ({ onLogout }) => {
     // --- Helpers for Offline Booking Logic ---
 
     const isHighSeason = (date) => {
-        const month = date.getMonth();
+        const month = date.getMonth(); // 0 = Jan, 5 = June, 6 = July, 7 = Aug, 8 = Sept, 11 = Dec
         const day = date.getDate();
-        if (month === 11 || month === 0) return true; // Dec, Jan
-        if (month === 2) return true; // Mar
-        if (month === 3 && day <= 15) return true; // Apr 1-15
-        if (month === 9) return true; // Oct
-        if (month === 10 && day <= 7) return true; // Nov 1-7
-        return false;
+
+        // Off-season (Monsoon): Mid June (June 15) to Mid September (Sept 15)
+        if (month === 5 && day >= 15) return false; // June 15 - June 30
+        if (month === 6) return false;              // July 1 - July 31
+        if (month === 7) return false;              // August 1 - August 31
+        if (month === 8 && day <= 15) return false; // September 1 - September 15
+
+        // All other dates are On-Season / Peak Season
+        return true;
     };
 
     const getSeasonalRoomPrice = (date, roomId) => {
@@ -321,8 +344,113 @@ const AdminDashboard = ({ onLogout }) => {
             alert('Room updated successfully!');
             setEditingRoom(null);
             loadData();
+            window.dispatchEvent(new CustomEvent('bethany:roomsUpdated'));
         } else {
             alert('Failed to update room');
+        }
+    };
+
+    // --- Create New Room Handlers ---
+    const handleCreateRoom = async (e) => {
+        if (e && e.preventDefault) e.preventDefault();
+        if (!newRoomForm.name.trim()) return alert('Please enter a room name');
+
+        const slug = newRoomForm.id.trim()
+            ? newRoomForm.id.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '')
+            : newRoomForm.name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+
+        if (!slug) return alert('Please enter a valid unique room ID');
+
+        if (rooms.some(r => r.id === slug)) {
+            return alert(`A room with ID "${slug}" already exists. Please choose a different name or ID.`);
+        }
+
+        const featuresArray = typeof newRoomForm.features === 'string'
+            ? newRoomForm.features.split(',').map(f => f.trim()).filter(Boolean)
+            : (Array.isArray(newRoomForm.features) ? newRoomForm.features : []);
+
+        const payload = {
+            id: slug,
+            name: newRoomForm.name.trim(),
+            price_low_season: parseInt(newRoomForm.price_low_season) || 2500,
+            price_high_season: parseInt(newRoomForm.price_high_season) || 3000,
+            capacity: newRoomForm.capacity || '4 Adults',
+            view_type: newRoomForm.view || 'Mountain View',
+            size: newRoomForm.size || '380 sq.ft',
+            description: newRoomForm.description || '',
+            features: featuresArray,
+            images: newRoomForm.images && newRoomForm.images.length > 0
+                ? newRoomForm.images
+                : ['https://r1imghtlak.mmtcdn.com/bc566280898d11ec90380a58a9feac02.jpg?output-quality=75&downsize=*:500&crop=990:500'],
+            ical_import_url: newRoomForm.ical_import_url || null,
+            is_active: true
+        };
+
+        const res = await SupabaseService.createRoom(payload);
+        if (res.success) {
+            alert(`🎉 Suite "${newRoomForm.name}" created and listed successfully!`);
+            setIsAddRoomModalOpen(false);
+            setNewRoomForm({
+                id: '',
+                name: '',
+                price_low_season: 2500,
+                price_high_season: 3000,
+                capacity: '4 Adults',
+                view: 'Mountain View',
+                size: '400 sq.ft',
+                extra_bed: '',
+                description: '',
+                features: 'Attached Western Bathroom, High-Speed Wi-Fi, Daily Housekeeping, 24/7 Hot Water',
+                images: ['https://r1imghtlak.mmtcdn.com/bc566280898d11ec90380a58a9feac02.jpg?output-quality=75&downsize=*:500&crop=990:500'],
+                ical_import_url: ''
+            });
+            loadData();
+            window.dispatchEvent(new CustomEvent('bethany:roomsUpdated'));
+        } else {
+            alert(`Failed to create room: ${res.error}`);
+        }
+    };
+
+    const handleDeleteRoom = async (roomId, roomName) => {
+        if (!window.confirm(`Are you sure you want to remove suite "${roomName}" (${roomId}) from the homestay catalog?`)) {
+            return;
+        }
+        const res = await SupabaseService.deleteRoom(roomId);
+        if (res.success) {
+            alert(`Suite "${roomName}" removed.`);
+            loadData();
+            window.dispatchEvent(new CustomEvent('bethany:roomsUpdated'));
+        } else {
+            alert(`Delete failed: ${res.error}`);
+        }
+    };
+
+    const handleAddFeatureToNewRoom = (featureToAdd) => {
+        const feat = (featureToAdd || newRoomCustomFeature).trim();
+        if (!feat) return;
+        const current = newRoomForm.features
+            ? newRoomForm.features.split(',').map(f => f.trim()).filter(Boolean)
+            : [];
+        if (!current.includes(feat)) {
+            current.push(feat);
+            setNewRoomForm(prev => ({ ...prev, features: current.join(', ') }));
+        }
+        setNewRoomCustomFeature('');
+    };
+
+    const handleNewRoomImageUpload = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        setUploadingNewRoomImg(true);
+        const result = await SupabaseService.uploadRoomImage(file);
+        setUploadingNewRoomImg(false);
+        if (result.success) {
+            setNewRoomForm(prev => ({
+                ...prev,
+                images: [...(prev.images || []), result.publicUrl]
+            }));
+        } else {
+            alert('Image upload failed.');
         }
     };
 
@@ -1369,13 +1497,24 @@ const AdminDashboard = ({ onLogout }) => {
 
                 {activeTab === 'inventory' && (
                     <div className="card-panel">
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                            <h3>Room Inventory & OTA Sync</h3>
-                            <button onClick={loadData} className="btn-secondary">↻ Refresh</button>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
+                            <div>
+                                <h3 style={{ margin: 0 }}>Room Inventory & Live Catalog</h3>
+                                <p style={{ fontSize: '0.88rem', color: '#64748b', margin: '4px 0 0 0' }}>
+                                    Manage suites, seasonal tariffs, OTA calendar sync, and list new rooms.
+                                </p>
+                            </div>
+                            <div style={{ display: 'flex', gap: '10px' }}>
+                                <button
+                                    onClick={() => setIsAddRoomModalOpen(true)}
+                                    className="btn-primary"
+                                    style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#059669', borderColor: '#059669' }}
+                                >
+                                    <span>➕</span> <span>List New Room</span>
+                                </button>
+                                <button onClick={loadData} className="btn-secondary">↻ Refresh</button>
+                            </div>
                         </div>
-                        <p style={{ fontSize: '0.9rem', color: '#64748b', marginBottom: '20px' }}>
-                            Manage room details and sync availability with external OTA platforms (Airbnb, Booking.com, Goibibo).
-                        </p>
                         <div className="table-container">
                             <table className="admin-table">
                                 <thead>
@@ -1470,6 +1609,14 @@ const AdminDashboard = ({ onLogout }) => {
                                                         title="Generate & Copy OTA Link"
                                                     >
                                                         🔗 OTA Link
+                                                    </button>
+                                                    <button
+                                                        className="btn-secondary"
+                                                        style={{ padding: '6px 10px', fontSize: '0.8rem', color: '#ef4444', borderColor: '#fca5a5' }}
+                                                        onClick={() => handleDeleteRoom(r.id, r.name)}
+                                                        title="Delete Suite from Catalog"
+                                                    >
+                                                        🗑️
                                                     </button>
                                                 </td>
                                             </tr>
@@ -1673,6 +1820,280 @@ const AdminDashboard = ({ onLogout }) => {
                                         </div>
 
                                     </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* List New Room Modal */}
+                        {isAddRoomModalOpen && (
+                            <div className="modal-overlay" onClick={() => setIsAddRoomModalOpen(false)}>
+                                <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '750px', width: '92%', maxHeight: '90vh', overflowY: 'auto', padding: '32px', borderRadius: '16px', position: 'relative' }}>
+
+                                    <div className="modal-header" style={{ marginBottom: '22px', paddingBottom: '14px', borderBottom: '1px solid #eee', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <div>
+                                            <h3 style={{ margin: 0, color: '#1e293b', fontSize: '1.45rem' }}>➕ List New Boutique Suite</h3>
+                                            <p style={{ margin: '4px 0 0 0', fontSize: '0.88rem', color: '#64748b' }}>
+                                                Add a new room to publish immediately to website showcase, booking calendar, and mobile app.
+                                            </p>
+                                        </div>
+                                        <button
+                                            onClick={() => setIsAddRoomModalOpen(false)}
+                                            style={{ background: 'none', border: 'none', fontSize: '2rem', cursor: 'pointer', color: '#64748b', lineHeight: 1 }}
+                                        >
+                                            &times;
+                                        </button>
+                                    </div>
+
+                                    <form onSubmit={handleCreateRoom} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+                                        {/* Room Name & ID */}
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '16px' }}>
+                                            <div>
+                                                <label className="form-label" style={{ display: 'block', marginBottom: '6px', fontWeight: '600', color: '#334155', fontSize: '0.9rem' }}>Suite Name *</label>
+                                                <input
+                                                    type="text"
+                                                    required
+                                                    placeholder="e.g. Kanchenjunga Sunrise Suite"
+                                                    value={newRoomForm.name}
+                                                    onChange={e => {
+                                                        const name = e.target.value;
+                                                        setNewRoomForm(prev => ({
+                                                            ...prev,
+                                                            name,
+                                                            id: prev.id || name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
+                                                        }));
+                                                    }}
+                                                    className="form-input"
+                                                    style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.95rem' }}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="form-label" style={{ display: 'block', marginBottom: '6px', fontWeight: '600', color: '#334155', fontSize: '0.9rem' }}>Unique ID / Slug</label>
+                                                <input
+                                                    type="text"
+                                                    placeholder="e.g. kanchenjunga"
+                                                    value={newRoomForm.id}
+                                                    onChange={e => setNewRoomForm(p => ({ ...p, id: e.target.value }))}
+                                                    className="form-input"
+                                                    style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.95rem' }}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* Pricing Tariffs */}
+                                        <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '10px', border: '1px solid #e2e8f0', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                                            <div>
+                                                <label className="form-label" style={{ display: 'block', marginBottom: '6px', fontWeight: '600', color: '#047857', fontSize: '0.9rem' }}>
+                                                    🌿 Standard / Off-Season Tariff (₹/night)
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    required
+                                                    value={newRoomForm.price_low_season}
+                                                    onChange={e => setNewRoomForm(p => ({ ...p, price_low_season: e.target.value }))}
+                                                    className="form-input"
+                                                    style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #a7f3d0', fontSize: '1rem', fontWeight: '600' }}
+                                                />
+                                                <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Applies Mid-June to Mid-September</span>
+                                            </div>
+                                            <div>
+                                                <label className="form-label" style={{ display: 'block', marginBottom: '6px', fontWeight: '600', color: '#b45309', fontSize: '0.9rem' }}>
+                                                    🍁 On-Season Tariff (₹/night)
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    required
+                                                    value={newRoomForm.price_high_season}
+                                                    onChange={e => setNewRoomForm(p => ({ ...p, price_high_season: e.target.value }))}
+                                                    className="form-input"
+                                                    style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #fde68a', fontSize: '1rem', fontWeight: '600' }}
+                                                />
+                                                <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Applies all other months</span>
+                                            </div>
+                                        </div>
+
+                                        {/* Capacity, View, Size */}
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
+                                            <div>
+                                                <label className="form-label" style={{ display: 'block', marginBottom: '6px', fontWeight: '600', color: '#334155', fontSize: '0.9rem' }}>Capacity</label>
+                                                <input
+                                                    type="text"
+                                                    placeholder="e.g. 4 Adults + 1 Kid"
+                                                    value={newRoomForm.capacity}
+                                                    onChange={e => setNewRoomForm(p => ({ ...p, capacity: e.target.value }))}
+                                                    className="form-input"
+                                                    style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.95rem' }}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="form-label" style={{ display: 'block', marginBottom: '6px', fontWeight: '600', color: '#334155', fontSize: '0.9rem' }}>View Type</label>
+                                                <input
+                                                    type="text"
+                                                    placeholder="e.g. Mountain View"
+                                                    value={newRoomForm.view}
+                                                    onChange={e => setNewRoomForm(p => ({ ...p, view: e.target.value }))}
+                                                    className="form-input"
+                                                    style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.95rem' }}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="form-label" style={{ display: 'block', marginBottom: '6px', fontWeight: '600', color: '#334155', fontSize: '0.9rem' }}>Size</label>
+                                                <input
+                                                    type="text"
+                                                    placeholder="e.g. 450 sq.ft (42 sq.mt)"
+                                                    value={newRoomForm.size}
+                                                    onChange={e => setNewRoomForm(p => ({ ...p, size: e.target.value }))}
+                                                    className="form-input"
+                                                    style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.95rem' }}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* Description */}
+                                        <div>
+                                            <label className="form-label" style={{ display: 'block', marginBottom: '6px', fontWeight: '600', color: '#334155', fontSize: '0.9rem' }}>Suite Overview Description</label>
+                                            <textarea
+                                                rows="3"
+                                                placeholder="Describe the room, ambiance, mountain vistas, and bedding layout..."
+                                                value={newRoomForm.description}
+                                                onChange={e => setNewRoomForm(p => ({ ...p, description: e.target.value }))}
+                                                className="form-input"
+                                                style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.95rem', fontFamily: 'inherit' }}
+                                            />
+                                        </div>
+
+                                        {/* Room Features Builder */}
+                                        <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                                            <label className="form-label" style={{ display: 'block', marginBottom: '6px', fontWeight: '600', color: '#1e293b', fontSize: '0.95rem' }}>
+                                                ✨ Room Features & Amenities
+                                            </label>
+                                            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '10px' }}>
+                                                {['Attached Western Bathroom', 'Daily Housekeeping', 'High-Speed Wi-Fi', 'Mountain Balcony', '24/7 Geyser Hot Water', 'Electric Kettle', 'Air Purifier', 'Valley Panorama'].map(feat => (
+                                                    <button
+                                                        key={feat}
+                                                        type="button"
+                                                        onClick={() => handleAddFeatureToNewRoom(feat)}
+                                                        style={{
+                                                            background: newRoomForm.features?.includes(feat) ? '#059669' : '#ffffff',
+                                                            color: newRoomForm.features?.includes(feat) ? '#ffffff' : '#334155',
+                                                            border: '1px solid #cbd5e1',
+                                                            borderRadius: '16px',
+                                                            padding: '4px 12px',
+                                                            fontSize: '0.8rem',
+                                                            cursor: 'pointer',
+                                                            fontWeight: '500'
+                                                        }}
+                                                    >
+                                                        {newRoomForm.features?.includes(feat) ? '✓ ' : '+ '} {feat}
+                                                    </button>
+                                                ))}
+                                            </div>
+
+                                            <div style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
+                                                <input
+                                                    type="text"
+                                                    placeholder="Type custom room feature..."
+                                                    value={newRoomCustomFeature}
+                                                    onChange={e => setNewRoomCustomFeature(e.target.value)}
+                                                    onKeyDown={e => {
+                                                        if (e.key === 'Enter') {
+                                                            e.preventDefault();
+                                                            handleAddFeatureToNewRoom();
+                                                        }
+                                                    }}
+                                                    className="form-input"
+                                                    style={{ flex: 1, padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.9rem' }}
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleAddFeatureToNewRoom()}
+                                                    className="btn-secondary"
+                                                    style={{ padding: '8px 14px', fontSize: '0.88rem' }}
+                                                >
+                                                    + Add Feature
+                                                </button>
+                                            </div>
+
+                                            <textarea
+                                                rows="2"
+                                                placeholder="Features (comma-separated)..."
+                                                value={newRoomForm.features}
+                                                onChange={e => setNewRoomForm(p => ({ ...p, features: e.target.value }))}
+                                                className="form-input"
+                                                style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.88rem', fontFamily: 'inherit' }}
+                                            />
+                                        </div>
+
+                                        {/* Gallery Images */}
+                                        <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                                            <label className="form-label" style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#1e293b', fontSize: '0.95rem' }}>
+                                                🖼️ Suite Photo Gallery
+                                            </label>
+
+                                            {newRoomForm.images && newRoomForm.images.length > 0 && (
+                                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginBottom: '12px' }}>
+                                                    {newRoomForm.images.map((img, idx) => (
+                                                        <div key={idx} style={{ position: 'relative', width: '90px', height: '90px', borderRadius: '8px', overflow: 'hidden', border: '1px solid #cbd5e1' }}>
+                                                            <img src={img} alt={`Room ${idx}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setNewRoomForm(p => ({ ...p, images: p.images.filter((_, i) => i !== idx) }))}
+                                                                style={{ position: 'absolute', top: '3px', right: '3px', background: 'rgba(239, 68, 68, 0.9)', color: 'white', border: 'none', borderRadius: '50%', width: '20px', height: '20px', cursor: 'pointer', fontSize: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                                            >
+                                                                &times;
+                                                            </button>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+
+                                            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                                                <label style={{ background: '#fff', border: '1px solid #cbd5e1', padding: '8px 14px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.88rem', fontWeight: '500', color: '#334155' }}>
+                                                    <span>📁 Upload File</span>
+                                                    <input type="file" accept="image/*" onChange={handleNewRoomImageUpload} style={{ display: 'none' }} disabled={uploadingNewRoomImg} />
+                                                </label>
+                                                {uploadingNewRoomImg && <span style={{ fontSize: '0.85rem', color: '#3b82f6' }}>⏳ Uploading...</span>}
+                                                <span style={{ fontSize: '0.85rem', color: '#94a3b8' }}>OR</span>
+                                                <input
+                                                    type="text"
+                                                    placeholder="Paste image URL..."
+                                                    value={newRoomImageUrl}
+                                                    onChange={e => setNewRoomImageUrl(e.target.value)}
+                                                    className="form-input"
+                                                    style={{ flex: 1, padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.9rem' }}
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        if (newRoomImageUrl.trim()) {
+                                                            setNewRoomForm(p => ({ ...p, images: [...(p.images || []), newRoomImageUrl.trim()] }));
+                                                            setNewRoomImageUrl('');
+                                                        }
+                                                    }}
+                                                    className="btn-secondary"
+                                                    style={{ padding: '8px 14px', fontSize: '0.88rem' }}
+                                                >
+                                                    + Add URL
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <div className="modal-footer" style={{ marginTop: '10px', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                                            <button
+                                                type="button"
+                                                onClick={() => setIsAddRoomModalOpen(false)}
+                                                style={{ background: '#f1f5f9', color: '#475569', border: 'none', padding: '12px 24px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', fontSize: '0.95rem' }}
+                                            >
+                                                Cancel
+                                            </button>
+                                            <button
+                                                type="submit"
+                                                className="btn-primary"
+                                                style={{ background: '#059669', color: 'white', border: 'none', padding: '12px 32px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', fontSize: '0.95rem', boxShadow: '0 4px 6px -1px rgba(5, 150, 105, 0.4)' }}
+                                            >
+                                                Publish & List Suite
+                                            </button>
+                                        </div>
+                                    </form>
                                 </div>
                             </div>
                         )}

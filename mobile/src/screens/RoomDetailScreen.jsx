@@ -10,13 +10,14 @@ import {
 } from 'react-native';
 import { colors, radius, shadows } from '../theme';
 
-import { DEFAULT_ROOMS } from '../services/pricingService';
+import { DEFAULT_ROOMS, getSeasonalRoomPrice } from '../services/pricingService';
 
 const { width } = Dimensions.get('window');
 
 const RoomDetailScreen = ({ route, navigation }) => {
     const room = route?.params?.room || DEFAULT_ROOMS[0];
     const [activeImageIndex, setActiveImageIndex] = useState(0);
+    const currentPrice = getSeasonalRoomPrice(new Date(), room.id, [room]);
 
     const handleScroll = (event) => {
         const slideIndex = Math.round(event.nativeEvent.contentOffset.x / width);
@@ -75,16 +76,16 @@ const RoomDetailScreen = ({ route, navigation }) => {
                         </View>
                     )}
 
-                    {/* Seasonal Rates Breakdown */}
+                    {/* Room Tariff Card (No Peak/Standard tags) */}
                     <View style={styles.seasonalCard}>
-                        <Text style={styles.seasonalTitle}>Authoritative Rates</Text>
-                        <View style={styles.seasonRow}>
-                            <Text style={styles.seasonLabel}>Standard Season:</Text>
-                            <Text style={styles.seasonPrice}>₹{room.priceLowSeason} / night</Text>
-                        </View>
-                        <View style={styles.seasonRow}>
-                            <Text style={styles.seasonLabel}>Peak Season (Dec-Jan, Mar-Apr, Oct-Nov):</Text>
-                            <Text style={styles.seasonPricePeak}>₹{room.priceHighSeason} / night</Text>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <View>
+                                <Text style={styles.seasonalTitle}>Room Tariff</Text>
+                                <Text style={styles.seasonPrice}>₹{currentPrice.toLocaleString('en-IN')} <Text style={{ fontSize: 13, fontWeight: '400', color: colors.textMuted }}>/ night</Text></Text>
+                            </View>
+                            <View style={{ backgroundColor: 'rgba(35, 72, 59, 0.1)', paddingHorizontal: 10, paddingVertical: 5, borderRadius: radius.full }}>
+                                <Text style={{ fontSize: 11, fontWeight: '700', color: colors.forest }}>✓ Best Direct Rate</Text>
+                            </View>
                         </View>
                     </View>
 
@@ -126,8 +127,8 @@ const RoomDetailScreen = ({ route, navigation }) => {
             {/* Sticky Bottom Action Bar */}
             <View style={styles.bottomBar}>
                 <View>
-                    <Text style={styles.bottomBarPrice}>₹{room.priceLowSeason}</Text>
-                    <Text style={styles.bottomBarSub}>Starting rate / night</Text>
+                    <Text style={styles.bottomBarPrice}>₹{currentPrice.toLocaleString('en-IN')}</Text>
+                    <Text style={styles.bottomBarSub}>per night</Text>
                 </View>
 
                 <TouchableOpacity

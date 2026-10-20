@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     View,
     Text,
@@ -9,7 +9,8 @@ import {
     Linking
 } from 'react-native';
 import { colors, radius, shadows } from '../theme';
-import { DEFAULT_ROOMS } from '../services/pricingService';
+import { DEFAULT_ROOMS, getSeasonalRoomPrice } from '../services/pricingService';
+import { MobileSupabaseService } from '../services/SupabaseService';
 
 const HomeScreen = ({ navigation }) => {
     const today = new Date().toISOString().split('T')[0];
@@ -18,6 +19,39 @@ const HomeScreen = ({ navigation }) => {
     const [checkIn, setCheckIn] = useState(today);
     const [checkOut, setCheckOut] = useState(tomorrow);
     const [guests, setGuests] = useState('2');
+    const [rooms, setRooms] = useState(DEFAULT_ROOMS);
+
+    const loadRooms = async () => {
+        try {
+            const dbRooms = await MobileSupabaseService.getRooms();
+            if (dbRooms && dbRooms.length > 0) {
+                const mapped = dbRooms.map(r => ({
+                    id: r.id,
+                    name: r.name,
+                    priceLowSeason: Number(r.price_low_season || 2500),
+                    priceHighSeason: Number(r.price_high_season || 3000),
+                    price_low_season: Number(r.price_low_season || 2500),
+                    price_high_season: Number(r.price_high_season || 3000),
+                    capacity: r.capacity || '4 Adults',
+                    view: r.view_type || r.view || 'Mountain View',
+                    size: r.size || '380 sq.ft',
+                    extraBed: r.extra_bed || (r.id === 'carmel' ? 'Extra 1 Mattress' : r.id === 'sion' ? 'Extra 1 Cot' : null),
+                    features: r.features && r.features.length > 0 ? r.features : ['Attached Bathroom', 'Wi-Fi', 'Daily Housekeeping'],
+                    images: r.images && r.images.length > 0 ? r.images : DEFAULT_ROOMS.find(dr => dr.id === r.id)?.images || ['https://r1imghtlak.mmtcdn.com/bc566280898d11ec90380a58a9feac02.jpg?output-quality=75&downsize=*:500&crop=990:500'],
+                    description: r.description || DEFAULT_ROOMS.find(dr => dr.id === r.id)?.description || ''
+                }));
+                setRooms(mapped);
+            }
+        } catch (err) {
+            console.log('Error loading rooms on home:', err);
+        }
+    };
+
+    useEffect(() => {
+        loadRooms();
+        const unsubscribe = navigation?.addListener ? navigation.addListener('focus', loadRooms) : undefined;
+        return unsubscribe;
+    }, [navigation]);
 
     const handleQuickSearch = () => {
         navigation.navigate('BookingFlow', {
@@ -100,7 +134,7 @@ const HomeScreen = ({ navigation }) => {
                 <View style={styles.sectionHeader}>
                     <View>
                         <Text style={styles.sectionTag}>PRIVATE SUITES</Text>
-                        <Text style={styles.sectionTitle}>Our 4 Boutique Rooms</Text>
+                        <Text style={styles.sectionTitle}>Our {rooms.length > 0 ? rooms.length : 4} Boutique Rooms</Text>
                     </View>
                     <TouchableOpacity onPress={() => navigation.navigate('Suites')}>
                         <Text style={styles.seeAllText}>See All →</Text>
@@ -108,27 +142,30 @@ const HomeScreen = ({ navigation }) => {
                 </View>
 
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
-                    {DEFAULT_ROOMS.map(room => (
-                        <TouchableOpacity
-                            key={room.id}
-                            style={styles.roomCard}
-                            activeOpacity={0.9}
-                            onPress={() => navigation.navigate('RoomDetail', { room })}
-                        >
-                            <Image source={{ uri: room.images[0] }} style={styles.roomImage} />
-                            <View style={styles.roomBadge}>
-                                <Text style={styles.roomBadgeText}>{room.view}</Text>
-                            </View>
-                            <View style={styles.roomCardBody}>
-                                <Text style={styles.roomName}>{room.name}</Text>
-                                <Text style={styles.roomMeta}>{room.capacity} · {room.size}</Text>
-                                <View style={styles.roomPriceRow}>
-                                    <Text style={styles.roomPrice}>₹{room.priceLowSeason} <Text style={styles.roomPerNight}>/ night</Text></Text>
-                                    <Text style={styles.bookActionText}>View Details →</Text>
+                    {rooms.map(room => {
+                        const currentPrice = getSeasonalRoomPrice(new Date(), room.id, rooms);
+                        return (
+                            <TouchableOpacity
+                                key={room.id}
+                                style={styles.roomCard}
+                                activeOpacity={0.9}
+                                onPress={() => navigation.navigate('RoomDetail', { room })}
+                            >
+                                <Image source={{ uri: room.images[0] }} style={styles.roomImage} />
+                                <View style={styles.roomBadge}>
+                                    <Text style={styles.roomBadgeText}>{room.view}</Text>
                                 </View>
-                            </View>
-                        </TouchableOpacity>
-                    ))}
+                                <View style={styles.roomCardBody}>
+                                    <Text style={styles.roomName}>{room.name}</Text>
+                                    <Text style={styles.roomMeta}>{room.capacity} · {room.size}</Text>
+                                    <View style={styles.roomPriceRow}>
+                                        <Text style={styles.roomPrice}>₹{currentPrice.toLocaleString('en-IN')} <Text style={styles.roomPerNight}>/ night</Text></Text>
+                                        <Text style={styles.bookActionText}>View Details →</Text>
+                                    </View>
+                                </View>
+                            </TouchableOpacity>
+                        );
+                    })}
                 </ScrollView>
             </View>
 
