@@ -129,6 +129,40 @@ const HomeScreen = ({ navigation }) => {
                 </TouchableOpacity>
             </View>
 
+            {/* Exclusive Mobile Privilege: Family & Couple Monthly Room Subscription */}
+            <View style={styles.subscriptionBannerCard}>
+                <View style={styles.subscriptionTopRow}>
+                    <View style={styles.subPrivilegeBadge}>
+                        <Text style={styles.subPrivilegeBadgeText}>⭐ MEMBER RESIDENCY</Text>
+                    </View>
+                    <Text style={styles.subCommitmentTag}>3-Month AutoPay</Text>
+                </View>
+                <Text style={styles.subscriptionHeading}>Family & Couple Monthly Subscription</Text>
+                <Text style={styles.subscriptionSubtitle}>
+                    Enjoy 5–6 guaranteed mountain suite nights every month for up to 4 occupants with dedicated member calendar allocations.
+                </Text>
+
+                <View style={styles.subPillsRow}>
+                    <View style={styles.subPill}>
+                        <Text style={styles.subPillText}>💑 Couples & Families</Text>
+                    </View>
+                    <View style={styles.subPill}>
+                        <Text style={styles.subPillText}>📅 Dedicated Inventory</Text>
+                    </View>
+                    <View style={styles.subPill}>
+                        <Text style={styles.subPillText}>🔒 Zero Surge Pricing</Text>
+                    </View>
+                </View>
+
+                <TouchableOpacity
+                    style={styles.subscriptionCtaBtn}
+                    onPress={() => navigation.navigate('SubscriptionIntro')}
+                    activeOpacity={0.85}
+                >
+                    <Text style={styles.subscriptionCtaBtnText}>Explore Residency & Apply →</Text>
+                </TouchableOpacity>
+            </View>
+
             {/* Featured Suites Preview */}
             <View style={styles.section}>
                 <View style={styles.sectionHeader}>
@@ -513,6 +547,83 @@ const styles = StyleSheet.create({
         color: '#FFFFFF',
         fontSize: 13,
         fontWeight: '700'
+    },
+    subscriptionBannerCard: {
+        marginHorizontal: 16,
+        marginTop: 18,
+        backgroundColor: colors.forestDark,
+        borderRadius: radius.md,
+        padding: 18,
+        borderWidth: 1.5,
+        borderColor: colors.gold,
+        ...shadows.card
+    },
+    subscriptionTopRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 8
+    },
+    subPrivilegeBadge: {
+        backgroundColor: colors.gold,
+        paddingHorizontal: 8,
+        paddingVertical: 3,
+        borderRadius: radius.full
+    },
+    subPrivilegeBadgeText: {
+        fontSize: 9,
+        fontWeight: '800',
+        color: colors.forestDark,
+        letterSpacing: 0.8
+    },
+    subCommitmentTag: {
+        fontSize: 11,
+        fontWeight: '700',
+        color: colors.beige
+    },
+    subscriptionHeading: {
+        fontSize: 18,
+        fontWeight: '800',
+        color: colors.ivory,
+        marginBottom: 4
+    },
+    subscriptionSubtitle: {
+        fontSize: 12,
+        color: colors.beige,
+        lineHeight: 17,
+        opacity: 0.95,
+        marginBottom: 12
+    },
+    subPillsRow: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 6,
+        marginBottom: 14
+    },
+    subPill: {
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: radius.xs
+    },
+    subPillText: {
+        fontSize: 10,
+        fontWeight: '600',
+        color: colors.ivory
+    },
+    subscriptionCtaBtn: {
+        backgroundColor: colors.forest,
+        borderWidth: 1,
+        borderColor: colors.gold,
+        paddingVertical: 12,
+        borderRadius: radius.xs,
+        alignItems: 'center'
+    },
+    subscriptionCtaBtnText: {
+        color: colors.ivory,
+        fontSize: 13,
+        fontWeight: '700',
+        letterSpacing: 0.5
     }
 });
 

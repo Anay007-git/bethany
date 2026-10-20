@@ -19,6 +19,20 @@ import HomestayPoliciesScreen from '../screens/HomestayPoliciesScreen';
 import AdminLoginScreen from '../screens/AdminLoginScreen';
 import AdminDashboardScreen from '../screens/AdminDashboardScreen';
 
+// Subscription Screens (Exclusive Mobile Feature)
+import SubscriptionIntroScreen from '../screens/SubscriptionIntroScreen';
+import SubscriptionAuthScreen from '../screens/SubscriptionAuthScreen';
+import SubscriptionApplicationScreen from '../screens/SubscriptionApplicationScreen';
+import SubscriptionStatusScreen from '../screens/SubscriptionStatusScreen';
+import SubscriptionPlanSelectionScreen from '../screens/SubscriptionPlanSelectionScreen';
+import SubscriptionAutoPayScreen from '../screens/SubscriptionAutoPayScreen';
+import SubscriptionDashboardScreen from '../screens/SubscriptionDashboardScreen';
+import SubscriptionCalendarScreen from '../screens/SubscriptionCalendarScreen';
+import SubscriptionBookingScreen from '../screens/SubscriptionBookingScreen';
+import SubscriptionMyBookingsScreen from '../screens/SubscriptionMyBookingsScreen';
+import SubscriptionBillingHistoryScreen from '../screens/SubscriptionBillingHistoryScreen';
+import SubscriptionHelpPolicyScreen from '../screens/SubscriptionHelpPolicyScreen';
+
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
@@ -77,6 +91,20 @@ export default function AppNavigator() {
                 <Stack.Screen name="Policies" component={HomestayPoliciesScreen} />
                 <Stack.Screen name="AdminLogin" component={AdminLoginScreen} />
                 <Stack.Screen name="AdminDashboard" component={AdminDashboardScreen} />
+
+                {/* Family & Couple Monthly Room Subscription Flow */}
+                <Stack.Screen name="SubscriptionIntro" component={SubscriptionIntroScreen} />
+                <Stack.Screen name="SubscriptionAuth" component={SubscriptionAuthScreen} />
+                <Stack.Screen name="SubscriptionApplication" component={SubscriptionApplicationScreen} />
+                <Stack.Screen name="SubscriptionStatus" component={SubscriptionStatusScreen} />
+                <Stack.Screen name="SubscriptionPlanSelection" component={SubscriptionPlanSelectionScreen} />
+                <Stack.Screen name="SubscriptionAutoPay" component={SubscriptionAutoPayScreen} />
+                <Stack.Screen name="SubscriptionDashboard" component={SubscriptionDashboardScreen} />
+                <Stack.Screen name="SubscriptionCalendar" component={SubscriptionCalendarScreen} />
+                <Stack.Screen name="SubscriptionBooking" component={SubscriptionBookingScreen} />
+                <Stack.Screen name="SubscriptionMyBookings" component={SubscriptionMyBookingsScreen} />
+                <Stack.Screen name="SubscriptionBillingHistory" component={SubscriptionBillingHistoryScreen} />
+                <Stack.Screen name="SubscriptionHelpPolicy" component={SubscriptionHelpPolicyScreen} />
             </Stack.Navigator>
         </NavigationContainer>
     );

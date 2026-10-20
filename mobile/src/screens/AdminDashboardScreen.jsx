@@ -16,9 +16,10 @@ import {
 import { colors, radius, shadows } from '../theme';
 import { MobileSupabaseService } from '../services/SupabaseService';
 import AuthService from '../services/authService';
+import SubscriptionService from '../services/subscriptionService';
 
 const AdminDashboardScreen = ({ navigation }) => {
-    // Current Active Tab: 'dashboard' | 'inventory' | 'offline' | 'crm' | 'coupons'
+    // Current Active Tab: 'dashboard' | 'inventory' | 'offline' | 'crm' | 'coupons' | 'subscriptions'
     const [activeTab, setActiveTab] = useState('dashboard');
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
@@ -102,6 +103,16 @@ const AdminDashboardScreen = ({ navigation }) => {
     const [newCouponExpiry, setNewCouponExpiry] = useState('');
     const [showCouponModal, setShowCouponModal] = useState(false);
 
+    // Subscription Management States
+    const [subApplications, setSubApplications] = useState([]);
+    const [subAllocations, setSubAllocations] = useState([]);
+    const [selectedSubRoom, setSelectedSubRoom] = useState('carmel');
+    const [newSubAllocDate, setNewSubAllocDate] = useState('');
+    const [subFilter, setSubFilter] = useState('all'); // 'all' | 'pending_approval' | 'approved' | 'rejected' | 'additional_info_required'
+    const [selectedAppForReview, setSelectedAppForReview] = useState(null);
+    const [correctionNoteInput, setCorrectionNoteInput] = useState('');
+    const [subMemberships, setSubMemberships] = useState([]);
+
     // Initial session verification & data loading
     const loadAllAdminData = useCallback(async () => {
         try {
@@ -140,6 +151,20 @@ const AdminDashboardScreen = ({ navigation }) => {
             const crmRes = await MobileSupabaseService.getCRMAnalytics();
             if (crmRes.success) {
                 setCrmGuests(crmRes.data || []);
+            }
+
+            // 7. Fetch Subscriptions & Allocations
+            try {
+                const [appsRes, memsRes, allocsRes] = await Promise.all([
+                    SubscriptionService.getAdminApplications(),
+                    SubscriptionService.getAdminMemberships(),
+                    SubscriptionService.getAllocatedDates(selectedSubRoom)
+                ]);
+                if (appsRes.success) setSubApplications(appsRes.applications || []);
+                if (memsRes.success) setSubMemberships(memsRes.memberships || []);
+                if (allocsRes.success) setSubAllocations(allocsRes.dates || []);
+            } catch (subErr) {
+                console.log('Admin subscriptions load notice:', subErr);
             }
         } catch (err) {
             console.error('Error loading admin data:', err);
@@ -593,6 +618,48 @@ const AdminDashboardScreen = ({ navigation }) => {
         ]);
     };
 
+    // Subscription Application Review Action
+    const handleReviewApplication = async (appId, decision) => {
+        const note = correctionNoteInput.trim();
+        const res = await SubscriptionService.reviewApplication(appId, decision, note, 'Host Staff');
+        if (res.success) {
+            Alert.alert('Decision Recorded', `Application marked as ${decision.toUpperCase()}.`);
+            setSelectedAppForReview(null);
+            setCorrectionNoteInput('');
+            loadAllAdminData();
+        } else {
+            Alert.alert('Error', res.error || 'Failed to update application.');
+        }
+    };
+
+    // Allocate Subscription Date
+    const handleAllocateSubDate = async () => {
+        if (!newSubAllocDate.trim()) {
+            Alert.alert('Validation Error', 'Please enter a valid date in YYYY-MM-DD format.');
+            return;
+        }
+        const res = await SubscriptionService.allocateRoomDate(selectedSubRoom, newSubAllocDate.trim());
+        if (res.success) {
+            Alert.alert('Success', `Allocated ${newSubAllocDate} for ${selectedSubRoom.toUpperCase()} Suite.`);
+            setNewSubAllocDate('');
+            const allocsRes = await SubscriptionService.getAllocatedDates(selectedSubRoom);
+            if (allocsRes.success) setSubAllocations(allocsRes.dates || []);
+        } else {
+            Alert.alert('Error', res.error || 'Failed to allocate date.');
+        }
+    };
+
+    // Deallocate Subscription Date
+    const handleDeallocateSubDate = async (date) => {
+        const res = await SubscriptionService.deallocateRoomDate(selectedSubRoom, date);
+        if (res.success) {
+            const allocsRes = await SubscriptionService.getAllocatedDates(selectedSubRoom);
+            if (allocsRes.success) setSubAllocations(allocsRes.dates || []);
+        } else {
+            Alert.alert('Error', res.error || 'Failed to deallocate date.');
+        }
+    };
+
     // Filtered Bookings
     const filteredBookings = stats.allBookings.filter(b => {
         const matchesStatus = statusFilter === 'all' || (b.status || '').toLowerCase() === statusFilter;
@@ -686,6 +753,15 @@ const AdminDashboardScreen = ({ navigation }) => {
                     >
                         <Text style={[styles.tabText, activeTab === 'coupons' && styles.tabTextActive]}>
                             🏷️ Coupons ({coupons.length})
+                        </Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={[styles.tabItem, activeTab === 'subscriptions' && styles.tabItemActive]}
+                        onPress={() => setActiveTab('subscriptions')}
+                    >
+                        <Text style={[styles.tabText, activeTab === 'subscriptions' && styles.tabTextActive]}>
+                            ⭐ Subscriptions ({subApplications.length})
                         </Text>
                     </TouchableOpacity>
                 </ScrollView>
@@ -1572,8 +1648,343 @@ const AdminDashboardScreen = ({ navigation }) => {
                     </View>
                 )}
 
+                {/* ============================================================== */}
+                {/* TAB 6: SUBSCRIPTIONS, KYC REVIEW & MEMBER INVENTORY ALLOCATOR  */}
+                {/* ============================================================== */}
+                {activeTab === 'subscriptions' && (
+                    <View style={styles.tabContent}>
+                        {/* Subscriptions Header */}
+                        <View style={styles.couponTopHeader}>
+                            <View style={{ flex: 1 }}>
+                                <Text style={styles.sectionHeader}>Subscription Management</Text>
+                                <Text style={styles.sectionSub}>Review member applications & manage dedicated room date inventory.</Text>
+                            </View>
+                        </View>
+
+                        {/* Top Metrics Row */}
+                        <View style={{ flexDirection: 'row', gap: 8, marginBottom: 14 }}>
+                            <View style={[styles.kpiCard, { flex: 1 }]}>
+                                <Text style={styles.kpiValue}>{subApplications.length}</Text>
+                                <Text style={styles.kpiLabel}>Total Applicants</Text>
+                            </View>
+                            <View style={[styles.kpiCard, { flex: 1 }]}>
+                                <Text style={[styles.kpiValue, { color: '#E76F51' }]}>
+                                    {subApplications.filter(a => a.status === 'pending_approval').length}
+                                </Text>
+                                <Text style={styles.kpiLabel}>Pending Review</Text>
+                            </View>
+                            <View style={[styles.kpiCard, { flex: 1 }]}>
+                                <Text style={[styles.kpiValue, { color: colors.success }]}>
+                                    {subMemberships.length}
+                                </Text>
+                                <Text style={styles.kpiLabel}>Active Members</Text>
+                            </View>
+                        </View>
+
+                        {/* Sub-Filter Pills */}
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
+                            {[
+                                { key: 'all', label: `All (${subApplications.length})` },
+                                { key: 'pending_approval', label: `Pending (${subApplications.filter(a => a.status === 'pending_approval').length})` },
+                                { key: 'approved', label: `Approved (${subApplications.filter(a => a.status === 'approved').length})` },
+                                { key: 'additional_info_required', label: `Needs Info (${subApplications.filter(a => a.status === 'additional_info_required').length})` },
+                                { key: 'rejected', label: `Rejected (${subApplications.filter(a => a.status === 'rejected').length})` }
+                            ].map(filter => (
+                                <TouchableOpacity
+                                    key={filter.key}
+                                    style={[
+                                        styles.filterPill,
+                                        subFilter === filter.key && styles.filterPillActive,
+                                        { marginRight: 8 }
+                                    ]}
+                                    onPress={() => setSubFilter(filter.key)}
+                                >
+                                    <Text
+                                        style={[
+                                            styles.filterPillText,
+                                            subFilter === filter.key && styles.filterPillTextActive
+                                        ]}
+                                    >
+                                        {filter.label}
+                                    </Text>
+                                </TouchableOpacity>
+                            ))}
+                        </ScrollView>
+
+                        {/* Section: Applicant Review Cards */}
+                        <Text style={[styles.sectionHeader, { fontSize: 13, marginBottom: 8 }]}>
+                            Application Review Queue
+                        </Text>
+
+                        {subApplications
+                            .filter(a => subFilter === 'all' || a.status === subFilter)
+                            .map(app => {
+                                const occupants = app.subscription_occupants || [];
+                                const user = app.subscription_users || {};
+                                const isPending = app.status === 'pending_approval';
+
+                                return (
+                                    <View key={app.id} style={styles.bookingCard}>
+                                        <View style={styles.bookingHeaderRow}>
+                                            <View style={styles.guestAvatar}>
+                                                <Text style={styles.guestAvatarText}>
+                                                    {app.category === 'couple' ? '💑' : '👨‍👩‍👧‍👦'}
+                                                </Text>
+                                            </View>
+                                            <View style={{ flex: 1, marginLeft: 10 }}>
+                                                <Text style={styles.guestName}>{app.primary_name}</Text>
+                                                <Text style={styles.bookingRef}>
+                                                    {app.category === 'couple' ? 'Couple Tier' : 'Family Tier'} • {app.primary_phone}
+                                                </Text>
+                                                <Text style={{ fontSize: 11, color: colors.textMuted }}>{app.primary_email}</Text>
+                                            </View>
+                                            <View
+                                                style={[
+                                                    styles.statusBadge,
+                                                    {
+                                                        backgroundColor:
+                                                            app.status === 'approved' ? '#D1FAE5' :
+                                                            app.status === 'pending_approval' ? '#FEF3C7' :
+                                                            app.status === 'additional_info_required' ? '#FDE68A' : '#FEE2E2'
+                                                    }
+                                                ]}
+                                            >
+                                                <Text
+                                                    style={{
+                                                        fontSize: 9,
+                                                        fontWeight: '800',
+                                                        color:
+                                                            app.status === 'approved' ? '#065F46' :
+                                                            app.status === 'pending_approval' ? '#92400E' :
+                                                            app.status === 'additional_info_required' ? '#B45309' : '#991B1B'
+                                                    }}
+                                                >
+                                                    {(app.status || 'DRAFT').toUpperCase()}
+                                                </Text>
+                                            </View>
+                                        </View>
+
+                                        {/* Occupants Breakdown */}
+                                        <View style={{ backgroundColor: colors.ivoryWarm, padding: 8, borderRadius: 6, marginVertical: 8 }}>
+                                            <Text style={{ fontSize: 10, fontWeight: '800', color: colors.forest, marginBottom: 2 }}>
+                                                VERIFIED OCCUPANTS ({occupants.length}/4):
+                                            </Text>
+                                            {occupants.map((occ, idx) => (
+                                                <Text key={idx} style={{ fontSize: 11, color: colors.textMain, marginVertical: 1 }}>
+                                                    • {occ.full_name} ({occ.relationship}, {occ.age} yrs)
+                                                </Text>
+                                            ))}
+                                            <Text style={{ fontSize: 10, color: colors.textMuted, marginTop: 4 }}>
+                                                Address: {app.primary_address || 'Not provided'}
+                                            </Text>
+                                            {app.id_proof_number ? (
+                                                <Text style={{ fontSize: 10, color: colors.textMuted }}>
+                                                    ID: {app.id_proof_type} ({app.id_proof_number})
+                                                </Text>
+                                            ) : null}
+                                        </View>
+
+                                        {/* Host Notes if present */}
+                                        {app.admin_notes ? (
+                                            <Text style={{ fontSize: 11, fontStyle: 'italic', color: colors.terracotta, marginBottom: 6 }}>
+                                                Host Note: "{app.admin_notes}"
+                                            </Text>
+                                        ) : null}
+
+                                        {/* Action Buttons */}
+                                        <View style={{ flexDirection: 'row', gap: 8, marginTop: 4 }}>
+                                            <TouchableOpacity
+                                                style={[styles.actionBtn, { backgroundColor: colors.forest, flex: 1.5 }]}
+                                                onPress={() => {
+                                                    setSelectedAppForReview(app);
+                                                    setCorrectionNoteInput(app.admin_notes || '');
+                                                }}
+                                            >
+                                                <Text style={styles.actionBtnText}>⚖️ Review & Decide</Text>
+                                            </TouchableOpacity>
+
+                                            <TouchableOpacity
+                                                style={[styles.actionBtn, { backgroundColor: colors.whatsapp, flex: 1 }]}
+                                                onPress={() => {
+                                                    const cleanPhone = (app.primary_phone || '').replace(/\D/g, '');
+                                                    Linking.openURL(`https://wa.me/${cleanPhone}?text=Hello%20${app.primary_name},%20greetings%20from%20Bethany%20Homestay%20Host%20Team.`);
+                                                }}
+                                            >
+                                                <Text style={styles.actionBtnText}>💬 WhatsApp</Text>
+                                            </TouchableOpacity>
+                                        </View>
+                                    </View>
+                                );
+                            })}
+
+                        <View style={styles.divider} />
+
+                        {/* Section: Dedicated Room Allocations */}
+                        <Text style={[styles.sectionHeader, { fontSize: 13, marginTop: 14, marginBottom: 4 }]}>
+                            Dedicated Member Inventory Allocator
+                        </Text>
+                        <Text style={[styles.sectionSub, { marginBottom: 10 }]}>
+                            Members can ONLY book dates explicitly allocated here.
+                        </Text>
+
+                        {/* Room Switcher */}
+                        <View style={{ flexDirection: 'row', gap: 6, marginBottom: 12 }}>
+                            {rooms.map(r => (
+                                <TouchableOpacity
+                                    key={r.id}
+                                    style={[
+                                        styles.tabItem,
+                                        selectedSubRoom === r.id && styles.tabItemActive,
+                                        { paddingHorizontal: 12, paddingVertical: 6 }
+                                    ]}
+                                    onPress={async () => {
+                                        setSelectedSubRoom(r.id);
+                                        const res = await SubscriptionService.getAllocatedDates(r.id);
+                                        if (res.success) setSubAllocations(res.dates || []);
+                                    }}
+                                >
+                                    <Text style={[styles.tabText, selectedSubRoom === r.id && styles.tabTextActive, { fontSize: 11 }]}>
+                                        {r.name}
+                                    </Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+
+                        {/* Add Allocation Form */}
+                        <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center', marginBottom: 12 }}>
+                            <TextInput
+                                style={[styles.simpleInput, { flex: 1, height: 40, fontSize: 13 }]}
+                                placeholder="YYYY-MM-DD (e.g. 2026-11-15)"
+                                value={newSubAllocDate}
+                                onChangeText={setNewSubAllocDate}
+                            />
+                            <TouchableOpacity
+                                style={[styles.actionBtn, { backgroundColor: colors.forest, height: 40, paddingHorizontal: 14 }]}
+                                onPress={handleAllocateSubDate}
+                            >
+                                <Text style={styles.actionBtnText}>+ Allocate Date</Text>
+                            </TouchableOpacity>
+                        </View>
+
+                        {/* Currently Allocated Dates Chips */}
+                        <View style={{ backgroundColor: colors.bgSurface, padding: 12, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.borderSubtle }}>
+                            <Text style={{ fontSize: 11, fontWeight: '800', color: colors.grey, marginBottom: 8 }}>
+                                CURRENT ALLOCATIONS FOR {selectedSubRoom.toUpperCase()} ({subAllocations.length} Dates):
+                            </Text>
+
+                            {subAllocations.length === 0 ? (
+                                <Text style={{ fontSize: 12, color: colors.textMuted, fontStyle: 'italic' }}>
+                                    No dates currently allocated for this suite. Use the allocator above to enable dates for members.
+                                </Text>
+                            ) : (
+                                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                                    {subAllocations.map(d => (
+                                        <View
+                                            key={d}
+                                            style={{
+                                                flexDirection: 'row',
+                                                alignItems: 'center',
+                                                backgroundColor: '#ECFDF5',
+                                                borderWidth: 1,
+                                                borderColor: '#A7F3D0',
+                                                paddingHorizontal: 8,
+                                                paddingVertical: 4,
+                                                borderRadius: 4
+                                            }}
+                                        >
+                                            <Text style={{ fontSize: 11, fontWeight: '700', color: '#065F46', marginRight: 6 }}>
+                                                {d}
+                                            </Text>
+                                            <TouchableOpacity onPress={() => handleDeallocateSubDate(d)}>
+                                                <Text style={{ fontSize: 11, color: '#DC2626', fontWeight: '800' }}>✕</Text>
+                                            </TouchableOpacity>
+                                        </View>
+                                    ))}
+                                </View>
+                            )}
+                        </View>
+                    </View>
+                )}
+
                 <View style={{ height: 60 }} />
             </ScrollView>
+
+            {/* Modal: Subscription Application Decision Review */}
+            <Modal visible={!!selectedAppForReview} transparent animationType="fade">
+                <View style={styles.modalOverlay}>
+                    <View style={[styles.modalCard, { maxHeight: '85%' }]}>
+                        <ScrollView showsVerticalScrollIndicator={false}>
+                            <Text style={styles.modalTitle}>Review Membership Application</Text>
+                            <Text style={styles.modalSub}>
+                                Applicant: {selectedAppForReview?.primary_name} ({selectedAppForReview?.category === 'couple' ? 'Couple Tier' : 'Family Tier'})
+                            </Text>
+
+                            <View style={{ backgroundColor: colors.ivoryWarm, padding: 10, borderRadius: 6, marginVertical: 10 }}>
+                                <Text style={{ fontSize: 11, fontWeight: '700', color: colors.forestDark }}>
+                                    Contact & KYC Details:
+                                </Text>
+                                <Text style={{ fontSize: 11, color: colors.textMain, marginTop: 2 }}>
+                                    Phone: {selectedAppForReview?.primary_phone}
+                                </Text>
+                                <Text style={{ fontSize: 11, color: colors.textMain }}>
+                                    Email: {selectedAppForReview?.primary_email}
+                                </Text>
+                                <Text style={{ fontSize: 11, color: colors.textMain }}>
+                                    Address: {selectedAppForReview?.primary_address}
+                                </Text>
+                                <Text style={{ fontSize: 11, color: colors.textMain }}>
+                                    Document: {selectedAppForReview?.id_proof_type} ({selectedAppForReview?.id_proof_number || 'N/A'})
+                                </Text>
+                            </View>
+
+                            <Text style={styles.inputLabelSmall}>ADMIN DECISION NOTE / CORRECTION DETAILS</Text>
+                            <TextInput
+                                style={[styles.simpleInput, { height: 70, textAlignVertical: 'top' }]}
+                                placeholder="Enter instructions for applicant if requesting corrections or specific reason..."
+                                value={correctionNoteInput}
+                                onChangeText={setCorrectionNoteInput}
+                                multiline
+                            />
+
+                            <View style={{ gap: 8, marginTop: 12 }}>
+                                <TouchableOpacity
+                                    style={[styles.statusOptionBtn, { borderColor: '#10B981', backgroundColor: '#ECFDF5' }]}
+                                    onPress={() => handleReviewApplication(selectedAppForReview.id, 'approved')}
+                                >
+                                    <Text style={[styles.statusOptionText, { color: '#065F46', fontWeight: '800' }]}>
+                                        ✅ Approve Applicant (Unlocks Plan & AutoPay)
+                                    </Text>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity
+                                    style={[styles.statusOptionBtn, { borderColor: '#F59E0B', backgroundColor: '#FFFBEA' }]}
+                                    onPress={() => handleReviewApplication(selectedAppForReview.id, 'additional_info_required')}
+                                >
+                                    <Text style={[styles.statusOptionText, { color: '#92400E', fontWeight: '800' }]}>
+                                        ⚠️ Request Corrections / More Info
+                                    </Text>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity
+                                    style={[styles.statusOptionBtn, { borderColor: '#DC2626', backgroundColor: '#FEF2F2' }]}
+                                    onPress={() => handleReviewApplication(selectedAppForReview.id, 'rejected')}
+                                >
+                                    <Text style={[styles.statusOptionText, { color: '#991B1B', fontWeight: '800' }]}>
+                                        ❌ Reject Application
+                                    </Text>
+                                </TouchableOpacity>
+                            </View>
+
+                            <TouchableOpacity
+                                style={[styles.modalCancelBtn, { alignSelf: 'center', marginTop: 12 }]}
+                                onPress={() => setSelectedAppForReview(null)}
+                            >
+                                <Text style={styles.modalCancelText}>Close Window</Text>
+                            </TouchableOpacity>
+                        </ScrollView>
+                    </View>
+                </View>
+            </Modal>
 
             {/* Modal: Status Change */}
             <Modal visible={!!statusModalBooking} transparent animationType="fade">
@@ -2979,6 +3390,39 @@ const styles = StyleSheet.create({
         paddingVertical: 10,
         paddingHorizontal: 18,
         borderRadius: radius.xs
+    },
+    filterPill: {
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: radius.full,
+        backgroundColor: colors.ivoryWarm,
+        borderWidth: 1,
+        borderColor: colors.borderSubtle
+    },
+    filterPillActive: {
+        backgroundColor: colors.forest,
+        borderColor: colors.forest
+    },
+    filterPillText: {
+        fontSize: 11,
+        fontWeight: '600',
+        color: colors.grey
+    },
+    filterPillTextActive: {
+        color: colors.ivory,
+        fontWeight: '700'
+    },
+    actionBtn: {
+        paddingVertical: 8,
+        paddingHorizontal: 10,
+        borderRadius: radius.xs,
+        alignItems: 'center',
+        justifyContent: 'center'
+    },
+    actionBtnText: {
+        color: '#FFFFFF',
+        fontSize: 11,
+        fontWeight: '700'
     }
 });
 
