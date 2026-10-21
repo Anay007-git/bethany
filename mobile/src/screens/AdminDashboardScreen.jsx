@@ -17,6 +17,8 @@ import { colors, radius, shadows } from '../theme';
 import { MobileSupabaseService, supabase } from '../services/SupabaseService';
 import AuthService from '../services/authService';
 import SubscriptionService from '../services/subscriptionService';
+import { DateRangePicker } from '../components/DateRangePicker';
+import { DEFAULT_ROOMS } from '../services/pricingService';
 
 const AdminDashboardScreen = ({ navigation }) => {
     // Current Active Tab: 'dashboard' | 'inventory' | 'offline' | 'crm' | 'coupons' | 'subscriptions'
@@ -588,25 +590,39 @@ const AdminDashboardScreen = ({ navigation }) => {
             return;
         }
 
-        const selectedRoomObjects = rooms.filter(r => offlineSelectedRooms.includes(r.id));
+        if (offlineCheckOut <= offlineCheckIn) {
+            Alert.alert('Invalid Dates', 'Check-Out date must be after Check-In date. Please tap your dates on the calendar.');
+            return;
+        }
+
+        const allRoomsSource = (rooms && rooms.length > 0) ? rooms : DEFAULT_ROOMS;
+        let selectedRoomObjects = allRoomsSource.filter(r => offlineSelectedRooms.includes(r.id));
+        if (selectedRoomObjects.length === 0) {
+            selectedRoomObjects = DEFAULT_ROOMS.filter(r => offlineSelectedRooms.includes(r.id));
+        }
+        if (selectedRoomObjects.length === 0) {
+            selectedRoomObjects = [DEFAULT_ROOMS[0]];
+        }
+
         const mealSummary = `Breakfast(V:${offlineMeals.breakfastVeg},NV:${offlineMeals.breakfastNonVeg}) | Lunch(V:${offlineMeals.lunchVeg},NV:${offlineMeals.lunchNonVeg}) | Dinner(V:${offlineMeals.dinnerVeg},NV:${offlineMeals.dinnerNonVeg})`;
 
+        const safeGrandTotal = Math.max(0, parseFloat(liveLedger.grandTotal) || 0);
         const bookingPayload = {
-            name: offlineGuestName,
-            phone: offlinePhone,
-            email: offlineEmail || 'walkin@bethany.com',
+            name: offlineGuestName.trim(),
+            phone: offlinePhone.trim(),
+            email: offlineEmail.trim() || `walkin.${Date.now()}@bethanyhomestay.com`,
             checkIn: offlineCheckIn,
             checkOut: offlineCheckOut,
-            guests: offlineGuestsCount,
+            guests: offlineGuestsCount || '2',
             selectedRooms: selectedRoomObjects,
-            totalPrice: liveLedger.grandTotal,
+            totalPrice: safeGrandTotal,
             mealSummary,
             status: 'confirmed',
             notes: 'Walk-in booking created via Staff App',
             invoiceItems: [
-                { name: `Room Accommodations (${liveLedger.nights} Nights)`, amount: liveLedger.roomTotal },
-                { name: 'Organic Himalayan Meals', amount: liveLedger.mealsTotal },
-                { name: 'Courtesy Discount', amount: -liveLedger.discount }
+                { name: `Room Accommodations (${liveLedger.nights || 1} Nights)`, amount: liveLedger.roomTotal || safeGrandTotal },
+                { name: 'Organic Himalayan Meals', amount: liveLedger.mealsTotal || 0 },
+                { name: 'Courtesy Discount', amount: -(liveLedger.discount || 0) }
             ]
         };
 
@@ -1336,29 +1352,17 @@ const AdminDashboardScreen = ({ navigation }) => {
                             </View>
 
                             {/* Block Custom Date Range */}
-                            <Text style={styles.inputLabelSmall}>OR BLOCK CUSTOM DATE RANGE</Text>
-                            <View style={{ flexDirection: 'row', gap: 10, marginBottom: 8 }}>
-                                <View style={{ flex: 1 }}>
-                                    <Text style={{ fontSize: 10, color: colors.grey, marginBottom: 4 }}>FROM (YYYY-MM-DD)</Text>
-                                    <TextInput
-                                        style={styles.simpleInput}
-                                        placeholder="2026-10-01"
-                                        placeholderTextColor={colors.grey}
-                                        value={blockStartDate}
-                                        onChangeText={setBlockStartDate}
-                                    />
-                                </View>
-                                <View style={{ flex: 1 }}>
-                                    <Text style={{ fontSize: 10, color: colors.grey, marginBottom: 4 }}>TO (YYYY-MM-DD)</Text>
-                                    <TextInput
-                                        style={styles.simpleInput}
-                                        placeholder="2026-10-31"
-                                        placeholderTextColor={colors.grey}
-                                        value={blockEndDate}
-                                        onChangeText={setBlockEndDate}
-                                    />
-                                </View>
-                            </View>
+                            <Text style={[styles.inputLabelSmall, { marginTop: 12, marginBottom: 6 }]}>
+                                OR BLOCK CUSTOM DATE RANGE (TAP DATES ON CALENDAR)
+                            </Text>
+                            <DateRangePicker
+                                checkIn={blockStartDate}
+                                checkOut={blockEndDate}
+                                onSelectRange={(inStr, outStr) => {
+                                    setBlockStartDate(inStr || '');
+                                    setBlockEndDate(outStr || '');
+                                }}
+                            />
 
                             <Text style={styles.inputLabelSmall}>BLOCK REASON</Text>
                             <TextInput
@@ -1466,32 +1470,21 @@ const AdminDashboardScreen = ({ navigation }) => {
                                 onChangeText={setOfflineEmail}
                             />
 
-                            <View style={{ flexDirection: 'row', gap: 10 }}>
-                                <View style={{ flex: 1 }}>
-                                    <Text style={styles.inputLabelSmall}>CHECK-IN (YYYY-MM-DD) *</Text>
-                                    <TextInput
-                                        style={styles.simpleInput}
-                                        placeholder="2026-10-15"
-                                        placeholderTextColor={colors.grey}
-                                        value={offlineCheckIn}
-                                        onChangeText={setOfflineCheckIn}
-                                    />
-                                </View>
-                                <View style={{ flex: 1 }}>
-                                    <Text style={styles.inputLabelSmall}>CHECK-OUT (YYYY-MM-DD) *</Text>
-                                    <TextInput
-                                        style={styles.simpleInput}
-                                        placeholder="2026-10-17"
-                                        placeholderTextColor={colors.grey}
-                                        value={offlineCheckOut}
-                                        onChangeText={setOfflineCheckOut}
-                                    />
-                                </View>
-                            </View>
+                            <Text style={[styles.inputLabelSmall, { marginTop: 12, marginBottom: 6 }]}>
+                                RESERVATION DATES (TAP TO SELECT ON CALENDAR) *
+                            </Text>
+                            <DateRangePicker
+                                checkIn={offlineCheckIn}
+                                checkOut={offlineCheckOut}
+                                onSelectRange={(inStr, outStr) => {
+                                    setOfflineCheckIn(inStr || '');
+                                    setOfflineCheckOut(outStr || '');
+                                }}
+                            />
 
-                            <Text style={styles.inputLabelSmall}>SELECT SUITE(S) *</Text>
+                            <Text style={[styles.inputLabelSmall, { marginTop: 14 }]}>SELECT SUITE(S) *</Text>
                             <View style={styles.roomSelectRow}>
-                                {rooms.map(r => {
+                                {(rooms && rooms.length > 0 ? rooms : DEFAULT_ROOMS).map(r => {
                                     const isSel = offlineSelectedRooms.includes(r.id);
                                     return (
                                         <TouchableOpacity

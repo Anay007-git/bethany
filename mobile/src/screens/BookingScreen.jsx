@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
     View,
     Text,
@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { colors, radius, shadows } from '../theme';
 import { MobileSupabaseService } from '../services/SupabaseService';
+import { DateRangePicker } from '../components/DateRangePicker';
 import {
     DEFAULT_ROOMS,
     calculateRoomTotal,
@@ -68,6 +69,37 @@ const BookingScreen = ({ route, navigation }) => {
     const subtotal = roomTotal + mealTotal;
     const discountAmount = calculateDiscount(subtotal, appliedCoupon);
     const finalTotal = Math.max(0, subtotal - discountAmount);
+
+    // Calculate occupied dates for selected rooms to visually mark OCC and prevent conflict
+    const occupiedDatesList = useMemo(() => {
+        const occSet = new Set();
+        const selectedIds = selectedRooms.map(r => r.id);
+
+        selectedIds.forEach(id => {
+            if (blockedDates[id] && Array.isArray(blockedDates[id])) {
+                blockedDates[id].forEach(d => occSet.add(d));
+            }
+        });
+
+        (existingBookings || []).forEach(b => {
+            if (['confirmed', 'booked', 'pending'].includes((b.status || '').toLowerCase())) {
+                const bRoomIds = Array.isArray(b.room_ids)
+                    ? b.room_ids.map(r => (typeof r === 'object' ? r.id : r))
+                    : [];
+                const hasMatch = selectedIds.some(id => bRoomIds.includes(id));
+                if (hasMatch && b.check_in && b.check_out) {
+                    let cur = new Date(b.check_in);
+                    const out = new Date(b.check_out);
+                    while (cur < out) {
+                        occSet.add(cur.toISOString().split('T')[0]);
+                        cur.setDate(cur.getDate() + 1);
+                    }
+                }
+            }
+        });
+
+        return Array.from(occSet);
+    }, [selectedRooms, blockedDates, existingBookings]);
 
     useEffect(() => {
         loadData();
@@ -210,32 +242,23 @@ const BookingScreen = ({ route, navigation }) => {
 
                 {/* Step 1: Dates & Duration */}
                 <View style={styles.card}>
-                    <Text style={styles.cardTitle}>1. Reservation Dates</Text>
-                    <View style={styles.datesRow}>
-                        <View style={styles.dateField}>
-                            <Text style={styles.inputLabel}>CHECK-IN</Text>
-                            <TextInput
-                                style={styles.dateInput}
-                                value={checkIn}
-                                onChangeText={setCheckIn}
-                                placeholder="YYYY-MM-DD"
-                            />
-                        </View>
-
+                    <View style={styles.cardHeaderRow}>
+                        <Text style={styles.cardTitle}>1. Reservation Dates</Text>
                         <View style={styles.nightBadge}>
                             <Text style={styles.nightText}>{nights} {nights === 1 ? 'Night' : 'Nights'}</Text>
                         </View>
-
-                        <View style={styles.dateField}>
-                            <Text style={styles.inputLabel}>CHECK-OUT</Text>
-                            <TextInput
-                                style={styles.dateInput}
-                                value={checkOut}
-                                onChangeText={setCheckOut}
-                                placeholder="YYYY-MM-DD"
-                            />
-                        </View>
                     </View>
+                    <Text style={styles.cardHint}>Tap dates on the interactive calendar to select your stay duration:</Text>
+
+                    <DateRangePicker
+                        checkIn={checkIn}
+                        checkOut={checkOut}
+                        onSelectRange={(inStr, outStr) => {
+                            if (inStr) setCheckIn(inStr);
+                            if (outStr) setCheckOut(outStr);
+                        }}
+                        occupiedDates={occupiedDatesList}
+                    />
                 </View>
 
                 {/* Step 2: Select Rooms */}

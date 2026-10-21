@@ -106,25 +106,48 @@ export const MobileSupabaseService = {
                 }
             }
 
-            // B. Create Guest
-            const { data: guest, error: guestError } = await supabase
-                .from('guests')
-                .insert([{
-                    full_name: bookingData.name,
-                    email: bookingData.email,
-                    phone: bookingData.phone
-                }])
-                .select()
-                .single();
+            // B. Create / Lookup Guest
+            let guestId = null;
+            let guestRecord = null;
+            const cleanPhone = (bookingData.phone || '').toString().trim();
+            const cleanEmail = (bookingData.email || '').toString().trim().toLowerCase();
 
-            if (guestError) throw guestError;
+            try {
+                const { data: existingGuest } = await supabase
+                    .from('guests')
+                    .select('*')
+                    .or(`phone.eq.${cleanPhone},email.eq.${cleanEmail}`)
+                    .limit(1)
+                    .maybeSingle();
+
+                if (existingGuest?.id) {
+                    guestId = existingGuest.id;
+                    guestRecord = existingGuest;
+                }
+            } catch (_) {}
+
+            if (!guestId) {
+                const { data: newGuest, error: guestError } = await supabase
+                    .from('guests')
+                    .insert([{
+                        full_name: (bookingData.name || 'Guest').trim(),
+                        email: cleanEmail,
+                        phone: cleanPhone
+                    }])
+                    .select()
+                    .single();
+
+                if (guestError) throw guestError;
+                guestId = newGuest.id;
+                guestRecord = newGuest;
+            }
 
             // C. Create Booking
             const roomIds = bookingData.selectedRooms.map(r => ({ id: r.id, name: r.name }));
             const { data: booking, error: bookingError } = await supabase
                 .from('bookings')
                 .insert([{
-                    guest_id: guest.id,
+                    guest_id: guestId,
                     room_ids: roomIds,
                     check_in: bookingData.checkIn,
                     check_out: bookingData.checkOut,
@@ -158,7 +181,7 @@ export const MobileSupabaseService = {
                 }
             }
 
-            return { success: true, booking, guest };
+            return { success: true, booking, guest: guestRecord };
         } catch (error) {
             console.error('Mobile booking error:', error);
             return { success: false, error: error.message || 'Booking creation failed' };
@@ -510,43 +533,113 @@ export const MobileSupabaseService = {
     // A10. Admin: Create Manual / Offline Booking
     async createAdminManualBooking(bookingData) {
         try {
-            // A. Create / reuse guest
-            const { data: guest, error: guestError } = await supabase
-                .from('guests')
-                .insert([{
-                    full_name: bookingData.name.trim(),
-                    email: (bookingData.email || 'offline@bethany.com').trim(),
-                    phone: bookingData.phone.trim()
-                }])
-                .select()
-                .single();
+            // 1. Sanitize & validate dates
+            const normalizeDate = (dStr) => {
+                if (!dStr) return null;
+                const trimmed = dStr.toString().trim();
+                // If in DD/MM/YYYY format
+                if (trimmed.includes('/') && trimmed.split('/').length === 3) {
+                    const [d, m, y] = trimmed.split('/');
+                    return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+                }
+                // If in YYYY-MM-DD format
+                if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+                    return trimmed;
+                }
+                const parsed = new Date(trimmed);
+                if (!isNaN(parsed.getTime())) {
+                    return parsed.toISOString().split('T')[0];
+                }
+                return null;
+            };
 
-            if (guestError) throw guestError;
+            const cleanCheckIn = normalizeDate(bookingData.checkIn);
+            const cleanCheckOut = normalizeDate(bookingData.checkOut);
 
-            // B. Room records array
-            const roomIds = bookingData.selectedRooms.map(r => ({ id: r.id, name: r.name }));
+            if (!cleanCheckIn || !cleanCheckOut || cleanCheckOut <= cleanCheckIn) {
+                return { success: false, error: 'Invalid check-in or check-out dates. Please select valid consecutive dates.' };
+            }
 
-            // C. Insert booking
+            // 2. Sanitize Guest Info
+            const cleanName = (bookingData.name || 'Walk-In Guest').toString().trim();
+            const rawPhone = (bookingData.phone || '').toString().trim();
+            const cleanPhone = rawPhone.replace(/[^\d+]/g, '') || '9999999999';
+            let cleanEmail = (bookingData.email || '').toString().trim().toLowerCase();
+            if (!cleanEmail || !cleanEmail.includes('@')) {
+                cleanEmail = `offline.${Date.now()}@bethanyhomestay.com`;
+            }
+
+            // Check if guest already exists by phone or email
+            let guestId = null;
+            let guestRecord = null;
+
+            try {
+                const { data: existingGuest } = await supabase
+                    .from('guests')
+                    .select('*')
+                    .or(`phone.eq.${cleanPhone},email.eq.${cleanEmail}`)
+                    .limit(1)
+                    .maybeSingle();
+
+                if (existingGuest?.id) {
+                    guestId = existingGuest.id;
+                    guestRecord = existingGuest;
+                }
+            } catch (_) {}
+
+            if (!guestId) {
+                const { data: newGuest, error: guestError } = await supabase
+                    .from('guests')
+                    .insert([{
+                        full_name: cleanName,
+                        email: cleanEmail,
+                        phone: cleanPhone
+                    }])
+                    .select()
+                    .single();
+
+                if (guestError) throw new Error(`Guest record error: ${guestError.message}`);
+                guestId = newGuest.id;
+                guestRecord = newGuest;
+            }
+
+            // 3. Room records array (guarantee at least one valid room)
+            let roomIds = [];
+            if (Array.isArray(bookingData.selectedRooms) && bookingData.selectedRooms.length > 0) {
+                roomIds = bookingData.selectedRooms.map(r => ({
+                    id: (r.id || 'carmel').toLowerCase(),
+                    name: r.name || (r.id === 'jordan' ? 'Jordan' : r.id === 'sion' ? 'Sion Room' : r.id === 'zion' ? 'Zion' : 'Carmel')
+                }));
+            } else {
+                roomIds = [{ id: 'carmel', name: 'Carmel' }];
+            }
+
+            // 4. Safe price and guest count
+            const rawPrice = parseFloat(bookingData.totalPrice);
+            const safeTotalPrice = isNaN(rawPrice) || rawPrice < 0 ? 0 : rawPrice;
+            const safeGuestsCount = Math.max(1, parseInt(bookingData.guests, 10) || 1);
+
+            // 5. Insert booking
             const { data: booking, error: bookingError } = await supabase
                 .from('bookings')
                 .insert([{
-                    guest_id: guest.id,
+                    guest_id: guestId,
                     room_ids: roomIds,
-                    check_in: bookingData.checkIn,
-                    check_out: bookingData.checkOut,
-                    guests_count: parseInt(bookingData.guests, 10) || 1,
-                    total_price: parseFloat(bookingData.totalPrice) || 0,
+                    check_in: cleanCheckIn,
+                    check_out: cleanCheckOut,
+                    guests_count: safeGuestsCount,
+                    total_price: safeTotalPrice,
                     meal_preferences: bookingData.mealSummary || 'None',
                     special_requests: bookingData.notes || 'Direct Manual Booking by Concierge',
-                    status: bookingData.status || 'confirmed',
+                    status: 'confirmed',
                     source: 'admin_manual'
                 }])
                 .select()
                 .single();
 
-            if (bookingError) throw bookingError;
+            if (bookingError) throw new Error(`Booking insert error: ${bookingError.message}`);
 
-            // D. Generate Invoice
+            // 6. Generate Invoice safely
             const invNum = `INV-ADM-${Date.now().toString().slice(-6)}`;
             try {
                 await supabase
@@ -554,18 +647,20 @@ export const MobileSupabaseService = {
                     .insert([{
                         booking_id: booking.id,
                         invoice_number: invNum,
-                        items: bookingData.invoiceItems || [{ name: 'Homestay Stay', amount: bookingData.totalPrice }],
-                        total_amount: bookingData.totalPrice,
+                        items: bookingData.invoiceItems && Array.isArray(bookingData.invoiceItems)
+                            ? bookingData.invoiceItems
+                            : [{ name: 'Homestay Stay', amount: safeTotalPrice }],
+                        total_amount: safeTotalPrice,
                         status: 'paid'
                     }]);
             } catch (invErr) {
                 console.warn('Admin invoice insert non-fatal error:', invErr);
             }
 
-            return { success: true, booking, guest };
+            return { success: true, booking, guest: guestRecord };
         } catch (error) {
             console.error('Admin Manual Booking Error:', error);
-            return { success: false, error: error.message };
+            return { success: false, error: error.message || 'Failed to record reservation in database.' };
         }
     },
 
