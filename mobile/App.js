@@ -1,6 +1,8 @@
+import 'react-native-gesture-handler';
 import 'react-native-url-polyfill/auto';
 import React from 'react';
 import { View, Text, TouchableOpacity, LogBox, Dimensions } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
 import AppNavigator from './src/navigation/AppNavigator';
@@ -68,14 +70,14 @@ class ErrorBoundary extends React.Component {
 
 export default function App() {
     return (
-        <View style={{ flex: 1, backgroundColor: '#162E25' }}>
+        <GestureHandlerRootView style={{ flex: 1, backgroundColor: '#162E25' }}>
             <ErrorBoundary>
                 <SafeAreaProvider initialMetrics={safeMetrics} style={{ flex: 1 }}>
                     <StatusBar style="light" />
                     <AppNavigator />
                 </SafeAreaProvider>
             </ErrorBoundary>
-        </View>
+        </GestureHandlerRootView>
     );
 }
 
