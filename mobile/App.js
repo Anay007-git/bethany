@@ -1,11 +1,22 @@
 import 'react-native-url-polyfill/auto';
 import React from 'react';
-import { View, Text, TouchableOpacity, LogBox } from 'react-native';
+import { View, Text, TouchableOpacity, LogBox, Dimensions } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
 import AppNavigator from './src/navigation/AppNavigator';
 
 LogBox.ignoreAllLogs(true);
+
+const { width, height } = Dimensions.get('window');
+const defaultMetrics = {
+    insets: { top: 24, left: 0, right: 0, bottom: 0 },
+    frame: { x: 0, y: 0, width: width || 360, height: height || 640 }
+};
+
+// Guarantee initial insets are non-null so SafeAreaProvider never renders null
+const safeMetrics = (initialWindowMetrics && initialWindowMetrics.insets)
+    ? initialWindowMetrics
+    : defaultMetrics;
 
 class ErrorBoundary extends React.Component {
     constructor(props) {
@@ -30,7 +41,7 @@ class ErrorBoundary extends React.Component {
                         Bethany Homestay
                     </Text>
                     <Text style={{ color: '#EAE3D5', fontSize: 14, textAlign: 'center', marginBottom: 28, lineHeight: 22, opacity: 0.9 }}>
-                        The sanctuary app encountered a temporary loading interruption. Tap below to reload your session.
+                        {this.state.error?.message || 'The sanctuary app encountered a temporary loading interruption. Tap below to reload your session.'}
                     </Text>
                     <TouchableOpacity
                         onPress={() => this.setState({ hasError: false, error: null })}
@@ -57,12 +68,14 @@ class ErrorBoundary extends React.Component {
 
 export default function App() {
     return (
-        <ErrorBoundary>
-            <SafeAreaProvider>
-                <StatusBar style="light" />
-                <AppNavigator />
-            </SafeAreaProvider>
-        </ErrorBoundary>
+        <View style={{ flex: 1, backgroundColor: '#162E25' }}>
+            <ErrorBoundary>
+                <SafeAreaProvider initialMetrics={safeMetrics} style={{ flex: 1 }}>
+                    <StatusBar style="light" />
+                    <AppNavigator />
+                </SafeAreaProvider>
+            </ErrorBoundary>
+        </View>
     );
 }
 

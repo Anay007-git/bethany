@@ -1,9 +1,17 @@
 import React from 'react';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Text } from 'react-native';
 import { colors } from '../theme';
+
+const NavigationTheme = {
+    ...DefaultTheme,
+    colors: {
+        ...DefaultTheme.colors,
+        background: colors.forestDark
+    }
+};
 
 // Screens
 import SplashScreen from '../screens/SplashScreen';
@@ -74,12 +82,12 @@ function TabNavigator() {
 
 export default function AppNavigator() {
     return (
-        <NavigationContainer>
+        <NavigationContainer theme={NavigationTheme}>
             <Stack.Navigator
                 initialRouteName="Splash"
                 screenOptions={{
                     headerShown: false,
-                    contentStyle: { backgroundColor: colors.bgPage }
+                    contentStyle: { backgroundColor: colors.forestDark }
                 }}
             >
                 <Stack.Screen name="Splash" component={SplashScreen} />
