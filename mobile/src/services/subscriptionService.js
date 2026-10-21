@@ -11,14 +11,17 @@
  * 8. Admin Application Review & Inventory Controls
  */
 
+import { Platform } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 import * as Linking from 'expo-linking';
 import * as AuthSession from 'expo-auth-session';
 import { supabase } from './SupabaseService';
 import StorageService from './storageService';
 
-// Ensure OAuth redirects complete cleanly
-WebBrowser.maybeCompleteAuthSession();
+// Ensure OAuth redirects complete cleanly (web only)
+if (Platform.OS === 'web') {
+    WebBrowser.maybeCompleteAuthSession();
+}
 
 const USER_SESSION_KEY = '@bethany_subscription_user_session';
 const OTP_COOLDOWN_SECONDS = 60;

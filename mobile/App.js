@@ -2,12 +2,9 @@ import 'react-native-url-polyfill/auto';
 import React from 'react';
 import { View, Text, TouchableOpacity, LogBox } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
-import { enableScreens } from 'react-native-screens';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import AppNavigator from './src/navigation/AppNavigator';
 
-// Ensure react-native-screens is optimized for Android
-enableScreens(true);
 LogBox.ignoreAllLogs(true);
 
 class ErrorBoundary extends React.Component {
@@ -61,7 +58,7 @@ class ErrorBoundary extends React.Component {
 export default function App() {
     return (
         <ErrorBoundary>
-            <SafeAreaProvider initialMetrics={initialWindowMetrics}>
+            <SafeAreaProvider>
                 <StatusBar style="light" />
                 <AppNavigator />
             </SafeAreaProvider>
