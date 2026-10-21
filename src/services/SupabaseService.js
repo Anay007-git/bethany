@@ -17,7 +17,26 @@ export const SupabaseService = {
                 .select()
                 .single();
 
-            if (guestError) throw guestError;
+            // Concurrency Safety: Check if room is reserved in subscription bookings
+            if (bookingData.selectedRooms && bookingData.selectedRooms.length > 0) {
+                for (const room of bookingData.selectedRooms) {
+                    const { data: subOverlap } = await supabase
+                        .from('subscription_bookings')
+                        .select('id')
+                        .eq('room_id', room.id)
+                        .eq('status', 'confirmed')
+                        .lt('check_in', bookingData.checkOut)
+                        .gt('check_out', bookingData.checkIn)
+                        .limit(1);
+
+                    if (subOverlap && subOverlap.length > 0) {
+                        return {
+                            success: false,
+                            error: `Room "${room.name}" is already reserved by a subscription member during the selected dates.`
+                        };
+                    }
+                }
+            }
 
             // B. Create Booking Record
             const roomIds = bookingData.selectedRooms.map(r => ({ id: r.id, name: r.name }));
@@ -80,21 +99,37 @@ export const SupabaseService = {
                 body: { booking: bookingData }
             });
 
-            if (error) {
-                console.error("Supabase Function Error:", error);
-                return { success: false, error };
+            if (!error && data?.success) {
+                console.log("Email Function Response:", data);
+                return { success: true, data };
             }
 
-            console.log("Email Function Response:", data);
-            return { success: true, data };
+            console.warn("Supabase Edge Email failed, invoking /api/booking/send-email fallback...", error);
+            const res = await fetch('/api/booking/send-email', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ booking: bookingData })
+            });
+            const fallbackData = await res.json();
+            return { success: fallbackData.success !== false, data: fallbackData };
 
         } catch (err) {
-            console.error("Email Invocation Failed:", err);
-            return { success: false, error: err };
+            console.error("Email Invocation Failed, attempting direct /api/booking/send-email fallback:", err);
+            try {
+                const res = await fetch('/api/booking/send-email', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ booking: bookingData })
+                });
+                const fallbackData = await res.json();
+                return { success: fallbackData.success !== false, data: fallbackData };
+            } catch (fallbackErr) {
+                return { success: false, error: fallbackErr };
+            }
         }
     },
 
-    // 1.3 Send Payment Failed Email (Edge Function)
+    // 1.3 Send Payment Failed Email (Edge Function with Vercel fallback)
     async sendPaymentFailedEmail(bookingData) {
         try {
             console.log("Triggering Payment Failed Email Function...");
@@ -102,17 +137,33 @@ export const SupabaseService = {
                 body: { booking: bookingData }
             });
 
-            if (error) {
-                console.error("Supabase Function Error:", error);
-                return { success: false, error };
+            if (!error && data?.success) {
+                console.log("Payment Failed Email Function Response:", data);
+                return { success: true, data };
             }
 
-            console.log("Payment Failed Email Function Response:", data);
-            return { success: true, data };
+            console.warn("Supabase Edge Email failed, invoking /api/payment/send-failed-email fallback...", error);
+            const res = await fetch('/api/payment/send-failed-email', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ booking: bookingData })
+            });
+            const fallbackData = await res.json();
+            return { success: fallbackData.success !== false, data: fallbackData };
 
         } catch (err) {
-            console.error("Payment Failed Email Invocation Failed:", err);
-            return { success: false, error: err };
+            console.error("Payment Failed Email Invocation Failed, attempting direct /api/payment/send-failed-email fallback:", err);
+            try {
+                const res = await fetch('/api/payment/send-failed-email', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ booking: bookingData })
+                });
+                const fallbackData = await res.json();
+                return { success: fallbackData.success !== false, data: fallbackData };
+            } catch (fallbackErr) {
+                return { success: false, error: fallbackErr };
+            }
         }
     },
 
@@ -328,16 +379,34 @@ export const SupabaseService = {
         }
     },
 
-    // 3. Get All Bookings for Availability Check
+    // 3. Get All Bookings for Availability Check (Bidirectionally Synchronized)
     getAllBookings: async () => {
         try {
-            const { data, error } = await supabase
-                .from('bookings')
-                .select('*')
-                .or('status.eq.confirmed,status.eq.booked,status.eq.pending'); // Fetch all relevant statues
+            const [standardRes, subRes] = await Promise.all([
+                supabase
+                    .from('bookings')
+                    .select('*')
+                    .or('status.eq.confirmed,status.eq.booked,status.eq.pending'),
+                supabase
+                    .from('subscription_bookings')
+                    .select('*')
+                    .eq('status', 'confirmed')
+            ]);
 
-            if (error) throw error;
-            return data;
+            if (standardRes.error) throw standardRes.error;
+
+            const standardBookings = standardRes.data || [];
+            const subBookings = (subRes.data || []).map(sb => ({
+                id: `sub_${sb.id}`,
+                check_in: sb.check_in,
+                check_out: sb.check_out,
+                room_ids: [{ id: sb.room_id, name: sb.room_id }],
+                guests_count: Array.isArray(sb.attending_occupants) ? sb.attending_occupants.length : 1,
+                status: 'confirmed',
+                is_subscription: true
+            }));
+
+            return [...standardBookings, ...subBookings];
         } catch (error) {
             console.error('Supabase Availability Fetch Error:', error);
             return [];

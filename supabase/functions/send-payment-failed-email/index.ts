@@ -60,7 +60,8 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Email to Guest
     const mailOptions = {
-      from: `"Bethany Homestay" <info@bethanyhomestay.com>`,
+      from: Deno.env.get('SMTP_FROM') || (smtpUser === 'resend' || smtpHost.includes('resend') ? '"Bethany Homestay" <otp@anaytech.in>' : `"Bethany Homestay" <${smtpUser || 'namastehills.kol@gmail.com'}>`),
+      replyTo: Deno.env.get('SMTP_REPLY_TO') || "namastehills.kol@gmail.com",
       to: booking.guests.email,
       cc: "namastehills.kol@gmail.com", // Copy to Admin
       subject: `Payment Declined - Bethany Homestay (#${booking.id.slice(0, 8)})`,
@@ -100,10 +101,42 @@ const handler = async (req: Request): Promise<Response> => {
       `,
     };
 
-    const info = await transporter.sendMail(mailOptions);
-    console.log("Email sent: %s", info.messageId);
+    let sentId = null;
+    try {
+      const info = await transporter.sendMail(mailOptions);
+      sentId = info.messageId;
+      console.log("Email sent via SMTP: %s", sentId);
+    } catch (smtpErr) {
+      console.error("SMTP failed, attempting Resend API:", smtpErr);
+      if (smtpPass && smtpPass.startsWith('re_')) {
+        const resendRes = await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${smtpPass}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            from: mailOptions.from,
+            to: [mailOptions.to],
+            cc: [mailOptions.cc],
+            reply_to: mailOptions.replyTo,
+            subject: mailOptions.subject,
+            html: mailOptions.html,
+          }),
+        });
+        const resData = await resendRes.json();
+        if (resendRes.ok) {
+          sentId = resData.id;
+          console.log("Email sent via Resend API: %s", sentId);
+        } else {
+          throw new Error(resData.message || 'Resend API failed');
+        }
+      } else {
+        throw smtpErr;
+      }
+    }
 
-    return new Response(JSON.stringify({ success: true, message: "Declined Payment Email sent successfully" }), {
+    return new Response(JSON.stringify({ success: true, message: "Declined Payment Email sent successfully", messageId: sentId }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 

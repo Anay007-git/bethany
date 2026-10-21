@@ -47,21 +47,26 @@ test('Verify atomic subscription booking and cross-channel overlap prevention', 
         `, [userId, appId]);
         memberId = memRes.rows[0].id;
 
-        await t.test('1. Fails when dates are NOT allocated in subscription_room_allocations', async () => {
+        await t.test('1. Fails when dates are blocked by Admin / OTA', async () => {
+            // Block the date in ota_blocked_dates (e.g. October month block)
+            await client.query(`
+                INSERT INTO ota_blocked_dates (room_id, blocked_date, source)
+                VALUES ($1, $2, 'Admin Oct Block')
+                ON CONFLICT (room_id, blocked_date) DO NOTHING;
+            `, [testRoom, testDate1]);
+
             const res = await client.query(`
                 SELECT book_subscription_stay_atomic($1, $2, $3, $4, $5, 2, '[]'::jsonb, 'Test') AS result;
             `, [memberId, userId, testRoom, testDate1, testCheckOut]);
             const result = res.rows[0].result;
             assert.strictEqual(result.success, false);
-            assert.match(result.error, /not allocated/i);
-        });
+            assert.match(result.error, /blocked by management/i);
 
-        // Allocate the 2 dates
-        await client.query(`
-            INSERT INTO subscription_room_allocations (room_id, allocated_date, is_available)
-            VALUES ($1, $2, true), ($1, $3, true)
-            ON CONFLICT (room_id, allocated_date) DO UPDATE SET is_available = true;
-        `, [testRoom, testDate1, testDate2]);
+            // Unblock date for remaining tests
+            await client.query(`
+                DELETE FROM ota_blocked_dates WHERE room_id = $1 AND blocked_date = $2;
+            `, [testRoom, testDate1]);
+        });
 
         await t.test('2. Fails when date overlaps with a public booking', async () => {
             // Insert conflicting public booking
@@ -83,7 +88,7 @@ test('Verify atomic subscription booking and cross-channel overlap prevention', 
             await client.query(`DELETE FROM bookings WHERE id = $1;`, [pubId]);
         });
 
-        await t.test('3. Successfully books allocated dates and atomically updates remaining balance', async () => {
+        await t.test('3. Successfully books available dates and atomically updates remaining balance', async () => {
             const res = await client.query(`
                 SELECT book_subscription_stay_atomic($1, $2, $3, $4, $5, 2, '[]'::jsonb, 'Test Note') AS result;
             `, [memberId, userId, testRoom, testDate1, testCheckOut]);
@@ -106,7 +111,7 @@ test('Verify atomic subscription booking and cross-channel overlap prevention', 
             `, [memberId, userId, testRoom, testDate1, testCheckOut]);
             const result = res.rows[0].result;
             assert.strictEqual(result.success, false);
-            assert.match(result.error, /already booked by another member/i);
+            assert.match(result.error, /already booked by another/i);
         });
 
     } finally {

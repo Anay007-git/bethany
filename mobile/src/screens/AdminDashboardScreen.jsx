@@ -14,7 +14,7 @@ import {
     Modal
 } from 'react-native';
 import { colors, radius, shadows } from '../theme';
-import { MobileSupabaseService } from '../services/SupabaseService';
+import { MobileSupabaseService, supabase } from '../services/SupabaseService';
 import AuthService from '../services/authService';
 import SubscriptionService from '../services/subscriptionService';
 
@@ -71,7 +71,9 @@ const AdminDashboardScreen = ({ navigation }) => {
     // Block Date inputs
     const [selectedRoomForBlock, setSelectedRoomForBlock] = useState('carmel');
     const [dateToBlock, setDateToBlock] = useState('');
-    const [blockReason, setBlockReason] = useState('OTA Sync Block');
+    const [blockStartDate, setBlockStartDate] = useState('');
+    const [blockEndDate, setBlockEndDate] = useState('');
+    const [blockReason, setBlockReason] = useState('Admin Blocked Period');
 
     // Offline Booking State
     const [offlineGuestName, setOfflineGuestName] = useState('');
@@ -112,6 +114,12 @@ const AdminDashboardScreen = ({ navigation }) => {
     const [selectedAppForReview, setSelectedAppForReview] = useState(null);
     const [correctionNoteInput, setCorrectionNoteInput] = useState('');
     const [subMemberships, setSubMemberships] = useState([]);
+    const [subPlans, setSubPlans] = useState([]);
+    const [editingPlan, setEditingPlan] = useState(null);
+    const [editPlanPrice, setEditPlanPrice] = useState('');
+    const [editPlanNights, setEditPlanNights] = useState('');
+    const [editPlanMonths, setEditPlanMonths] = useState('3');
+    const [editPlanActive, setEditPlanActive] = useState(true);
 
     // Initial session verification & data loading
     const loadAllAdminData = useCallback(async () => {
@@ -153,16 +161,18 @@ const AdminDashboardScreen = ({ navigation }) => {
                 setCrmGuests(crmRes.data || []);
             }
 
-            // 7. Fetch Subscriptions & Allocations
+            // 7. Fetch Subscriptions & Allocations & Plans
             try {
-                const [appsRes, memsRes, allocsRes] = await Promise.all([
+                const [appsRes, memsRes, allocsRes, plansRes] = await Promise.all([
                     SubscriptionService.getAdminApplications(),
                     SubscriptionService.getAdminMemberships(),
-                    SubscriptionService.getAllocatedDates(selectedSubRoom)
+                    SubscriptionService.getAllocatedDates(selectedSubRoom),
+                    SubscriptionService.getPlans()
                 ]);
                 if (appsRes.success) setSubApplications(appsRes.applications || []);
                 if (memsRes.success) setSubMemberships(memsRes.memberships || []);
                 if (allocsRes.success) setSubAllocations(allocsRes.dates || []);
+                if (plansRes.success) setSubPlans(plansRes.plans || []);
             } catch (subErr) {
                 console.log('Admin subscriptions load notice:', subErr);
             }
@@ -500,6 +510,61 @@ const AdminDashboardScreen = ({ navigation }) => {
         }
     };
 
+    // Block Date Range / Entire Month
+    const handleBlockRange = async () => {
+        if (!blockStartDate.trim() || !blockEndDate.trim()) {
+            Alert.alert('Validation', 'Please provide start and end dates (YYYY-MM-DD).');
+            return;
+        }
+        const res = await MobileSupabaseService.blockDateRange(
+            selectedRoomForBlock,
+            blockStartDate.trim(),
+            blockEndDate.trim(),
+            blockReason || 'Admin Management Block'
+        );
+        if (res.success) {
+            Alert.alert('Range Blocked', `Successfully blocked ${res.blockedCount || 'selected'} dates for suite "${selectedRoomForBlock.toUpperCase()}". It will now show as occupied on the subscription calendar.`);
+            setBlockStartDate('');
+            setBlockEndDate('');
+            loadAllAdminData();
+        } else {
+            Alert.alert('Error', res.error || 'Failed to block date range.');
+        }
+    };
+
+    // Quick Block Month
+    const handleQuickBlockMonth = async (monthNum, yearNum, monthName) => {
+        const mm = String(monthNum).padStart(2, '0');
+        const startStr = `${yearNum}-${mm}-01`;
+        const lastDay = new Date(yearNum, monthNum, 0).getDate();
+        const endStr = `${yearNum}-${mm}-${String(lastDay).padStart(2, '0')}`;
+
+        Alert.alert(
+            `Block ${monthName} ${yearNum}?`,
+            `This will block all ${lastDay} days of ${monthName} for suite "${selectedRoomForBlock.toUpperCase()}". It will show as occupied on the subscription calendar.`,
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: `Block ${monthName}`,
+                    onPress: async () => {
+                        const res = await MobileSupabaseService.blockDateRange(
+                            selectedRoomForBlock,
+                            startStr,
+                            endStr,
+                            `Admin Blocked: ${monthName} ${yearNum}`
+                        );
+                        if (res.success) {
+                            Alert.alert('Month Blocked', `All dates in ${monthName} ${yearNum} are now blocked.`);
+                            loadAllAdminData();
+                        } else {
+                            Alert.alert('Error', res.error || 'Failed to block month.');
+                        }
+                    }
+                }
+            ]
+        );
+    };
+
     // Unblock Date
     const handleUnblockDate = async (roomId, dateStr) => {
         const res = await MobileSupabaseService.unblockDate(roomId, dateStr);
@@ -657,6 +722,45 @@ const AdminDashboardScreen = ({ navigation }) => {
             if (allocsRes.success) setSubAllocations(allocsRes.dates || []);
         } else {
             Alert.alert('Error', res.error || 'Failed to deallocate date.');
+        }
+    };
+
+    // Update Subscription Plan Pricing & Commitment Rules
+    const handleUpdatePlanPrice = async () => {
+        if (!editingPlan) return;
+        const parsedPrice = parseFloat(editPlanPrice);
+        const parsedNights = parseInt(editPlanNights, 10);
+        const parsedMonths = parseInt(editPlanMonths, 10);
+
+        if (isNaN(parsedPrice) || parsedPrice <= 0) {
+            Alert.alert('Validation Error', 'Please enter a valid monthly subscription price in INR.');
+            return;
+        }
+
+        if (isNaN(parsedMonths) || parsedMonths < 3) {
+            Alert.alert('Validation Error', 'Minimum commitment must be at least 3 consecutive months.');
+            return;
+        }
+
+        try {
+            const { error } = await supabase
+                .from('subscription_plans')
+                .update({
+                    monthly_price: parsedPrice,
+                    nights_per_month: isNaN(parsedNights) ? editingPlan.nights_per_month : parsedNights,
+                    commitment_months: parsedMonths,
+                    is_active: editPlanActive
+                })
+                .eq('id', editingPlan.id);
+
+            if (error) throw error;
+
+            Alert.alert('Plan Pricing Updated', `Plan "${editingPlan.title}" updated to ₹${parsedPrice.toLocaleString('en-IN')}/month with ${parsedMonths}-month commitment.`);
+            setEditingPlan(null);
+            const pRes = await SubscriptionService.getPlans();
+            if (pRes.success) setSubPlans(pRes.plans || []);
+        } catch (err) {
+            Alert.alert('Update Failed', err.message || 'Could not update subscription plan.');
         }
     };
 
@@ -1208,27 +1312,89 @@ const AdminDashboardScreen = ({ navigation }) => {
                                 ))}
                             </View>
 
-                            <Text style={styles.inputLabelSmall}>DATE TO BLOCK (YYYY-MM-DD)</Text>
-                            <TextInput
-                                style={styles.simpleInput}
-                                placeholder="e.g. 2026-11-20"
-                                placeholderTextColor={colors.grey}
-                                value={dateToBlock}
-                                onChangeText={setDateToBlock}
-                            />
+                            {/* Quick Block Month (1-Tap) */}
+                            <Text style={styles.inputLabelSmall}>QUICK BLOCK ENTIRE MONTH (1-TAP)</Text>
+                            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 14 }}>
+                                {[
+                                    { m: 10, y: 2026, name: 'October' },
+                                    { m: 11, y: 2026, name: 'November' },
+                                    { m: 12, y: 2026, name: 'December' },
+                                    { m: 1, y: 2027, name: 'January' },
+                                    { m: 2, y: 2027, name: 'February' }
+                                ].map(item => (
+                                    <TouchableOpacity
+                                        key={`${item.name}-${item.y}`}
+                                        style={[styles.actionBtn, { backgroundColor: '#991B1B', paddingVertical: 8, paddingHorizontal: 12 }]}
+                                        onPress={() => handleQuickBlockMonth(item.m, item.y, item.name)}
+                                        activeOpacity={0.8}
+                                    >
+                                        <Text style={[styles.actionBtnText, { fontSize: 11 }]}>
+                                            🔒 Block {item.name.slice(0, 3)} '{String(item.y).slice(2)}
+                                        </Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+
+                            {/* Block Custom Date Range */}
+                            <Text style={styles.inputLabelSmall}>OR BLOCK CUSTOM DATE RANGE</Text>
+                            <View style={{ flexDirection: 'row', gap: 10, marginBottom: 8 }}>
+                                <View style={{ flex: 1 }}>
+                                    <Text style={{ fontSize: 10, color: colors.grey, marginBottom: 4 }}>FROM (YYYY-MM-DD)</Text>
+                                    <TextInput
+                                        style={styles.simpleInput}
+                                        placeholder="2026-10-01"
+                                        placeholderTextColor={colors.grey}
+                                        value={blockStartDate}
+                                        onChangeText={setBlockStartDate}
+                                    />
+                                </View>
+                                <View style={{ flex: 1 }}>
+                                    <Text style={{ fontSize: 10, color: colors.grey, marginBottom: 4 }}>TO (YYYY-MM-DD)</Text>
+                                    <TextInput
+                                        style={styles.simpleInput}
+                                        placeholder="2026-10-31"
+                                        placeholderTextColor={colors.grey}
+                                        value={blockEndDate}
+                                        onChangeText={setBlockEndDate}
+                                    />
+                                </View>
+                            </View>
 
                             <Text style={styles.inputLabelSmall}>BLOCK REASON</Text>
                             <TextInput
                                 style={styles.simpleInput}
-                                placeholder="e.g. Airbnb Reserved / Deep Cleaning"
+                                placeholder="e.g. Management Blocked / Deep Cleaning"
                                 placeholderTextColor={colors.grey}
                                 value={blockReason}
                                 onChangeText={setBlockReason}
                             />
 
-                            <TouchableOpacity style={styles.blockSubmitBtn} onPress={handleBlockDate} activeOpacity={0.85}>
-                                <Text style={styles.btnTextWhite}>🔒 Block This Date</Text>
+                            <TouchableOpacity
+                                style={[styles.blockSubmitBtn, { backgroundColor: '#991B1B', marginBottom: 12 }]}
+                                onPress={handleBlockRange}
+                                activeOpacity={0.85}
+                            >
+                                <Text style={styles.btnTextWhite}>🔒 Block Selected Date Range</Text>
                             </TouchableOpacity>
+
+                            {/* Block Single Date */}
+                            <Text style={[styles.inputLabelSmall, { marginTop: 6 }]}>OR BLOCK SINGLE DATE</Text>
+                            <View style={{ flexDirection: 'row', gap: 8 }}>
+                                <TextInput
+                                    style={[styles.simpleInput, { flex: 2 }]}
+                                    placeholder="2026-11-20"
+                                    placeholderTextColor={colors.grey}
+                                    value={dateToBlock}
+                                    onChangeText={setDateToBlock}
+                                />
+                                <TouchableOpacity
+                                    style={[styles.blockSubmitBtn, { flex: 1.2, marginTop: 0, justifyContent: 'center' }]}
+                                    onPress={handleBlockDate}
+                                    activeOpacity={0.85}
+                                >
+                                    <Text style={[styles.btnTextWhite, { fontSize: 12 }]}>Block Date</Text>
+                                </TouchableOpacity>
+                            </View>
 
                             {/* Currently Blocked Dates List */}
                             <Text style={[styles.sectionHeader, { marginTop: 20 }]}>
@@ -1903,8 +2069,167 @@ const AdminDashboardScreen = ({ navigation }) => {
                                 </View>
                             )}
                         </View>
+
+                        <View style={styles.divider} />
+
+                        {/* Section: Subscription Plans & Pricing Management */}
+                        <Text style={[styles.sectionHeader, { fontSize: 13, marginTop: 14, marginBottom: 4 }]}>
+                            Subscription Plans & Dynamic Pricing Management
+                        </Text>
+                        <Text style={[styles.sectionSub, { marginBottom: 12 }]}>
+                            Configure monthly residency pricing, room night allocations, and 3-month commitments. Prices are served dynamically to the mobile app.
+                        </Text>
+
+                        {subPlans.map(plan => {
+                            const monthlyRate = Number(plan.monthly_price);
+                            const commitmentMonths = plan.commitment_months || 3;
+                            const totalCommitment = monthlyRate * commitmentMonths;
+
+                            return (
+                                <View key={plan.id} style={[styles.bookingCard, { marginBottom: 12 }]}>
+                                    <View style={styles.bookingHeaderRow}>
+                                        <View style={{ flex: 1 }}>
+                                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                                                <Text style={[styles.statusBadge, {
+                                                    backgroundColor: plan.is_active ? '#ECFDF5' : '#FEF2F2',
+                                                    color: plan.is_active ? '#065F46' : '#991B1B'
+                                                }]}>
+                                                    {plan.is_active ? '● ACTIVE' : '○ INACTIVE'}
+                                                </Text>
+                                                <Text style={{ fontSize: 10, fontWeight: '700', color: colors.terracotta }}>
+                                                    {plan.category.toUpperCase()} TIER
+                                                </Text>
+                                            </View>
+                                            <Text style={[styles.guestName, { fontSize: 15 }]}>{plan.title}</Text>
+                                        </View>
+                                        <TouchableOpacity
+                                            style={[styles.actionBtn, { backgroundColor: colors.forest, paddingHorizontal: 12, paddingVertical: 6 }]}
+                                            onPress={() => {
+                                                setEditingPlan(plan);
+                                                setEditPlanPrice(plan.monthly_price.toString());
+                                                setEditPlanNights(plan.nights_per_month.toString());
+                                                setEditPlanMonths((plan.commitment_months || 3).toString());
+                                                setEditPlanActive(plan.is_active);
+                                            }}
+                                        >
+                                            <Text style={styles.actionBtnText}>✏️ Edit Pricing</Text>
+                                        </TouchableOpacity>
+                                    </View>
+
+                                    <View style={[styles.bookingDetailsGrid, { marginTop: 8 }]}>
+                                        <View style={styles.detailItem}>
+                                            <Text style={styles.detailLabel}>Monthly Price</Text>
+                                            <Text style={[styles.detailValue, { color: colors.forest, fontWeight: '800' }]}>
+                                                ₹{monthlyRate.toLocaleString('en-IN')} / mo
+                                            </Text>
+                                        </View>
+                                        <View style={styles.detailItem}>
+                                            <Text style={styles.detailLabel}>Min Commitment</Text>
+                                            <Text style={styles.detailValue}>
+                                                {commitmentMonths} Months
+                                            </Text>
+                                        </View>
+                                        <View style={styles.detailItem}>
+                                            <Text style={styles.detailLabel}>3-Mo Initial Value</Text>
+                                            <Text style={[styles.detailValue, { color: colors.gold, fontWeight: '700' }]}>
+                                                ₹{totalCommitment.toLocaleString('en-IN')}
+                                            </Text>
+                                        </View>
+                                        <View style={styles.detailItem}>
+                                            <Text style={styles.detailLabel}>Monthly Nights</Text>
+                                            <Text style={styles.detailValue}>
+                                                {plan.nights_per_month} Nights / mo
+                                            </Text>
+                                        </View>
+                                    </View>
+
+                                    <Text style={{ fontSize: 11, color: colors.grey, marginTop: 8, fontStyle: 'italic' }}>
+                                        {plan.description}
+                                    </Text>
+                                </View>
+                            );
+                        })}
                     </View>
                 )}
+
+                {/* Modal: Edit Subscription Plan Pricing */}
+                <Modal visible={!!editingPlan} transparent animationType="fade">
+                    <View style={styles.modalOverlay}>
+                        <View style={[styles.modalCard, { maxHeight: '80%' }]}>
+                            <ScrollView showsVerticalScrollIndicator={false}>
+                                <Text style={styles.modalTitle}>Configure Plan Pricing</Text>
+                                <Text style={styles.modalSub}>
+                                    Modifying {editingPlan?.title} ({editingPlan?.category?.toUpperCase()} TIER)
+                                </Text>
+
+                                <Text style={styles.inputLabelSmall}>MONTHLY SUBSCRIPTION PRICE (INR)</Text>
+                                <TextInput
+                                    style={styles.simpleInput}
+                                    value={editPlanPrice}
+                                    onChangeText={setEditPlanPrice}
+                                    keyboardType="numeric"
+                                    placeholder="e.g. 25000"
+                                />
+
+                                <Text style={styles.inputLabelSmall}>INCLUDED MOUNTAIN ROOM NIGHTS PER MONTH</Text>
+                                <TextInput
+                                    style={styles.simpleInput}
+                                    value={editPlanNights}
+                                    onChangeText={setEditPlanNights}
+                                    keyboardType="numeric"
+                                    placeholder="e.g. 5"
+                                />
+
+                                <Text style={styles.inputLabelSmall}>MINIMUM CONSECUTIVE COMMITMENT (MONTHS)</Text>
+                                <TextInput
+                                    style={styles.simpleInput}
+                                    value={editPlanMonths}
+                                    onChangeText={setEditPlanMonths}
+                                    keyboardType="numeric"
+                                    placeholder="3"
+                                />
+
+                                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginVertical: 12 }}>
+                                    <Text style={{ fontSize: 13, fontWeight: '700', color: colors.forestDark }}>
+                                        Plan Active for New Members:
+                                    </Text>
+                                    <TouchableOpacity
+                                        style={[styles.actionBtn, {
+                                            backgroundColor: editPlanActive ? colors.success : '#991B1B',
+                                            paddingHorizontal: 14
+                                        }]}
+                                        onPress={() => setEditPlanActive(!editPlanActive)}
+                                    >
+                                        <Text style={styles.actionBtnText}>
+                                            {editPlanActive ? 'Active' : 'Inactive'}
+                                        </Text>
+                                    </TouchableOpacity>
+                                </View>
+
+                                <View style={{ backgroundColor: colors.ivoryWarm, padding: 12, borderRadius: 6, marginBottom: 14 }}>
+                                    <Text style={{ fontSize: 11, color: colors.grey }}>
+                                        💡 Note: Updating price will immediately reflect for new subscribers. Existing active members remain at their originally agreed rate for their commitment period.
+                                    </Text>
+                                </View>
+
+                                <View style={{ flexDirection: 'row', gap: 10, marginTop: 10 }}>
+                                    <TouchableOpacity
+                                        style={[styles.actionBtn, { backgroundColor: '#6B7280', flex: 1 }]}
+                                        onPress={() => setEditingPlan(null)}
+                                    >
+                                        <Text style={styles.actionBtnText}>Cancel</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity
+                                        style={[styles.actionBtn, { backgroundColor: colors.forest, flex: 1.5 }]}
+                                        onPress={handleUpdatePlanPrice}
+                                    >
+                                        <Text style={styles.actionBtnText}>Save Pricing</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            </ScrollView>
+                        </View>
+                    </View>
+                </Modal>
 
                 <View style={{ height: 60 }} />
             </ScrollView>

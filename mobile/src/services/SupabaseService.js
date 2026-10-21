@@ -1,12 +1,14 @@
 import { createClient } from '@supabase/supabase-js';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const SUPABASE_URL = 'https://xiqtayqigrmxkvanxsmn.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_x_n8vRtkYzhN24mzv5VVKg_auI4sBtI';
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     auth: {
-        persistSession: false,
-        autoRefreshToken: false,
+        storage: AsyncStorage,
+        autoRefreshToken: true,
+        persistSession: true,
         detectSessionInUrl: false
     }
 });
@@ -31,17 +33,36 @@ export const MobileSupabaseService = {
         }
     },
 
-    // 2. Fetch Active Bookings for Guest Availability Check
+    // 2. Fetch Active Bookings for Guest Availability Check (Bidirectionally Synchronized)
     async getAllBookings() {
         try {
-            const { data, error } = await supabase
-                .from('bookings')
-                .select('*')
-                .or('status.eq.confirmed,status.eq.booked,status.eq.pending');
-            if (error) throw error;
-            return data || [];
+            const [standardRes, subRes] = await Promise.all([
+                supabase
+                    .from('bookings')
+                    .select('*')
+                    .or('status.eq.confirmed,status.eq.booked,status.eq.pending'),
+                supabase
+                    .from('subscription_bookings')
+                    .select('*')
+                    .eq('status', 'confirmed')
+            ]);
+
+            if (standardRes.error) throw standardRes.error;
+
+            const standardBookings = standardRes.data || [];
+            const subBookings = (subRes.data || []).map(sb => ({
+                id: `sub_${sb.id}`,
+                check_in: sb.check_in,
+                check_out: sb.check_out,
+                room_ids: [{ id: sb.room_id, name: sb.room_id }],
+                guests_count: Array.isArray(sb.attending_occupants) ? sb.attending_occupants.length : 1,
+                status: 'confirmed',
+                is_subscription: true
+            }));
+
+            return [...standardBookings, ...subBookings];
         } catch (err) {
-            console.warn('Error fetching bookings for mobile:', err);
+            console.warn('Error fetching synchronized bookings for mobile:', err);
             return [];
         }
     },
@@ -61,10 +82,31 @@ export const MobileSupabaseService = {
         }
     },
 
-    // 4. Create New Booking (Guest Flow)
+    // 4. Create New Booking (Guest Flow with Concurrency Check)
     async createBooking(bookingData) {
         try {
-            // A. Create Guest
+            // A. Concurrency Safety: Check if room is reserved in subscription bookings
+            if (bookingData.selectedRooms && bookingData.selectedRooms.length > 0) {
+                for (const room of bookingData.selectedRooms) {
+                    const { data: subOverlap } = await supabase
+                        .from('subscription_bookings')
+                        .select('id')
+                        .eq('room_id', room.id)
+                        .eq('status', 'confirmed')
+                        .lt('check_in', bookingData.checkOut)
+                        .gt('check_out', bookingData.checkIn)
+                        .limit(1);
+
+                    if (subOverlap && subOverlap.length > 0) {
+                        return {
+                            success: false,
+                            error: `Room "${room.name}" is already reserved by a subscription member during the selected dates.`
+                        };
+                    }
+                }
+            }
+
+            // B. Create Guest
             const { data: guest, error: guestError } = await supabase
                 .from('guests')
                 .insert([{
@@ -77,7 +119,7 @@ export const MobileSupabaseService = {
 
             if (guestError) throw guestError;
 
-            // B. Create Booking
+            // C. Create Booking
             const roomIds = bookingData.selectedRooms.map(r => ({ id: r.id, name: r.name }));
             const { data: booking, error: bookingError } = await supabase
                 .from('bookings')
@@ -98,18 +140,22 @@ export const MobileSupabaseService = {
 
             if (bookingError) throw bookingError;
 
-            // C. Create Invoice Breakdown
+            // D. Create Invoice Breakdown
             if (bookingData.invoiceItems && bookingData.invoiceItems.length > 0) {
                 const invNum = `INV-${Date.now().toString().slice(-6)}`;
-                await supabase
-                    .from('invoices')
-                    .insert([{
-                        booking_id: booking.id,
-                        invoice_number: invNum,
-                        items: bookingData.invoiceItems,
-                        total_amount: bookingData.totalPrice,
-                        status: 'issued'
-                    }]).catch(() => {});
+                try {
+                    await supabase
+                        .from('invoices')
+                        .insert([{
+                            booking_id: booking.id,
+                            invoice_number: invNum,
+                            items: bookingData.invoiceItems,
+                            total_amount: bookingData.totalPrice,
+                            status: 'issued'
+                        }]);
+                } catch (invErr) {
+                    console.warn('Invoice breakdown insert non-fatal error:', invErr);
+                }
             }
 
             return { success: true, booking, guest };
@@ -330,6 +376,46 @@ export const MobileSupabaseService = {
         }
     },
 
+    // A4.1 Admin: Block Date Range or Month for Room
+    async blockDateRange(roomId, startDateStr, endDateStr, reason = 'Admin Blocked Period') {
+        try {
+            const start = new Date(startDateStr);
+            const end = new Date(endDateStr);
+            const rows = [];
+            const cur = new Date(start);
+
+            while (cur <= end) {
+                const dStr = cur.toISOString().split('T')[0];
+                rows.push({
+                    room_id: roomId,
+                    blocked_date: dStr,
+                    source: reason
+                });
+                cur.setDate(cur.getDate() + 1);
+            }
+
+            if (rows.length === 0) return { success: false, error: 'Invalid date range' };
+
+            // Upsert / insert rows
+            const { data, error } = await supabase
+                .from('ota_blocked_dates')
+                .upsert(rows, { onConflict: 'room_id,blocked_date' })
+                .select();
+
+            if (error) {
+                // If upsert constraint differs, fallback to insert with ignoreDuplicates
+                try {
+                    await supabase.from('ota_blocked_dates').insert(rows);
+                } catch (_) {}
+            }
+
+            return { success: true, blockedCount: rows.length, data };
+        } catch (error) {
+            console.error('Admin Block Date Range Error:', error);
+            return { success: false, error: error.message };
+        }
+    },
+
     // A5. Admin: Unblock Date for Room
     async unblockDate(roomId, dateStr) {
         try {
@@ -462,15 +548,19 @@ export const MobileSupabaseService = {
 
             // D. Generate Invoice
             const invNum = `INV-ADM-${Date.now().toString().slice(-6)}`;
-            await supabase
-                .from('invoices')
-                .insert([{
-                    booking_id: booking.id,
-                    invoice_number: invNum,
-                    items: bookingData.invoiceItems || [{ name: 'Homestay Stay', amount: bookingData.totalPrice }],
-                    total_amount: bookingData.totalPrice,
-                    status: 'paid'
-                }]).catch(() => {});
+            try {
+                await supabase
+                    .from('invoices')
+                    .insert([{
+                        booking_id: booking.id,
+                        invoice_number: invNum,
+                        items: bookingData.invoiceItems || [{ name: 'Homestay Stay', amount: bookingData.totalPrice }],
+                        total_amount: bookingData.totalPrice,
+                        status: 'paid'
+                    }]);
+            } catch (invErr) {
+                console.warn('Admin invoice insert non-fatal error:', invErr);
+            }
 
             return { success: true, booking, guest };
         } catch (error) {

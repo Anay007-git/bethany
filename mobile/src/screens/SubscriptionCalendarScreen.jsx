@@ -43,13 +43,18 @@ const SubscriptionCalendarScreen = ({ route, navigation }) => {
         return `${y}-${mm}-${dd}`;
     };
 
-    // Load room availability
+    // Load room availability (6-month rolling window for smooth multi-month booking)
     const loadAvailability = useCallback(async () => {
         setLoadingAvailability(true);
         try {
-            const startStr = formatDate(year, month, 1);
-            const lastDay = new Date(year, month + 1, 0).getDate();
-            const endStr = formatDate(year, month, lastDay);
+            const today = new Date();
+            const startYear = Math.min(year, today.getFullYear());
+            const startMonth = Math.min(month, today.getMonth());
+            const startStr = formatDate(startYear, startMonth, 1);
+            
+            // Query 6 months ahead so user can smoothly navigate and check multi-month availability
+            const futureEnd = new Date(year, month + 6, 0);
+            const endStr = futureEnd.toISOString().split('T')[0];
 
             const res = await SubscriptionService.getSubscriptionCalendarAvailability(
                 selectedRoomId,
@@ -104,25 +109,16 @@ const SubscriptionCalendarScreen = ({ route, navigation }) => {
 
     // Date tap handler
     const handleDatePress = (dateStr) => {
-        // 1. Unallocated dates are strictly unavailable
-        if (!allocatedDates.has(dateStr)) {
-            Alert.alert(
-                'Date Not Allocated',
-                'This date is not allocated for member residency bookings. Only dates marked in green are open for subscription members.'
-            );
-            return;
-        }
-
-        // 2. Occupied / blocked dates cannot be selected
+        // 1. Occupied / blocked dates cannot be selected
         if (occupiedDates.has(dateStr)) {
             Alert.alert(
-                'Room Occupied',
-                'This date is already occupied by a reservation or synchronized OTA block.'
+                'Date Occupied or Blocked',
+                'This date is currently occupied by a reservation or blocked by management. Please select an open green date.'
             );
             return;
         }
 
-        // 3. Selection logic
+        // 2. Selection logic
         if (!checkIn || (checkIn && checkOut)) {
             // First tap: set check-in
             setCheckIn(dateStr);
@@ -134,25 +130,25 @@ const SubscriptionCalendarScreen = ({ route, navigation }) => {
                 setCheckIn(dateStr);
                 setCheckOut(null);
             } else {
-                // Verify all dates in between are allocated and free
+                // Verify all dates in between are free
                 const nightsCount = calculateNights(checkIn, dateStr);
                 let cur = new Date(checkIn);
                 const outDate = new Date(dateStr);
-                let hasInvalidDate = false;
+                let hasOccupiedDate = false;
 
                 while (cur < outDate) {
                     const str = cur.toISOString().split('T')[0];
-                    if (!allocatedDates.has(str) || occupiedDates.has(str)) {
-                        hasInvalidDate = true;
+                    if (occupiedDates.has(str)) {
+                        hasOccupiedDate = true;
                         break;
                     }
                     cur.setDate(cur.getDate() + 1);
                 }
 
-                if (hasInvalidDate) {
+                if (hasOccupiedDate) {
                     Alert.alert(
                         'Unavailable Date in Range',
-                        'One or more dates in your selected range are either not allocated or already occupied. Please select an unbroken sequence of open green dates.'
+                        'Your selected date range spans one or more occupied or blocked dates. Please select consecutive available dates.'
                     );
                     return;
                 }
@@ -189,19 +185,20 @@ const SubscriptionCalendarScreen = ({ route, navigation }) => {
         for (let day = 1; day <= daysInMonth; day++) {
             const dateStr = formatDate(year, month, day);
             const isPast = dateStr < todayStr;
-            const isAllocated = allocatedDates.has(dateStr);
             const isOccupied = occupiedDates.has(dateStr);
 
             const isStart = checkIn === dateStr;
             const isEnd = checkOut === dateStr;
             const isInRange = checkIn && checkOut && dateStr > checkIn && dateStr < checkOut;
 
-            let cellBg = '#FFFFFF';
-            let cellBorderColor = colors.borderSubtle;
-            let textColor = colors.textMain;
+            let cellBg = '#ECFDF5'; // Available by default
+            let cellBorderColor = '#A7F3D0';
+            let textColor = '#065F46';
 
             if (isPast) {
+                cellBg = '#F9FAFB';
                 textColor = colors.greySubtle;
+                cellBorderColor = colors.borderSubtle;
             } else if (isStart || isEnd) {
                 cellBg = colors.forest;
                 textColor = colors.ivory;
@@ -209,17 +206,11 @@ const SubscriptionCalendarScreen = ({ route, navigation }) => {
             } else if (isInRange) {
                 cellBg = 'rgba(35, 72, 59, 0.15)';
                 textColor = colors.forestDark;
+                cellBorderColor = colors.forest;
             } else if (isOccupied) {
                 cellBg = '#FEE2E2';
                 textColor = '#991B1B';
-            } else if (isAllocated) {
-                cellBg = '#ECFDF5';
-                textColor = '#065F46';
-                cellBorderColor = '#A7F3D0';
-            } else {
-                // Unallocated
-                cellBg = '#F3F4F6';
-                textColor = '#9CA3AF';
+                cellBorderColor = '#FCA5A5';
             }
 
             days.push(
@@ -234,8 +225,11 @@ const SubscriptionCalendarScreen = ({ route, navigation }) => {
                     activeOpacity={0.7}
                 >
                     <Text style={[styles.cellDayText, { color: textColor }]}>{day}</Text>
-                    {isAllocated && !isOccupied && !isPast && !isStart && !isEnd && (
+                    {!isOccupied && !isPast && !isStart && !isEnd && (
                         <View style={styles.openDot} />
+                    )}
+                    {isOccupied && !isPast && (
+                        <Text style={{ fontSize: 7, color: '#991B1B', fontWeight: '700', marginTop: -2 }}>OCC</Text>
                     )}
                 </TouchableOpacity>
             );
@@ -341,15 +335,15 @@ const SubscriptionCalendarScreen = ({ route, navigation }) => {
                     <View style={styles.legendRow}>
                         <View style={styles.legendItem}>
                             <View style={[styles.legendBox, { backgroundColor: '#ECFDF5', borderColor: '#A7F3D0' }]} />
-                            <Text style={styles.legendText}>Allocated & Open</Text>
-                        </View>
-                        <View style={styles.legendItem}>
-                            <View style={[styles.legendBox, { backgroundColor: '#F3F4F6', borderColor: '#E5E7EB' }]} />
-                            <Text style={styles.legendText}>Unallocated</Text>
+                            <Text style={styles.legendText}>Available Dates</Text>
                         </View>
                         <View style={styles.legendItem}>
                             <View style={[styles.legendBox, { backgroundColor: '#FEE2E2', borderColor: '#FCA5A5' }]} />
-                            <Text style={styles.legendText}>Reserved / Blocked</Text>
+                            <Text style={styles.legendText}>Occupied / Blocked</Text>
+                        </View>
+                        <View style={styles.legendItem}>
+                            <View style={[styles.legendBox, { backgroundColor: colors.forest, borderColor: colors.forest }]} />
+                            <Text style={styles.legendText}>Selected Stay</Text>
                         </View>
                     </View>
                 </View>

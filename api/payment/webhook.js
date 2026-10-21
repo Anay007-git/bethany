@@ -43,11 +43,26 @@ export default async function handler(req, res) {
                 console.error("Booking update error:", bookingError);
             } else if (booking && booking.status !== 'confirmed') {
                 // 1.5 Send Email Notification (Only if not already confirmed by frontend)
-                await supabase.functions.invoke('send-booking-email', {
+                const edgeRes = await supabase.functions.invoke('send-booking-email', {
                     body: {
                         booking: { ...booking, status: 'confirmed' }
                     }
-                }).catch(err => console.error("Webhook Email Failed:", err));
+                }).catch(err => {
+                    console.error("Webhook Edge Email Failed:", err);
+                    return { error: err };
+                });
+
+                if (edgeRes?.error) {
+                    try {
+                        const sendBookingEmailHandler = (await import('../booking/send-email.js')).default;
+                        await sendBookingEmailHandler(
+                            { method: 'POST', body: { booking: { ...booking, status: 'confirmed' } } },
+                            { setHeader: () => {}, status: () => ({ json: () => {}, end: () => {} }) }
+                        );
+                    } catch (localErr) {
+                        console.error("Local booking email fallback failed:", localErr);
+                    }
+                }
             }
 
             // 2. Insert Payment Record
@@ -63,6 +78,28 @@ export default async function handler(req, res) {
 
             if (paymentError) {
                 console.error("Payment insert error:", paymentError);
+            }
+        } else if (payload.data && payload.data.merchantOrderId) {
+            const merchantOrderId = payload.data.merchantOrderId;
+            await supabase
+                .from('bookings')
+                .update({ status: 'cancelled' })
+                .eq('id', merchantOrderId);
+
+            try {
+                const sendFailedHandler = (await import('./send-failed-email.js')).default;
+                await sendFailedHandler(
+                    {
+                        method: 'POST',
+                        body: {
+                            bookingId: merchantOrderId,
+                            reason: payload.message || payload.code || 'Payment declined by payment gateway'
+                        }
+                    },
+                    { setHeader: () => {}, status: () => ({ json: () => {}, end: () => {} }) }
+                );
+            } catch (failErr) {
+                console.error("Payment failed email webhook trigger failed:", failErr);
             }
         }
 

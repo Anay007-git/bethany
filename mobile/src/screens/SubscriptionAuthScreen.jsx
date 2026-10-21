@@ -58,7 +58,6 @@ const SubscriptionAuthScreen = ({ route, navigation }) => {
         }
 
         setLoading(true);
-        setDevOtpNotice('');
 
         try {
             const res = await SubscriptionService.requestEmailOtp(cleanEmail, fullName.trim());
@@ -68,7 +67,7 @@ const SubscriptionAuthScreen = ({ route, navigation }) => {
                 if (res.cooldown) {
                     setCooldownSeconds(res.secondsLeft || 60);
                 }
-                Alert.alert('Verification Alert', res.error);
+                Alert.alert('Verification Notice', res.error || 'Failed to dispatch verification code.');
                 return;
             }
 
@@ -76,15 +75,9 @@ const SubscriptionAuthScreen = ({ route, navigation }) => {
             setCooldownSeconds(60);
             setStep('otp');
 
-            // For smooth development/testing display code
-            if (res.devCode) {
-                setDevOtpNotice(res.devCode);
-                setOtpCode(res.devCode);
-            }
-
             Alert.alert(
                 'Verification Code Sent',
-                `A 6-digit security OTP has been sent to ${cleanEmail}. Enter the code below to verify your account.`
+                `A 6-digit verification code has been dispatched to ${cleanEmail}. Please check your inbox (and spam folder) and enter the code below.`
             );
         } catch (err) {
             setLoading(false);
@@ -107,7 +100,7 @@ const SubscriptionAuthScreen = ({ route, navigation }) => {
             setLoading(false);
 
             if (!res.success) {
-                Alert.alert('Verification Failed', res.error);
+                Alert.alert('Verification Failed', res.error || 'Invalid code.');
                 return;
             }
 
@@ -119,25 +112,18 @@ const SubscriptionAuthScreen = ({ route, navigation }) => {
         }
     };
 
-    // Handle Option A: Google Sign-In
+    // Handle Option A: Google Sign-In with Real Google OAuth
     const handleGoogleAuth = async () => {
         setGoogleLoading(true);
 
         try {
-            // Note: In Expo development builds or production, Google token is retrieved via Expo AuthSession.
-            // Here we provide seamless Google Sign-In handler with automatic account linking
-            const promptGoogleEmail = email.trim() || 'member@gmail.com';
-            const simulatedGoogleProfile = {
-                email: promptGoogleEmail,
-                name: fullName.trim() || 'Verified Google Member',
-                id: `google_${Date.now()}`
-            };
-
-            const res = await SubscriptionService.handleGoogleSignIn(simulatedGoogleProfile);
+            const res = await SubscriptionService.signInWithGoogleOAuth();
             setGoogleLoading(false);
 
             if (!res.success) {
-                Alert.alert('Google Sign-In Error', res.error);
+                if (!res.cancelled) {
+                    Alert.alert('Google Sign-In Error', res.error || 'Google authentication could not be completed.');
+                }
                 return;
             }
 

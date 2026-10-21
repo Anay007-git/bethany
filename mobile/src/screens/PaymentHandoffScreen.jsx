@@ -7,10 +7,14 @@ import {
     TouchableOpacity,
     Alert,
     ActivityIndicator,
-    Linking
+    Platform
 } from 'react-native';
+import * as WebBrowser from 'expo-web-browser';
 import { colors, radius, shadows } from '../theme';
-import { MobileSupabaseService } from '../services/SupabaseService';
+import { MobileSupabaseService, supabase } from '../services/SupabaseService';
+
+// Ensure web browser auth session completes cleanly on Android
+WebBrowser.maybeCompleteAuthSession();
 
 const PaymentHandoffScreen = ({ route, navigation }) => {
     const bookingPayload = route?.params?.bookingPayload || {
@@ -24,16 +28,61 @@ const PaymentHandoffScreen = ({ route, navigation }) => {
         discountAmount: 0,
         finalTotal: 0
     };
-    const [loading, setLoading] = useState(false);
 
-    const handleConfirmBooking = async () => {
+    const [loading, setLoading] = useState(false);
+    const [verifying, setVerifying] = useState(false);
+    const [statusMessage, setStatusMessage] = useState('');
+    const [paymentError, setPaymentError] = useState('');
+
+    // Polling helper to verify PhonePe order status
+    const pollPaymentStatus = async (merchantOrderId, maxAttempts = 6, intervalMs = 2500) => {
+        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+            try {
+                const res = await fetch(`https://bethanyhomestay.com/api/payment/status?orderId=${merchantOrderId}`);
+                if (res.ok) {
+                    const statusData = await res.json();
+                    const state = statusData.state || (statusData.data && statusData.data.state);
+
+                    if (state === 'COMPLETED' || state === 'SUCCESS') {
+                        return { verified: true, state: 'COMPLETED', raw: statusData };
+                    }
+                    if (state === 'FAILED') {
+                        return { verified: false, state: 'FAILED', raw: statusData };
+                    }
+                }
+            } catch (pollErr) {
+                console.warn(`Payment status poll attempt ${attempt} error:`, pollErr);
+            }
+
+            if (attempt < maxAttempts) {
+                await new Promise(resolve => setTimeout(resolve, intervalMs));
+            }
+        }
+
+        // Final check against Supabase booking record (webhook may have marked it confirmed)
+        try {
+            const { data: dbBooking } = await supabase
+                .from('bookings')
+                .select('status')
+                .eq('id', merchantOrderId)
+                .maybeSingle();
+
+            if (dbBooking && dbBooking.status === 'confirmed') {
+                return { verified: true, state: 'COMPLETED' };
+            }
+        } catch (_) {}
+
+        return { verified: false, state: 'PENDING_OR_TIMEOUT' };
+    };
+
+    const handleConfirmAndPay = async () => {
         setLoading(true);
+        setPaymentError('');
+        setStatusMessage('Creating reservation ledger...');
 
         try {
-            // 1. Create Dual-Write Booking in Supabase authoritative database
+            // 1. Prepare invoice breakdown
             const invoiceItems = [];
-
-            // Line items for selected rooms
             bookingPayload.selectedRooms.forEach(r => {
                 invoiceItems.push({
                     description: `${r.name} (${bookingPayload.nights} Nights)`,
@@ -43,7 +92,6 @@ const PaymentHandoffScreen = ({ route, navigation }) => {
                 });
             });
 
-            // Line items for meals
             if (bookingPayload.mealTotal > 0) {
                 invoiceItems.push({
                     description: `Homestay Meals (${bookingPayload.nights} Nights)`,
@@ -53,7 +101,6 @@ const PaymentHandoffScreen = ({ route, navigation }) => {
                 });
             }
 
-            // Line items for discount
             if (bookingPayload.discountAmount > 0) {
                 invoiceItems.push({
                     description: 'Promotional Discount',
@@ -63,6 +110,7 @@ const PaymentHandoffScreen = ({ route, navigation }) => {
                 });
             }
 
+            // 2. Create authoritative booking in Supabase with status 'pending'
             const res = await MobileSupabaseService.createBooking({
                 name: bookingPayload.name,
                 email: bookingPayload.email,
@@ -79,49 +127,141 @@ const PaymentHandoffScreen = ({ route, navigation }) => {
 
             if (!res.success) {
                 setLoading(false);
-                Alert.alert('Booking Error', res.error || 'Failed to record reservation. Please check your network.');
+                setStatusMessage('');
+                Alert.alert('Booking Error', res.error || 'Failed to record reservation. Please check your dates and network.');
                 return;
             }
 
-            const bookingId = res.booking.id;
-
-            // 2. Launch PhonePe Gateway or Confirmation
+            const booking = res.booking;
+            const bookingId = booking.id;
             const amountInPaise = Math.round(bookingPayload.finalTotal * 100);
 
-            try {
-                // If payment endpoint is accessible on deployed web
-                const initiateRes = await fetch('https://bethanyhomestay.com/api/payment/initiate', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        merchantOrderId: bookingId,
-                        amount: amountInPaise,
-                        phone: bookingPayload.phone,
-                        redirectUrl: `https://bethanyhomestay.com/payment-status?id=${bookingId}`,
-                        message: `Stay at Bethany Homestay for ${bookingPayload.nights} nights.`
-                    })
-                });
+            // 3. Initiate PhonePe Order through backend
+            setStatusMessage('Opening PhonePe Secure Gateway...');
+            const returnUrl = `https://bethanyhomestay.com/payment-status?id=${bookingId}`;
 
-                if (initiateRes.ok) {
-                    const data = await initiateRes.json();
-                    const redirectUrl = data.redirectUrl || data.redirect_url;
-                    if (redirectUrl) {
-                        Linking.openURL(redirectUrl);
-                    }
-                }
-            } catch (err) {
-                console.log('Mobile web payment handoff notice (offline fallback):', err);
+            const initiateRes = await fetch('https://bethanyhomestay.com/api/payment/initiate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    merchantOrderId: bookingId,
+                    amount: amountInPaise,
+                    phone: bookingPayload.phone,
+                    redirectUrl: returnUrl,
+                    message: `Bethany Homestay: ${bookingPayload.nights} night(s) stay`
+                })
+            });
+
+            if (!initiateRes.ok) {
+                const errData = await initiateRes.json().catch(() => ({}));
+                throw new Error(errData.error || 'Failed to initialize payment gateway.');
             }
 
+            const initiateData = await initiateRes.json();
+            const redirectUrl = initiateData.redirectUrl || initiateData.redirect_url;
+
+            if (!redirectUrl) {
+                throw new Error('Payment gateway did not provide a valid checkout URL.');
+            }
+
+            // 4. Launch In-App Browser Gateway Sheet
             setLoading(false);
-            navigation.replace('BookingConfirmation', {
-                booking: res.booking,
-                bookingPayload
-            });
+            setVerifying(true);
+            setStatusMessage('Awaiting payment authorization...');
+
+            const authResult = await WebBrowser.openAuthSessionAsync(
+                redirectUrl,
+                'bethanyhomestay://payment-status'
+            );
+
+            // 5. User returned to app -> Verify payment status with server
+            setStatusMessage('Verifying transaction with PhonePe...');
+            const verification = await pollPaymentStatus(bookingId);
+
+            if (verification.verified) {
+                // Payment Successful: Update Supabase status to confirmed
+                await supabase
+                    .from('bookings')
+                    .update({ status: 'confirmed' })
+                    .eq('id', bookingId);
+
+                // Insert payment record
+                try {
+                    await supabase
+                        .from('payments')
+                        .insert([{
+                            booking_id: bookingId,
+                            amount: bookingPayload.finalTotal,
+                            status: 'completed',
+                            payment_method: 'phonepe'
+                        }]);
+                } catch (payErr) {
+                    console.warn('Payment record insert error:', payErr);
+                }
+
+                // Send email confirmation
+                try {
+                    await supabase.functions.invoke('send-booking-email', {
+                        body: { booking: { ...booking, status: 'confirmed' } }
+                    });
+                } catch (_) {
+                    try {
+                        const apiUrl = process.env.EXPO_PUBLIC_API_URL || 'https://bethanyhomestay.com';
+                        await fetch(`${apiUrl}/api/booking/send-email`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ booking: { ...booking, status: 'confirmed' } })
+                        });
+                    } catch (_) {}
+                }
+
+                setVerifying(false);
+                setStatusMessage('');
+
+                // Navigate to confirmation voucher
+                navigation.replace('BookingConfirmation', {
+                    booking: { ...booking, status: 'confirmed' },
+                    bookingPayload
+                });
+            } else {
+                // Payment was cancelled or failed
+                setVerifying(false);
+                setStatusMessage('');
+
+                if (verification.state === 'FAILED') {
+                    await supabase
+                        .from('bookings')
+                        .update({ status: 'cancelled' })
+                        .eq('id', bookingId);
+
+                    // Dispatch payment declined notification
+                    try {
+                        const apiUrl = process.env.EXPO_PUBLIC_API_URL || 'https://bethanyhomestay.com';
+                        fetch(`${apiUrl}/api/payment/send-failed-email`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                booking: { ...booking, status: 'cancelled' },
+                                bookingId,
+                                reason: 'Payment was declined by your bank or PhonePe.'
+                            })
+                        }).catch(() => {});
+                    } catch (_) {}
+
+                    setPaymentError('Your payment was declined by your bank or PhonePe. Please check your payment details and retry.');
+                    Alert.alert('Payment Declined', 'The transaction was declined. Your booking has not been confirmed.');
+                } else {
+                    setPaymentError('The checkout window was closed before completion. If your account was debited, your booking will be confirmed automatically via webhook.');
+                    Alert.alert('Payment Incomplete', 'Payment verification was not completed. You can tap Retry Payment to complete your reservation.');
+                }
+            }
 
         } catch (error) {
             setLoading(false);
-            Alert.alert('Reservation Failed', error.message || 'An error occurred during booking.');
+            setVerifying(false);
+            setStatusMessage('');
+            setPaymentError(error.message || 'An error occurred during checkout.');
+            Alert.alert('Payment Error', error.message || 'Unable to proceed to payment.');
         }
     };
 
@@ -129,7 +269,7 @@ const PaymentHandoffScreen = ({ route, navigation }) => {
         <ScrollView style={styles.container}>
             {/* Header */}
             <View style={styles.header}>
-                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn} disabled={loading || verifying}>
                     <Text style={styles.backBtnText}>←</Text>
                 </TouchableOpacity>
                 <View>
@@ -217,26 +357,61 @@ const PaymentHandoffScreen = ({ route, navigation }) => {
                     </View>
                 </View>
 
+                {/* Configured Payment Methods Display */}
+                <View style={styles.paymentMethodsCard}>
+                    <Text style={styles.paymentMethodsTitle}>Available Payment Methods</Text>
+                    <View style={styles.methodsGrid}>
+                        <View style={styles.methodBadge}>
+                            <Text style={styles.methodBadgeIcon}>⚡</Text>
+                            <Text style={styles.methodBadgeText}>UPI Apps (GPay, PhonePe, Paytm)</Text>
+                        </View>
+                        <View style={styles.methodBadge}>
+                            <Text style={styles.methodBadgeIcon}>💳</Text>
+                            <Text style={styles.methodBadgeText}>Debit & Credit Cards (Visa, MC, RuPay)</Text>
+                        </View>
+                        <View style={styles.methodBadge}>
+                            <Text style={styles.methodBadgeIcon}>🏦</Text>
+                            <Text style={styles.methodBadgeText}>Net Banking (All Major Indian Banks)</Text>
+                        </View>
+                    </View>
+                </View>
+
+                {/* Error Banner */}
+                {paymentError ? (
+                    <View style={styles.errorBanner}>
+                        <Text style={styles.errorIcon}>⚠️</Text>
+                        <Text style={styles.errorText}>{paymentError}</Text>
+                    </View>
+                ) : null}
+
+                {/* Status Indicator */}
+                {(loading || verifying) && (
+                    <View style={styles.verifyingBanner}>
+                        <ActivityIndicator color={colors.forest} size="small" style={{ marginRight: 10 }} />
+                        <Text style={styles.verifyingText}>{statusMessage || 'Processing checkout...'}</Text>
+                    </View>
+                )}
+
                 {/* Security Note */}
                 <View style={styles.securityNote}>
                     <Text style={styles.shieldIcon}>🛡️</Text>
                     <Text style={styles.securityText}>
-                        Your reservation will be created immediately in the authoritative Supabase ledger. Payment is securely handled via PhonePe gateway.
+                        End-to-end 256-bit encrypted checkout via PhonePe. Your booking is confirmed instantly upon successful bank authorization.
                     </Text>
                 </View>
 
-                {/* Confirm Button */}
+                {/* Confirm & Pay Button */}
                 <TouchableOpacity
-                    style={styles.confirmBtn}
-                    onPress={handleConfirmBooking}
-                    disabled={loading}
+                    style={[styles.confirmBtn, (loading || verifying) && styles.btnDisabled]}
+                    onPress={handleConfirmAndPay}
+                    disabled={loading || verifying}
                     activeOpacity={0.85}
                 >
-                    {loading ? (
+                    {loading || verifying ? (
                         <ActivityIndicator color={colors.ivory} size="small" />
                     ) : (
                         <Text style={styles.confirmBtnText}>
-                            Confirm & Pay via PhonePe (₹{bookingPayload.finalTotal.toLocaleString('en-IN')})
+                            Pay via PhonePe • ₹{bookingPayload.finalTotal.toLocaleString('en-IN')}
                         </Text>
                     )}
                 </TouchableOpacity>
@@ -253,7 +428,7 @@ const styles = StyleSheet.create({
         backgroundColor: colors.bgPage
     },
     header: {
-        paddingTop: 50,
+        paddingTop: Platform.OS === 'ios' ? 56 : 46,
         paddingBottom: 16,
         paddingHorizontal: 20,
         backgroundColor: colors.bgSurface,
@@ -344,6 +519,76 @@ const styles = StyleSheet.create({
         fontWeight: '700',
         color: colors.forest
     },
+    paymentMethodsCard: {
+        backgroundColor: colors.bgSurface,
+        borderRadius: radius.md,
+        padding: 16,
+        marginBottom: 14,
+        borderWidth: 1,
+        borderColor: colors.borderSubtle
+    },
+    paymentMethodsTitle: {
+        fontSize: 12,
+        fontWeight: '700',
+        color: colors.forestDark,
+        textTransform: 'uppercase',
+        letterSpacing: 1,
+        marginBottom: 10
+    },
+    methodsGrid: {
+        gap: 8
+    },
+    methodBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        backgroundColor: colors.ivoryWarm,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: radius.xs
+    },
+    methodBadgeIcon: {
+        fontSize: 14
+    },
+    methodBadgeText: {
+        fontSize: 12,
+        color: colors.textMain,
+        fontWeight: '500'
+    },
+    errorBanner: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        backgroundColor: '#FDF2F2',
+        borderColor: '#F87171',
+        borderWidth: 1,
+        padding: 12,
+        borderRadius: radius.sm,
+        marginBottom: 14
+    },
+    errorIcon: {
+        fontSize: 16
+    },
+    errorText: {
+        flex: 1,
+        fontSize: 12,
+        color: '#B91C1C',
+        lineHeight: 16
+    },
+    verifyingBanner: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: colors.forestSubtle,
+        padding: 14,
+        borderRadius: radius.sm,
+        marginBottom: 14
+    },
+    verifyingText: {
+        fontSize: 13,
+        fontWeight: '600',
+        color: colors.forest
+    },
     securityNote: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -366,10 +611,13 @@ const styles = StyleSheet.create({
     },
     confirmBtn: {
         backgroundColor: colors.forest,
-        paddingVertical: 14,
+        paddingVertical: 15,
         borderRadius: radius.sm,
         alignItems: 'center',
         ...shadows.card
+    },
+    btnDisabled: {
+        opacity: 0.7
     },
     confirmBtnText: {
         color: colors.ivory,

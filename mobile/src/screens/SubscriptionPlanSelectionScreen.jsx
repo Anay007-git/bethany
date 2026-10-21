@@ -159,6 +159,36 @@ const SubscriptionPlanSelectionScreen = ({ route, navigation }) => {
                                     </Text>
                                 </View>
 
+                                {/* 3-Month Minimum Commitment & Billing Terms Card */}
+                                <View style={styles.commitmentBreakdownBox}>
+                                    <View style={styles.commitmentRow}>
+                                        <Text style={styles.commitmentLabel}>Monthly Fee:</Text>
+                                        <Text style={styles.commitmentVal}>₹{Number(plan.monthly_price).toLocaleString('en-IN')}</Text>
+                                    </View>
+                                    <View style={styles.commitmentRow}>
+                                        <Text style={styles.commitmentLabel}>Minimum Commitment:</Text>
+                                        <Text style={styles.commitmentVal}>{plan.commitment_months || 3} Consecutive Months</Text>
+                                    </View>
+                                    <View style={styles.commitmentRow}>
+                                        <Text style={styles.commitmentLabel}>Total Initial 3-Month Commitment:</Text>
+                                        <Text style={[styles.commitmentVal, { color: colors.gold, fontWeight: '800' }]}>
+                                            ₹{(Number(plan.monthly_price) * (plan.commitment_months || 3)).toLocaleString('en-IN')}
+                                        </Text>
+                                    </View>
+                                    <View style={styles.commitmentRow}>
+                                        <Text style={styles.commitmentLabel}>Billing Schedule:</Text>
+                                        <Text style={styles.commitmentVal}>Monthly via RBI e-Mandate</Text>
+                                    </View>
+                                    <View style={styles.commitmentRow}>
+                                        <Text style={styles.commitmentLabel}>Taxes & Fees:</Text>
+                                        <Text style={styles.commitmentVal}>Included in subscription rate</Text>
+                                    </View>
+                                    <View style={styles.commitmentRow}>
+                                        <Text style={styles.commitmentLabel}>Cancellation Policy:</Text>
+                                        <Text style={styles.commitmentVal}>Eligible after {plan.commitment_months || 3} months</Text>
+                                    </View>
+                                </View>
+
                                 <Text style={styles.planDesc}>{plan.description}</Text>
 
                                 <View style={styles.divider} />
@@ -407,6 +437,29 @@ const styles = StyleSheet.create({
         fontSize: 11,
         color: colors.textMain,
         lineHeight: 16
+    },
+    commitmentBreakdownBox: {
+        backgroundColor: colors.ivoryWarm,
+        borderWidth: 1,
+        borderColor: colors.borderSubtle,
+        borderRadius: radius.xs,
+        padding: 10,
+        marginVertical: 10,
+        gap: 5
+    },
+    commitmentRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center'
+    },
+    commitmentLabel: {
+        fontSize: 11,
+        color: colors.grey
+    },
+    commitmentVal: {
+        fontSize: 11,
+        fontWeight: '600',
+        color: colors.textMain
     },
     bottomSection: {
         padding: spacing.md,
