@@ -1,14 +1,14 @@
 import 'react-native-url-polyfill/auto';
 import React from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity, LogBox } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { registerRootComponent } from 'expo';
 import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
 import { enableScreens } from 'react-native-screens';
 import AppNavigator from './src/navigation/AppNavigator';
 
 // Ensure react-native-screens is optimized for Android
 enableScreens(true);
+LogBox.ignoreAllLogs(true);
 
 class ErrorBoundary extends React.Component {
     constructor(props) {
@@ -68,6 +68,4 @@ export default function App() {
         </ErrorBoundary>
     );
 }
-
-registerRootComponent(App);
 
