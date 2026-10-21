@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { colors } from '../theme';
 
 const SplashScreen = ({ navigation }) => {
@@ -17,8 +17,19 @@ const SplashScreen = ({ navigation }) => {
         return () => clearTimeout(timer);
     }, [navigation]);
 
+    const handleSkip = () => {
+        if (navigation?.reset) {
+            navigation.reset({
+                index: 0,
+                routes: [{ name: 'MainTabs' }]
+            });
+        } else if (navigation?.replace) {
+            navigation.replace('MainTabs');
+        }
+    };
+
     return (
-        <View style={styles.container}>
+        <TouchableOpacity activeOpacity={1} style={styles.container} onPress={handleSkip}>
             <View style={styles.content}>
                 <View style={styles.logoBadge}>
                     <Text style={styles.logoIcon}>🏔️</Text>
@@ -33,7 +44,7 @@ const SplashScreen = ({ navigation }) => {
                     style={styles.spinner}
                 />
             </View>
-        </View>
+        </TouchableOpacity>
     );
 };
 

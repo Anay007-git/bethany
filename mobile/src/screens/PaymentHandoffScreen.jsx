@@ -13,8 +13,10 @@ import * as WebBrowser from 'expo-web-browser';
 import { colors, radius, shadows } from '../theme';
 import { MobileSupabaseService, supabase } from '../services/SupabaseService';
 
-// Ensure web browser auth session completes cleanly on Android
-WebBrowser.maybeCompleteAuthSession();
+// Ensure web browser auth session completes cleanly (web only)
+if (Platform.OS === 'web') {
+    WebBrowser.maybeCompleteAuthSession();
+}
 
 const PaymentHandoffScreen = ({ route, navigation }) => {
     const bookingPayload = route?.params?.bookingPayload || {

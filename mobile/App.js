@@ -2,14 +2,10 @@ import 'react-native-gesture-handler';
 import 'react-native-url-polyfill/auto';
 import React from 'react';
 import { View, Text, TouchableOpacity, LogBox, Dimensions } from 'react-native';
-import { enableScreens } from 'react-native-screens';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
 import AppNavigator from './src/navigation/AppNavigator';
-
-// Disable native screens to use standard React Native Views for all screens & tabs
-enableScreens(false);
 
 LogBox.ignoreAllLogs(true);
 

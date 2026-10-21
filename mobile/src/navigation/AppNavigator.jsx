@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
-import { createStackNavigator } from '@react-navigation/stack';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Text } from 'react-native';
 import { colors } from '../theme';
@@ -41,7 +41,7 @@ import SubscriptionMyBookingsScreen from '../screens/SubscriptionMyBookingsScree
 import SubscriptionBillingHistoryScreen from '../screens/SubscriptionBillingHistoryScreen';
 import SubscriptionHelpPolicyScreen from '../screens/SubscriptionHelpPolicyScreen';
 
-const Stack = createStackNavigator();
+const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
 function TabNavigator() {
@@ -87,8 +87,8 @@ export default function AppNavigator() {
                 initialRouteName="Splash"
                 screenOptions={{
                     headerShown: false,
-                    cardStyle: { backgroundColor: colors.forestDark },
-                    animationEnabled: false
+                    contentStyle: { backgroundColor: colors.forestDark },
+                    animation: 'none'
                 }}
             >
                 <Stack.Screen name="Splash" component={SplashScreen} />
