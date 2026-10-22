@@ -2,7 +2,7 @@
   "name": "bethany-homestay-mobile",
   "version": "1.0.0",
   "description": "Bethany Homestay Dedicated Android & iOS Mobile Application",
-  "main": "expo/AppEntry.js",
+  "main": "index.js",
   "scripts": {
     "start": "expo start",
     "android": "expo run:android",
@@ -23,6 +23,7 @@
     "expo-asset": "~11.0.5",
     "expo-auth-session": "~6.0.3",
     "expo-linking": "~7.0.0",
+    "expo-splash-screen": "~0.29.21",
     "expo-status-bar": "~2.0.0",
     "expo-web-browser": "~14.0.2",
     "react": "18.3.1",

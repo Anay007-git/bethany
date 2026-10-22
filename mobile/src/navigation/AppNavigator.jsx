@@ -84,7 +84,7 @@ export default function AppNavigator() {
     return (
         <NavigationContainer theme={NavigationTheme}>
             <Stack.Navigator
-                initialRouteName="Splash"
+                initialRouteName="MainTabs"
                 screenOptions={{
                     headerShown: false,
                     contentStyle: { backgroundColor: colors.forestDark },

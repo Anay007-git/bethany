@@ -1,24 +1,30 @@
 import 'react-native-gesture-handler';
 import 'react-native-url-polyfill/auto';
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, TouchableOpacity, LogBox, Dimensions } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
+import * as SplashScreen from 'expo-splash-screen';
 import AppNavigator from './src/navigation/AppNavigator';
 
 LogBox.ignoreAllLogs(true);
 
-const { width, height } = Dimensions.get('window');
-const defaultMetrics = {
-    insets: { top: 24, left: 0, right: 0, bottom: 0 },
-    frame: { x: 0, y: 0, width: width || 360, height: height || 640 }
-};
+const { width: winWidth, height: winHeight } = Dimensions.get('window');
+const { width: scrWidth, height: scrHeight } = Dimensions.get('screen');
 
-// Guarantee initial insets are non-null so SafeAreaProvider never renders null
-const safeMetrics = (initialWindowMetrics && initialWindowMetrics.insets)
-    ? initialWindowMetrics
-    : defaultMetrics;
+const initialWidth = (winWidth && winWidth > 0) ? winWidth : ((scrWidth && scrWidth > 0) ? scrWidth : 390);
+const initialHeight = (winHeight && winHeight > 0) ? winHeight : ((scrHeight && scrHeight > 0) ? scrHeight : 844);
+
+// Guarantee insets and frame are strictly non-zero so views never collapse
+const safeMetrics = {
+    insets: (initialWindowMetrics?.insets?.top !== undefined && initialWindowMetrics?.insets?.bottom !== undefined)
+        ? initialWindowMetrics.insets
+        : { top: 24, left: 0, right: 0, bottom: 0 },
+    frame: (initialWindowMetrics?.frame?.width && initialWindowMetrics.frame.width > 0 && initialWindowMetrics?.frame?.height && initialWindowMetrics.frame.height > 0)
+        ? initialWindowMetrics.frame
+        : { x: 0, y: 0, width: initialWidth, height: initialHeight }
+};
 
 class ErrorBoundary extends React.Component {
     constructor(props) {
@@ -37,7 +43,7 @@ class ErrorBoundary extends React.Component {
     render() {
         if (this.state.hasError) {
             return (
-                <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#162E25', padding: 28 }}>
+                <View style={{ flex: 1, width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center', backgroundColor: '#162E25', padding: 28 }}>
                     <Text style={{ fontSize: 48, marginBottom: 16 }}>🏔️</Text>
                     <Text style={{ color: '#F8F6F0', fontSize: 24, fontWeight: '700', marginBottom: 8, textAlign: 'center', letterSpacing: 0.5 }}>
                         Bethany Homestay
@@ -69,15 +75,36 @@ class ErrorBoundary extends React.Component {
 }
 
 export default function App() {
+    useEffect(() => {
+        let isMounted = true;
+        const dismissNativeSplash = async () => {
+            try {
+                // Short grace delay allowing the native hierarchy and navigation tree to mount
+                await new Promise(resolve => setTimeout(resolve, 200));
+                if (isMounted) {
+                    await SplashScreen.hideAsync().catch(() => {});
+                }
+            } catch (err) {
+                console.warn('Splash dismiss notice:', err);
+            }
+        };
+        dismissNativeSplash();
+        return () => {
+            isMounted = false;
+        };
+    }, []);
+
     return (
-        <GestureHandlerRootView style={{ flex: 1, backgroundColor: '#162E25' }}>
-            <ErrorBoundary>
-                <SafeAreaProvider initialMetrics={safeMetrics} style={{ flex: 1 }}>
-                    <StatusBar style="light" />
-                    <AppNavigator />
-                </SafeAreaProvider>
-            </ErrorBoundary>
-        </GestureHandlerRootView>
+        <View style={{ flex: 1, width: '100%', height: '100%', backgroundColor: '#162E25' }}>
+            <GestureHandlerRootView style={{ flex: 1, width: '100%', height: '100%', backgroundColor: '#162E25' }}>
+                <ErrorBoundary>
+                    <SafeAreaProvider initialMetrics={safeMetrics} style={{ flex: 1, width: '100%', height: '100%', backgroundColor: '#162E25' }}>
+                        <StatusBar style="light" backgroundColor="#162E25" />
+                        <AppNavigator />
+                    </SafeAreaProvider>
+                </ErrorBoundary>
+            </GestureHandlerRootView>
+        </View>
     );
 }
 

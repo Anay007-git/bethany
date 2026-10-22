@@ -5,12 +5,27 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "dark",
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
       "backgroundColor": "#162E25"
     },
+    "plugins": [
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#162E25",
+          "dark": {
+            "image": "./assets/splash.png",
+            "backgroundColor": "#162E25"
+          }
+        }
+      ]
+    ],
     "scheme": "bethanyhomestay",
     "assetBundlePatterns": [
       "**/*"
@@ -27,6 +42,7 @@
     "newArchEnabled": true,
     "android": {
       "newArchEnabled": true,
+      "backgroundColor": "#162E25",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#F6F4E7"
